@@ -1,5 +1,5 @@
 import { ElectronMenubar } from "./menubar"
-import { app, globalShortcut, dialog, nativeImage, Tray, shell, Menu } from "electron"
+import { app, globalShortcut, nativeImage, Tray, shell, Menu } from "electron"
 import * as path from "path"
 import * as url from 'url';
 import contextMenu from "electron-context-menu";
@@ -7,6 +7,7 @@ import contextMenu from "electron-context-menu";
 if (require('electron-squirrel-startup')) {
   app.quit();
 }
+
 
 app.on("ready", () => {
   const dir = app.getAppPath();
@@ -29,7 +30,7 @@ app.on("ready", () => {
         nodeIntegration: true,
         contextIsolation: false,
       },
-      width: 500,
+      width: 1000,
       height: 550,
     },
     index: url.format({
@@ -47,7 +48,6 @@ app.on("ready", () => {
 
 
   electronMenubar.on("ready", ({ window }) => {
-
     if (process.platform !== "darwin") {
       window.setSkipTaskbar(true);
     } else {
@@ -114,14 +114,18 @@ app.on("ready", () => {
   });
 
   app.on("web-contents-created", (_event, webContents) => {
+
+    const webContentType = webContents.getType()
    
-    
-    if (webContents.getType() == "webview") {
+    if (webContentType == "webview") {
       // 在 webview 中使用外部浏览器打开链接
-      webContents.on("zoom-changed", (e, url) => {
-        e.preventDefault();
+      webContents.setWindowOpenHandler(({ url }) => {
+        // 调用默认浏览器打开
         shell.openExternal(url);
+        // 阻止当前浏览器打开页面
+        return { action: 'deny' };
       });
+
 
       // 在 webview 中设置上下文菜单
       contextMenu({
@@ -160,14 +164,10 @@ app.on("ready", () => {
       });
 
       if (process.platform == "darwin") {
-        // restore focus to previous app on hiding
         electronMenubar.on("after-hide", ({ app }) => {
           app.hide();
         });
       }
-
-     
-
       // prevent background flickering
       app.commandLine.appendSwitch(
         "disable-backgrounding-occluded-windows",

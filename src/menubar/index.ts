@@ -331,10 +331,12 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 				this.emit('focus-lost', this)
 			} else {
 				this._blurTimeout = setTimeout(() => {
-					this.hideWindow()
+					// this.hideWindow()
 				}, 100)
 			};
 		});
+
+
 
 		if (this._options.showOnAllWorkspaces !== false) {
 			// https://github.com/electron/electron/issues/37832#issuecomment-1497882944
