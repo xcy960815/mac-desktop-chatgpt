@@ -324,11 +324,16 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 
 		// 给窗口添加失去焦点事件
 		this._browserWindow.on('blur', () => {
-
 			if (!this._browserWindow) return;
-
-			// hack to close if icon clicked when open
-			this._browserWindow.isAlwaysOnTop() ? this.emit('focus-lost', this) : (this._blurTimeout = setTimeout(() => this.hideWindow, 100));
+			// 窗口是否始终位于其他窗口之上。
+			const isOnTop = this._browserWindow.isAlwaysOnTop()
+			if (isOnTop) {
+				this.emit('focus-lost', this)
+			} else {
+				this._blurTimeout = setTimeout(() => {
+					this.hideWindow()
+				}, 100)
+			};
 		});
 
 		if (this._options.showOnAllWorkspaces !== false) {

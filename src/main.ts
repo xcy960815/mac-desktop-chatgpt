@@ -114,6 +114,8 @@ app.on("ready", () => {
   });
 
   app.on("web-contents-created", (_event, webContents) => {
+   
+    
     if (webContents.getType() == "webview") {
       // 在 webview 中使用外部浏览器打开链接
       webContents.on("zoom-changed", (e, url) => {
@@ -156,6 +158,21 @@ app.on("ready", () => {
             break;
         }
       });
+
+      if (process.platform == "darwin") {
+        // restore focus to previous app on hiding
+        electronMenubar.on("after-hide", ({ app }) => {
+          app.hide();
+        });
+      }
+
+     
+
+      // prevent background flickering
+      app.commandLine.appendSwitch(
+        "disable-backgrounding-occluded-windows",
+        "true"
+      );
     }
   });
 })
