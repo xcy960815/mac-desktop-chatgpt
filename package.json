@@ -30,8 +30,19 @@
     "typescript": "~4.5.4",
     "vite": "^5.2.2"
   },
-  "keywords": [],
-  "author": "opera",
+  "keywords": [
+    "mac",
+    "desktop",
+    "chatgpt",
+    "electron",
+    "vite",
+    "typescript",
+    "openai"
+  ],
+  "author": {
+    "name": "xcy960815",
+    "email": "18763006837@163.com"
+  },
   "license": "MIT",
   "dependencies": {
     "electron-squirrel-startup": "^1.0.0",

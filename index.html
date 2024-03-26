@@ -12,45 +12,16 @@
     <div class="triangle"></div>
     <div class="webview-box">
         <!-- chartgpt 内容 -->
-        <webview class="webview" src="https://chat.openai.com/chat" autosize="on"></webview>
-        <!-- <webview class="webview" src="https://chatweb.vdian.net/#/chat/" autosize="on"></webview> -->
+        <!-- <webview class="webview" src="https://chat.openai.com/chat" autosize="on"></webview> -->
+        <webview class="webview" src="https://chatweb.vdian.net/#/chat/" autosize="on"></webview>
     </div>
-    <script type="module" src="/src/renderer.ts"></script>
+    <!-- 不知道为什么不能加载 -->
+    <!-- <script type="module" src="./src/renderer.ts"></script> -->
     <script>
-        // const webview = document.getElementsByClassName('webview');
-        // webview.addEventListener('dom-ready', () => {
-        // console.log('dom-ready');
-        // 隐藏文本输入、侧边栏、新聊天建议下方的消息
-        // webview.insertCSS(`
-        //     .text-xs.text-center {
-        //         opacity: 0;
-        //         height: 0;
-        //         margin-bottom: -10px;
-        //     }
+        // const electron = require('electron')
+        // // 但是可以通过 electron 的 romote 属性的 getGloabal() 来拿到
+        // console.log('electron',electron);
 
-        //     .sticky,
-        //         .pointer-events-auto.flex.border-orange-500,
-        //         [class*="shared__Capabilities"] {
-        //         display: none !important;
-        //     }
-
-        //     [class*="shared__Wrapper"] {
-        //         align-items: center;
-        //         justify-content: center;
-        //         text-align: center;
-        //         margin-top: 15vh;
-        //     }
-
-        //     [class*="shared__Wrapper"] h3 {
-        //         margin-top: -40px;
-        //         font-size: 20px;
-        //     }
-        // `)
-
-        // const element = webview.executeJavaScript(`
-        //     document.querySelector("[class*='shared__Wrapper']").innerHTML += "<h3>Start by asking anything.</h3>"
-        // `);
-        // });
     </script>
 </body>
 

@@ -7,13 +7,24 @@ import { Options } from './types';
 import { cleanOptions } from './util/cleanOptions';
 import { getWindowPosition } from './util/getWindowPosition';
 
-
+interface MenubarEvents {
+	ready: [ElectronMenubar];
+	hide: [ElectronMenubar];
+	show: [ElectronMenubar];
+	'create-window': [ElectronMenubar];
+	'after-create-window': [ElectronMenubar];
+	'after-close': [ElectronMenubar];
+	'after-hide': [ElectronMenubar];
+	'after-show': [ElectronMenubar],
+	"focus-lost": [ElectronMenubar],
+	"before-load": [ElectronMenubar]
+}
 /**
  * The main Menubar class.
  *
  * @noInheritDoc
  */
-export class Menubar extends EventEmitter {
+export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 	private _app: Electron.App;
 	private _browserWindow?: BrowserWindow;
 	private _blurTimeout: NodeJS.Timeout | null = null; // track blur events with timeout
@@ -22,7 +33,7 @@ export class Menubar extends EventEmitter {
 	private _options: Options;
 	private _positioner: Positioner | undefined;
 	private _tray?: Tray;
-
+	// private _eventEmitter: EventEmitter
 	constructor(app: Electron.App, options?: Partial<Options>) {
 		super();
 		this._app = app;
@@ -84,29 +95,27 @@ export class Menubar extends EventEmitter {
 	}
 
 	/**
+	 * @desc 订正箭头位置
+	 */
+	correctArrowPosition() {
+		// 获取 Tray 的位置
+		const { x: trayX, width: trayWidth } = this.tray.getBounds()
+		const { x: windowX, width: windowWidth } = this.window.getBounds()
+		const triangleLeft = (trayX + trayWidth / 2) - windowX
+		this.window.webContents.executeJavaScript(`
+			// 不能使用变量承接会报错
+			document.getElementsByClassName('triangle')[0].style.left = ${triangleLeft}+'px'
+		`)
+	}
+
+
+	/**
 	 * Retrieve a menubar option.
 	 *
 	 * @param key - The option key to retrieve, see {@link Options}.
 	 */
 	getOption<K extends keyof Options>(key: K): Options[K] {
 		return this._options[key];
-	}
-
-	/**
-	 * @desc 隐藏菜单栏窗口
-	 * @return {void}
-	 */
-	hideWindow(): void {
-		return
-		if (!this._browserWindow || !this._isVisible) return;
-		this.emit('hide');
-		this._browserWindow.hide();
-		this.emit('after-hide');
-		this._isVisible = false;
-		if (this._blurTimeout) {
-			clearTimeout(this._blurTimeout);
-			this._blurTimeout = null;
-		}
 	}
 
 	/**
@@ -117,6 +126,22 @@ export class Menubar extends EventEmitter {
 	 */
 	setOption<K extends keyof Options>(key: K, value: Options[K]): void {
 		this._options[key] = value;
+	}
+
+	/**
+	 * @desc 隐藏菜单栏窗口
+	 * @return {void}
+	 */
+	hideWindow(): void {
+		if (!this._browserWindow || !this._isVisible) return;
+		this.emit('hide', this);
+		this._browserWindow.hide();
+		this.emit('after-hide', this);
+		this._isVisible = false;
+		if (this._blurTimeout) {
+			clearTimeout(this._blurTimeout);
+			this._blurTimeout = null;
+		}
 	}
 
 	/**
@@ -144,7 +169,7 @@ export class Menubar extends EventEmitter {
 			this._options.windowPosition = getWindowPosition(this.tray);
 		}
 
-		this.emit('show');
+		this.emit('show', this);
 
 		if (trayPos && trayPos.x !== 0) {
 			// Cache the bounds
@@ -183,9 +208,12 @@ export class Menubar extends EventEmitter {
 		// `.setPosition` crashed on non-integers
 		// https://github.com/maxogden/menubar/issues/233
 		this._browserWindow.setPosition(Math.round(x), Math.round(y));
+
 		this._browserWindow.show();
+		// 调整箭头位置
+		this.correctArrowPosition()
 		this._isVisible = true;
-		this.emit('after-show');
+		this.emit('after-show', this);
 		return;
 	}
 
@@ -239,7 +267,12 @@ export class Menubar extends EventEmitter {
 			await this.createWindow();
 		}
 
-		this.emit('ready');
+		// 监听窗口大小变化 调整箭头的位置
+		this.window.addListener("resize", () => {
+			this.correctArrowPosition()
+		})
+
+		this.emit('ready', this);
 	}
 
 	/**
@@ -260,7 +293,8 @@ export class Menubar extends EventEmitter {
 		}
 
 		if (this._browserWindow && this._isVisible) {
-			return this.hideWindow();
+			this.hideWindow();
+			return
 		}
 
 		this._cachedBounds = bounds || this._cachedBounds;
@@ -273,7 +307,7 @@ export class Menubar extends EventEmitter {
 	 * @return {Promise<void>}
 	 */
 	private async createWindow(): Promise<void> {
-		this.emit('create-window');
+		this.emit('create-window', this);
 
 		// 我们为菜单栏的 browserWindow 添加一些默认行为，使其看起来像一个菜单栏
 		const defaultBrowserWindow = {
@@ -294,7 +328,7 @@ export class Menubar extends EventEmitter {
 			if (!this._browserWindow) return;
 
 			// hack to close if icon clicked when open
-			this._browserWindow.isAlwaysOnTop() ? this.emit('focus-lost') : (this._blurTimeout = setTimeout(() => this.hideWindow, 100));
+			this._browserWindow.isAlwaysOnTop() ? this.emit('focus-lost', this) : (this._blurTimeout = setTimeout(() => this.hideWindow, 100));
 		});
 
 		if (this._options.showOnAllWorkspaces !== false) {
@@ -306,7 +340,7 @@ export class Menubar extends EventEmitter {
 
 		this._browserWindow.on('close', this.windowClear.bind(this));
 
-		this.emit('before-load');
+		this.emit('before-load', this);
 
 		// If the user explicity set options.index to false, we don't loadURL
 		// https://github.com/maxogden/menubar/issues/255
@@ -317,7 +351,7 @@ export class Menubar extends EventEmitter {
 			);
 		}
 
-		this.emit('after-create-window');
+		this.emit('after-create-window', this);
 	}
 
 	/**
@@ -326,6 +360,22 @@ export class Menubar extends EventEmitter {
 	 */
 	private windowClear(): void {
 		this._browserWindow = undefined;
-		this.emit('after-close');
+		this.emit('after-close', this);
 	}
 }
+
+// interface TestEventMap {
+// 	ready: [(isReady?: boolean) => void];
+// }
+
+// class TestEventEmitter extends EventEmitter<TestEventMap> {
+// 	constructor() {
+// 		super();
+// 	}
+// }
+
+// const testEventEmitter = new TestEventEmitter();
+
+// testEventEmitter.on('ready', (isReady) => {
+// 	console.log('ready');
+// });
