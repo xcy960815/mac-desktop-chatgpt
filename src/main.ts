@@ -1,5 +1,5 @@
 import { ElectronMenubar } from "./menubar"
-import { app, globalShortcut, nativeImage, Tray, shell, Menu } from "electron"
+import { BrowserWindow, app, globalShortcut, nativeImage, Tray, shell, Menu } from "electron"
 import * as path from "path"
 import * as url from 'url';
 import contextMenu from "electron-context-menu";
@@ -26,15 +26,16 @@ app.on("ready", () => {
       icon: image,
       transparent: true,
       webPreferences: {
+        // 启用webview标签
         webviewTag: true,
         nodeIntegration: true,
         contextIsolation: false,
       },
-      width: 1000,
+      width: 500,
       height: 550,
     },
     index: url.format({
-      pathname: path.join(dir, 'index.html'),
+      pathname: path.join(dir, "", 'index.html'),
       protocol: 'file:',
       slashes: true,
     }),
@@ -74,7 +75,8 @@ app.on("ready", () => {
         label: "Open in browser",
         accelerator: "Command+O",
         click: () => {
-          shell.openExternal("https://chatweb.vdian.net/#/chat/");
+          // shell.openExternal("https://chatweb.vdian.net/#/chat/");
+          shell.openExternal("https://chat.openai.com/chat");
         },
       },
     ];
@@ -116,7 +118,7 @@ app.on("ready", () => {
   app.on("web-contents-created", (_event, webContents) => {
 
     const webContentType = webContents.getType()
-   
+
     if (webContentType == "webview") {
       // 在 webview 中使用外部浏览器打开链接
       webContents.setWindowOpenHandler(({ url }) => {

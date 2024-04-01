@@ -8,6 +8,7 @@ export default defineConfig((env) => {
   const { forgeConfigSelf } = forgeEnv;
   const define = getBuildDefine(forgeEnv);
   const config: UserConfig = {
+    base:"./",
     build: {
       lib: {
         entry: forgeConfigSelf.entry!,

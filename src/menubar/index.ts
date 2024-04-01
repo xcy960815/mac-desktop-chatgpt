@@ -27,16 +27,17 @@ interface MenubarEvents {
 export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 	private _app: Electron.App;
 	private _browserWindow?: BrowserWindow;
-	private _blurTimeout: NodeJS.Timeout | null = null; // track blur events with timeout
-	private _isVisible: boolean; // track visibility
-	private _cachedBounds?: Electron.Rectangle; // _cachedBounds are needed for double-clicked event
+	private _blurTimeout: NodeJS.Timeout | null ; // 追踪失去焦点事件
+	private _isVisible: boolean; // 是否可见
+	private _cachedBounds?: Electron.Rectangle; // 双击事件需要_cachedBounds
 	private _options: Options;
 	private _positioner: Positioner | undefined;
 	private _tray?: Tray;
-	// private _eventEmitter: EventEmitter
+
 	constructor(app: Electron.App, options?: Partial<Options>) {
 		super();
 		this._app = app;
+		this._blurTimeout = null
 		this._options = cleanOptions(options);
 		this._isVisible = false;
 		if (app.isReady()) {
@@ -100,7 +101,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 	correctArrowPosition() {
 		// 获取 Tray 的位置
 		const { x: trayX, width: trayWidth } = this.tray.getBounds()
-		const { x: windowX, width: windowWidth } = this.window.getBounds()
+		const { x: windowX } = this.window.getBounds()
 		const triangleLeft = (trayX + trayWidth / 2) - windowX
 		this.window.webContents.executeJavaScript(`
 			// 不能使用变量承接会报错
@@ -238,7 +239,8 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 		let trayImage = this._options.icon || path.join(this._options.dir, 'IconTemplate.png');
 		// fs.existsSync(trayImage) 用于判断是否是一个文件
 		if (typeof trayImage === 'string' && !fs.existsSync(trayImage)) {
-			trayImage = path.join(__dirname, '..', 'assets', 'IconTemplate.png'); // Default cat icon
+			// 如果用户写了icon地址 但是确实个错误的文件 就走默认图标
+			trayImage = path.join(__dirname, '..', 'assets', 'IconTemplate.png'); 
 		}
 
 		// 默认点击事件
@@ -311,7 +313,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 
 		// 我们为菜单栏的 browserWindow 添加一些默认行为，使其看起来像一个菜单栏
 		const defaultBrowserWindow = {
-			show: false, // Don't show it at first
+			show: false, // 一开始不要展示窗口
 			frame: false, // Remove window frame
 		};
 
@@ -352,10 +354,15 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 		// If the user explicity set options.index to false, we don't loadURL
 		// https://github.com/maxogden/menubar/issues/255
 		if (this._options.index !== false) {
-			await this._browserWindow.loadURL(
-				this._options.index,
-				this._options.loadUrlOptions
-			);
+			// await this._browserWindow.loadURL(
+			// 	this._options.index,
+			// 	this._options.loadUrlOptions
+			// );
+			if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+				await this._browserWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL,this._options.loadUrlOptions);
+			  } else {
+				await this._browserWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
+			  }
 		}
 
 		this.emit('after-create-window', this);
