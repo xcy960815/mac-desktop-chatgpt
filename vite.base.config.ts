@@ -7,6 +7,11 @@ export const builtins = ['electron', ...builtinModules.map((m) => [m, `node:${m}
 
 export const external = [...builtins, ...Object.keys('dependencies' in pkg ? (pkg.dependencies as Record<string, string>) : {})];
 
+/**
+ * @desc 获取打包配置
+ * @param env {ConfigEnv<'build'>}
+ * @returns {UserConfig}
+ */
 export function getBuildConfig(env: ConfigEnv<'build'>): UserConfig {
   const { root, mode, command } = env;
   return {
@@ -48,7 +53,7 @@ export function getBuildDefine(env: ConfigEnv<'build'>) {
       [VITE_NAME]: JSON.stringify(name),
     };
     return { ...acc, ...def };
-  }, {} as Record<string, any>);
+  }, {} as Record<string, string>);
 
   return define;
 }

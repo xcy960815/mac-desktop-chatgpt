@@ -1,10 +1,10 @@
 import { BrowserWindowConstructorOptions, LoadURLOptions, Tray } from 'electron';
-
+import { ElectronMenubar } from "./electron-menubar"
 import * as Positioner from 'electron-positioner';
 /**
  * Options for creating a menubar application
  */
-export interface Options {
+export interface ElectronMenubarOptions {
 	/**
 	 * Listen on `app.on('activate')` to open menubar when app is activated.
 	 * @default `true`
@@ -98,4 +98,31 @@ export interface Options {
 	// | "leftCenter"
 	// | "rightCenter"
 	// | "center";
+}
+
+
+
+export type WindowPosition =
+	| 'trayCenter'
+	| 'topRight'
+	| 'trayBottomCenter'
+	| 'bottomLeft'
+	| 'bottomRight';
+
+
+export type TaskbarLocation = 'top' | 'bottom' | 'left' | 'right';
+
+
+
+export interface MenubarEvents {
+	ready: [ElectronMenubar];
+	hide: [ElectronMenubar];
+	show: [ElectronMenubar];
+	'create-window': [ElectronMenubar];
+	'after-create-window': [ElectronMenubar];
+	'after-close': [ElectronMenubar];
+	'after-hide': [ElectronMenubar];
+	'after-show': [ElectronMenubar],
+	"focus-lost": [ElectronMenubar],
+	"before-load": [ElectronMenubar]
 }

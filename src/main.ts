@@ -1,4 +1,4 @@
-import { ElectronMenubar } from "./menubar"
+import { ElectronMenubar } from "./electron-menubar"
 import { BrowserWindow, app, globalShortcut, nativeImage, Tray, shell, Menu } from "electron"
 import * as path from "path"
 import * as url from 'url';
@@ -80,7 +80,8 @@ app.on("ready", () => {
         },
       },
     ];
-    // 右键事件 弹出菜单
+
+    // 右键菜单 弹出菜单
     tray.on("right-click", () => {
       electronMenubar.tray.popUpContextMenu(Menu.buildFromTemplate(contextMenuTemplate));
     });
@@ -108,6 +109,14 @@ app.on("ready", () => {
         electronMenubar.app.focus();
       }
     });
+
+    // 注册esc快捷键 快捷关闭窗口
+    globalShortcut.register("esc",()=>{
+      const menubarVisible = window.isVisible()
+      if (menubarVisible) {
+        electronMenubar.hideWindow();
+      }
+    })
 
     Menu.setApplicationMenu(menu);
 
