@@ -1,9 +1,8 @@
-import { ElectronMenubar } from "./electron-menubar"
-import { BrowserWindow, app, globalShortcut, nativeImage, Tray, shell, Menu } from "electron"
 import * as path from "path"
 import * as url from 'url';
+import {ElectronMenubar } from "electron-menubar"
 import contextMenu from "electron-context-menu";
-
+import { app, globalShortcut, nativeImage, Tray, shell, Menu } from "electron"
 if (require('electron-squirrel-startup')) {
   app.quit();
 }
@@ -45,12 +44,13 @@ app.on("ready", () => {
     preloadWindow: true,
     showDockIcon: false,
     icon: image,
+    tooltip:"mac-desktop-chatgpt"
   });
 
 
-  electronMenubar.on("ready", ({ window }) => {
+  electronMenubar.on("ready", ({ browserWindow }) => {
     if (process.platform !== "darwin") {
-      window.setSkipTaskbar(true);
+      browserWindow.setSkipTaskbar(true);
     } else {
       app.dock.hide();
     }
@@ -68,7 +68,7 @@ app.on("ready", () => {
         label: "Reload",
         accelerator: "Command+R",
         click: () => {
-          window.reload();
+          browserWindow.reload();
         },
       },
       {
@@ -98,7 +98,7 @@ app.on("ready", () => {
     // Alt+x option + x
     // 添加快捷键 
     globalShortcut.register("CommandOrControl+g", () => {
-      const menubarVisible = window.isVisible()
+      const menubarVisible = browserWindow.isVisible()
       if (menubarVisible) {
         electronMenubar.hideWindow();
       } else {
@@ -112,7 +112,7 @@ app.on("ready", () => {
 
     // 注册esc快捷键 快捷关闭窗口
     globalShortcut.register("esc",()=>{
-      const menubarVisible = window.isVisible()
+      const menubarVisible = browserWindow.isVisible()
       if (menubarVisible) {
         electronMenubar.hideWindow();
       }
@@ -120,8 +120,8 @@ app.on("ready", () => {
 
     Menu.setApplicationMenu(menu);
 
-    // open devtools
-    // window.webContents.openDevTools();
+    // 打开开发工具
+    browserWindow.webContents.openDevTools();
   });
 
   app.on("web-contents-created", (_event, webContents) => {

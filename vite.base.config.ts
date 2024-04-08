@@ -2,7 +2,7 @@ import { builtinModules } from 'node:module';
 import type { AddressInfo } from 'node:net';
 import type { ConfigEnv, Plugin, UserConfig } from 'vite';
 import pkg from './package.json';
-
+import { resolve } from "path"
 export const builtins = ['electron', ...builtinModules.map((m) => [m, `node:${m}`]).flat()];
 
 export const external = [...builtins, ...Object.keys('dependencies' in pkg ? (pkg.dependencies as Record<string, string>) : {})];
@@ -17,6 +17,12 @@ export function getBuildConfig(env: ConfigEnv<'build'>): UserConfig {
   return {
     root,
     mode,
+    resolve: {
+      alias: {
+        // 只是想在项目中
+        'electron-menubar':resolve("./src/electron-menubar")
+      }
+    },
     build: {
       // Prevent multiple builds from interfering with each other.
       emptyOutDir: false,

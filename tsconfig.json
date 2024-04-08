@@ -13,7 +13,8 @@
     "resolveJsonModule": true,
     "paths": {
       "*": ["node_modules/*"],
-      "electron-positioner": ["electron-positioner.d.ts"]
+      "electron-positioner": ["electron-positioner.d.ts"],
+      "electron-menubar":["./src/electron-menubar.ts"]
     }
   }
 }

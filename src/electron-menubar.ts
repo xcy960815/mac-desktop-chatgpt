@@ -1,10 +1,110 @@
-import { BrowserWindow, Tray, app, Rectangle, screen as electronScreen, } from 'electron';
+import { BrowserWindow, Tray, app, Rectangle, screen as electronScreen, BrowserWindowConstructorOptions, LoadURLOptions } from 'electron';
 import Positioner from 'electron-positioner';
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ElectronMenubarOptions, WindowPosition, TaskbarLocation, MenubarEvents } from './menubar-types';
 import * as url from 'url';
+/**
+ * Options for creating a menubar application
+ */
+export interface ElectronMenubarOptions {
+	/**
+	 * 监听 `app.on('activate')` 以在应用程序激活时打开菜单栏。
+	 * @default `true`
+	 */
+	activateWithApp?: boolean;
+	/**
+	 * An Electron BrowserWindow instance, or an options object to be passed into
+	 * the BrowserWindow constructor.
+	 * @example
+	 * ```typescript
+	 * const options = { height: 640, width: 480 };
+	 *
+	 * const mb = new Menubar({
+	 *   browserWindow: options
+	 * });
+	 * ```
+	 */
+	browserWindow: BrowserWindowConstructorOptions;
+	/**
+	 * The app source directory.
+	 */
+	dir: string;
+	/**
+	 * The png icon to use for the menubar. A good size to start with is 20x20.
+	 * To support retina, supply a 2x sized image (e.g. 40x40) with @2x added to
+	 * the end of the name, so icon.png and icon@2x.png and Electron will
+	 * automatically use your @2x version on retina screens.
+	 */
+	icon?: string | Electron.NativeImage;
+	/**
+	 * The URL to load the menubar's browserWindow with. The url can be a remote
+	 * address (e.g. `http://`) or a path to a local HTML file using the
+	 * `file://` protocol. If false, then menubar won't call `loadURL` on
+	 * start.
+	 * @default `file:// + options.dir + index.html`
+	 * @see https://electronjs.org/docs/api/browser-browserWindow#winloadurlurl-options
+	 */
+	index: string | false;
+	/**
+	 * The options passed when loading the index URL in the menubar's
+	 * browserWindow. Everything browserWindow.loadURL supports is supported;
+	 * this object is simply passed onto browserWindow.loadURL
+	 * @default `{}`
+	 * @see https://electronjs.org/docs/api/browser-browserWindow#winloadurlurl-options
+	 */
+	loadUrlOptions?: LoadURLOptions;
+	/**
+	 * Create BrowserWindow instance before it is used -- increasing resource
+	 * usage, but making the click on the menubar load faster.
+	 */
+	preloadWindow?: boolean;
+	/**
+	 * Configure the visibility of the application dock icon, macOS only. Calls
+	 * [`app.dock.hide`](https://electronjs.org/docs/api/app#appdockhide-macos).
+	 */
+	showDockIcon?: boolean;
+	/**
+	 * Makes the browserWindow available on all OS X workspaces. Calls
+	 * [`setVisibleOnAllWorkspaces`](https://electronjs.org/docs/api/browser-browserWindow#winsetvisibleonallworkspacesvisible-options).
+	 */
+	showOnAllWorkspaces?: boolean;
+	/**
+	 * Show the browserWindow on 'right-click' event instead of regular 'click'.
+	 */
+	showOnRightClick?: boolean;
+	/**
+	 * Menubar tray icon tooltip text. Calls [`tray.setTooltip`](https://electronjs.org/docs/api/tray#traysettooltiptooltip).
+	 */
+	tooltip: string;
+	/**
+	 * An electron Tray instance. If provided, `options.icon` will be ignored.
+	 */
+	tray?: Tray;
+	/**
+	 * Sets the browserWindow position (x and y will still override this), check
+	 * electron-positioner docs for valid values.
+	 */
+	windowPosition?: Positioner.Position;
+}
+
+
+// 任务栏位置
+export type TaskbarLocation = 'top' | 'bottom' | 'left' | 'right';
+
+
+export interface MenubarEvents {
+	ready: [ElectronMenubar];
+	hide: [ElectronMenubar];
+	show: [ElectronMenubar];
+	'create-browserWindow': [ElectronMenubar];
+	'after-create-browserWindow': [ElectronMenubar];
+	'after-close': [ElectronMenubar];
+	'after-hide': [ElectronMenubar];
+	'after-show': [ElectronMenubar],
+	"focus-lost": [ElectronMenubar],
+	"before-load": [ElectronMenubar]
+}
 
 export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 	private readonly _DEFAULT_WINDOW_HEIGHT: number = 400;
@@ -12,7 +112,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 	private readonly _isLinux: boolean = process.platform === 'linux';
 	private _app: Electron.App;
 	private _browserWindow?: BrowserWindow;
-	private _blurTimeout: NodeJS.Timeout | null; // 追踪失去焦点事件
+	private _blurTimeout: NodeJS.Timeout | null;
 	private _isVisible: boolean; // 是否可见
 	private _cachedBounds?: Electron.Rectangle; // 双击事件需要_cachedBounds
 	private _options: ElectronMenubarOptions;
@@ -26,7 +126,9 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 		this._options = this.cleanOptions(options);
 		this._isVisible = false;
 		if (app.isReady()) {
-			/** @link https://github.com/maxogden/menubar/pull/151 */
+			/** 
+			 * @link https://github.com/maxogden/menubar/pull/151 
+			 */
 			process.nextTick(() =>
 				this.appReady().catch((error) => console.error('menubar:isReady ', error))
 			);
@@ -54,7 +156,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 	get positioner(): Positioner {
 		if (!this._positioner) {
 			throw new Error(
-				'Please access `this.positioner` after the `after-create-window` event has fired.'
+				'Please access `this.positioner` after the `after-create-browserWindow` event has fired.'
 			);
 		}
 
@@ -78,10 +180,10 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 
 	/**
 	 * @desc Electron BrowserWindow 实例 
-	 * @link https://electronjs.org/docs/api/browser-window
+	 * @link https://electronjs.org/docs/api/browser-browserWindow
 	 * @returns {BrowserWindow | undefined}
 	 */
-	get window(): BrowserWindow | undefined {
+	get browserWindow(): BrowserWindow | undefined {
 		return this._browserWindow;
 	}
 
@@ -91,10 +193,10 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 	private correctArrowPosition() {
 		// 获取 Tray 的位置
 		const { x: trayX, width: trayWidth } = this.tray.getBounds()
-		const { x: windowX } = this.window.getBounds()
+		const { x: windowX } = this.browserWindow.getBounds()
 		const triangleLeft = (trayX + trayWidth / 2) - windowX
-		this.window.webContents.executeJavaScript(`
-			// 不能使用变量承接会报错
+		// 不能使用变量承接会报错
+		this.browserWindow.webContents.executeJavaScript(`
 			document.getElementsByClassName('triangle')[0].style.left = ${triangleLeft}+'px'
 		`)
 	}
@@ -174,7 +276,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 			trayPosition = this.tray.getBounds();
 		}
 
-		// Default the window to the right if `trayPosition` bounds are undefined or null.
+		// Default the browserWindow to the right if `trayPosition` bounds are undefined or null.
 		let windowPosition = this._options.windowPosition;
 		if (
 			(trayPosition === undefined || trayPosition.x === 0) &&
@@ -189,23 +291,29 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 			trayPosition
 		)
 
-		// Not using `||` because x and y can be zero.
-		const x = this._options.browserWindow.x !== undefined
+		// 不使用“||”，因为 x 和 y 可以为零。
+		const x = Math.round(this._options.browserWindow.x !== undefined
 			? this._options.browserWindow.x
-			: position.x;
-		const y = this._options.browserWindow.y !== undefined
+			: position.x);
+		const y = Math.round(this._options.browserWindow.y !== undefined
 			? this._options.browserWindow.y
-			: position.y;
+			: position.y);
 
-		// `.setPosition` crashed on non-integers
-		// https://github.com/maxogden/menubar/issues/233
-		this._browserWindow.setPosition(Math.round(x), Math.round(y));
+		/** 
+		 * @desc setPosition 方法只能使用整数 
+		 * @link https://github.com/maxogden/menubar/issues/233 
+		 */
+		this._browserWindow.setPosition(x, y);
 
 		this._browserWindow.show();
+
 		// 调整箭头位置
 		this.correctArrowPosition()
+
 		this._isVisible = true;
+
 		this.emit('after-show', this);
+
 		return;
 	}
 
@@ -236,12 +344,15 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 
 		// 默认点击事件
 		const defaultClickEvent = this._options.showOnRightClick ? 'right-click' : 'click';
+
 		// 初始化托盘
 		this._tray = this._options.tray || new Tray(trayImage);
+
 		// Type guards for TS not to complain
 		if (!this.tray) {
 			throw new Error('Tray has been initialized above');
 		}
+
 		// 给托盘绑定点击事件
 		this.tray.on(defaultClickEvent as Parameters<Tray['on']>[0], this.clicked.bind(this));
 
@@ -261,7 +372,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 		}
 
 		// 监听窗口大小变化 调整箭头的位置
-		this.window.addListener("resize", () => {
+		this.browserWindow.addListener("resize", () => {
 			this.correctArrowPosition()
 		})
 
@@ -333,7 +444,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 			options.browserWindow = {};
 		}
 
-		// Set width/height on options to be usable before the window is created
+		// Set width/height on options to be usable before the browserWindow is created
 		options.browserWindow.width =
 			// Note: not using `options.browserWindow.width || _DEFAULT_WINDOW_WIDTH` so
 			// that users can put a 0 width
@@ -361,7 +472,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 
 		// TASKBAR LEFT
 		if (workArea.x > 0) {
-			// Most likely Ubuntu hence assuming the window should be on top
+			// Most likely Ubuntu hence assuming the browserWindow should be on top
 			if (this._isLinux && workArea.y > 0) return 'top';
 			// The workspace starts more on the right
 			return 'left';
@@ -390,9 +501,9 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 	/**
 	 * @desc 获取窗口位置
 	 * @param tray {Tray}
-	 * @returns {WindowPosition}
+	 * @returns {Positioner.Position}
 	 */
-	private getWindowPosition(tray: Tray): WindowPosition {
+	private getWindowPosition(tray: Tray): Positioner.Position {
 		switch (process.platform) {
 			// macOS
 			// Supports top taskbars
@@ -430,12 +541,12 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 	 * @return {Promise<void>}
 	 */
 	private async createWindow(): Promise<void> {
-		this.emit('create-window', this);
+		this.emit('create-browserWindow', this);
 
 		// 为菜单栏的 browserWindow 添加一些默认行为，使其看起来像一个菜单栏
 		const defaultBrowserWindow = {
 			show: false, // 一开始不要展示窗口
-			frame: false, // Remove window frame
+			frame: false, // Remove browserWindow frame
 		};
 
 		this._browserWindow = new BrowserWindow({
@@ -484,7 +595,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 			}
 		}
 
-		this.emit('after-create-window', this);
+		this.emit('after-create-browserWindow', this);
 	}
 
 	/**

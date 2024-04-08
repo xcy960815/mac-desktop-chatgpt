@@ -25,6 +25,8 @@ declare namespace ElectronPositioner {
         | "trayBottomRight"
         | "trayCenter"
         | "trayBottomCenter";
+
+    type Result = { x: number; y: number }
 }
 
 declare class ElectronPositioner {
@@ -33,11 +35,11 @@ declare class ElectronPositioner {
     move(position: ElectronPositioner.Position, trayBounds?: Rectangle): void;
     move(position: ElectronPositioner.Position | ElectronPositioner.TrayPosition, trayBounds: Rectangle): void;
 
-    calculate(position: ElectronPositioner.Position, trayBounds?: Rectangle): { x: number; y: number };
+    calculate(position: ElectronPositioner.Position, trayBounds?: Rectangle): ElectronPositioner.Result;
     calculate(
         position: ElectronPositioner.Position | ElectronPositioner.TrayPosition,
         trayBounds: Rectangle,
-    ): { x: number; y: number };
+    ): ElectronPositioner.Result;
 }
 
 export = ElectronPositioner;
