@@ -207,7 +207,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 	 * @param key { K extends keyof ElectronMenubarOptions }
 	 * @returns { ElectronMenubarOptions[keyof ElectronMenubarOptions]}
 	 */
-	getOption<K extends keyof ElectronMenubarOptions>(key: K): ElectronMenubarOptions[K] {
+	public getOption<K extends keyof ElectronMenubarOptions>(key: K): ElectronMenubarOptions[K] {
 		return this._options[key];
 	}
 
@@ -218,7 +218,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 	 * @param value {ElectronMenubarOptions[K]}
 	 * @return {void}
 	 */
-	setOption<K extends keyof ElectronMenubarOptions>(key: K, value: ElectronMenubarOptions[K]): void {
+	public setOption<K extends keyof ElectronMenubarOptions>(key: K, value: ElectronMenubarOptions[K]): void {
 		this._options[key] = value;
 	}
 
@@ -226,7 +226,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 	 * @desc 隐藏菜单栏窗口
 	 * @return {void}
 	 */
-	hideWindow(): void {
+	public hideWindow(): void {
 		if (!this._browserWindow || !this._isVisible) return;
 		this.emit('hide', this);
 		this._browserWindow.hide();
@@ -243,7 +243,8 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 	 * @param trayPosition {Electron.Rectangle}
 	 * @returns {Promise<void>}
 	 */
-	async showWindow(trayPosition?: Electron.Rectangle): Promise<void> {
+	public async showWindow(trayPosition?: Electron.Rectangle): Promise<void> {
+
 		if (!this.tray) {
 			throw new Error('Tray should have been instantiated by now');
 		}
@@ -256,23 +257,24 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 			throw new Error('Window has been initialized just above. qed.');
 		}
 
-		/** Windows任务栏：每次显示前同步窗口位置 */
-		/** @link https://github.com/maxogden/menubar/issues/232 */
+		/** 
+		 * @desc Windows任务栏：每次显示前同步窗口位置
+		 * @link https://github.com/maxogden/menubar/issues/232
+		 */
 		if (['win32', 'linux'].includes(process.platform)) {
-			// 当任务栏位置可用时填写this._options.windowPosition
 			this._options.windowPosition = this.getWindowPosition(this.tray);
 		}
 
 		this.emit('show', this);
 
 		if (trayPosition && trayPosition.x !== 0) {
-			// Cache the bounds
+			// 将位置缓存起来
 			this._cachedBounds = trayPosition;
 		} else if (this._cachedBounds) {
-			// Cached value will be used if showWindow is called without bounds data
+			// 如果在没有边界数据的情况下调用 showWindow，将使用缓存的值
 			trayPosition = this._cachedBounds;
 		} else if (this.tray.getBounds) {
-			// Get the current tray bounds
+			// 获取当前图标边界
 			trayPosition = this.tray.getBounds();
 		}
 
@@ -286,7 +288,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 			windowPosition = process.platform === 'win32' ? 'bottomRight' : 'topRight';
 		}
 
-		const position = this.positioner.calculate(
+		const calculateResult = this.positioner.calculate(
 			windowPosition,
 			trayPosition
 		)
@@ -294,10 +296,11 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 		// 不使用“||”，因为 x 和 y 可以为零。
 		const x = Math.round(this._options.browserWindow.x !== undefined
 			? this._options.browserWindow.x
-			: position.x);
+			: calculateResult.x);
+
 		const y = Math.round(this._options.browserWindow.y !== undefined
 			? this._options.browserWindow.y
-			: position.y);
+			: calculateResult.y);
 
 		/** 
 		 * @desc setPosition 方法只能使用整数 
@@ -412,19 +415,23 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 	 * @returns {ElectronMenubarOptions}
 	 */
 	private cleanOptions(opts?: Partial<ElectronMenubarOptions>): ElectronMenubarOptions {
+
 		const options: Partial<ElectronMenubarOptions> = { ...opts };
 
 		if (options.activateWithApp === undefined) {
 			options.activateWithApp = true;
 		}
+
 		if (!options.dir) {
 			options.dir = app.getAppPath();
 		}
+
 		if (!path.isAbsolute(options.dir)) {
 			options.dir = path.resolve(options.dir);
 		}
 
 		if (options.index === undefined) {
+
 			options.index = url.format({
 				pathname: path.join(options.dir, 'index.html'),
 				protocol: 'file:',
@@ -436,21 +443,17 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 
 		options.tooltip = options.tooltip || '';
 
-		// `icon`, `preloadWindow`, `showDockIcon`, `showOnAllWorkspaces`,
-		// `showOnRightClick` don't need any special treatment
+		// `icon`, `preloadWindow`, `showDockIcon`, `showOnAllWorkspaces`,`showOnRightClick` 不需要特殊处理
 
-		// Now we take care of `browserWindow`
 		if (!options.browserWindow) {
 			options.browserWindow = {};
 		}
 
-		// Set width/height on options to be usable before the browserWindow is created
 		options.browserWindow.width =
-			// Note: not using `options.browserWindow.width || _DEFAULT_WINDOW_WIDTH` so
-			// that users can put a 0 width
 			options.browserWindow.width !== undefined
 				? options.browserWindow.width
 				: this._DEFAULT_WINDOW_WIDTH;
+
 		options.browserWindow.height =
 			options.browserWindow.height !== undefined
 				? options.browserWindow.height
@@ -506,14 +509,14 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 	private getWindowPosition(tray: Tray): Positioner.Position {
 		switch (process.platform) {
 			// macOS
-			// Supports top taskbars
+			// 支持顶部任务栏
 			case 'darwin':
 				return 'trayCenter';
 			// Linux
 			// Windows
 			// Supports top/bottom/left/right taskbar
 			case 'linux':
-			case 'win32': {
+			case 'win32':
 				const traySide = this.taskbarLocation(tray);
 				// Assign position for menubar
 				if (traySide === 'top') {
@@ -528,11 +531,9 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 				if (traySide === 'right') {
 					return 'bottomRight';
 				}
-			}
+			default:
+				return 'topRight';
 		}
-
-		// When we really don't know, we just show the menubar on the top-right
-		return 'topRight';
 	}
 
 
@@ -581,18 +582,8 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 
 		this.emit('before-load', this);
 
-		// 如果用户明确将 options.index 设置为 false，我们不会 loadURL
-		// https://github.com/maxogden/menubar/issues/255
 		if (this._options.index !== false) {
-			// await this._browserWindow.loadURL(
-			// 	this._options.index,
-			// 	this._options.loadUrlOptions
-			// );
-			if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-				await this._browserWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL, this._options.loadUrlOptions);
-			} else {
-				await this._browserWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
-			}
+			await this._browserWindow.loadURL(this._options.index, this._options.loadUrlOptions);
 		}
 
 		this.emit('after-create-browserWindow', this);

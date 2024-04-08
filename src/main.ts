@@ -1,5 +1,4 @@
 import * as path from "path"
-import * as url from 'url';
 import {ElectronMenubar } from "electron-menubar"
 import contextMenu from "electron-context-menu";
 import { app, globalShortcut, nativeImage, Tray, shell, Menu } from "electron"
@@ -25,6 +24,7 @@ app.on("ready", () => {
       icon: image,
       transparent: true,
       webPreferences: {
+        preload:path.join(__dirname, 'preload.js'),
         // 启用webview标签
         webviewTag: true,
         nodeIntegration: true,
@@ -33,11 +33,7 @@ app.on("ready", () => {
       width: 500,
       height: 550,
     },
-    index: url.format({
-      pathname: path.join(dir, "", 'index.html'),
-      protocol: 'file:',
-      slashes: true,
-    }),
+    index: MAIN_WINDOW_VITE_DEV_SERVER_URL,
     tray,
     dir,
     showOnAllWorkspaces: true,
@@ -121,7 +117,7 @@ app.on("ready", () => {
     Menu.setApplicationMenu(menu);
 
     // 打开开发工具
-    browserWindow.webContents.openDevTools();
+    // browserWindow.webContents.openDevTools();
   });
 
   app.on("web-contents-created", (_event, webContents) => {

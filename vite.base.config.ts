@@ -3,8 +3,10 @@ import type { AddressInfo } from 'node:net';
 import type { ConfigEnv, Plugin, UserConfig } from 'vite';
 import pkg from './package.json';
 import { resolve } from "path"
+
 export const builtins = ['electron', ...builtinModules.map((m) => [m, `node:${m}`]).flat()];
 
+// 外部依赖
 export const external = [...builtins, ...Object.keys('dependencies' in pkg ? (pkg.dependencies as Record<string, string>) : {})];
 
 /**
@@ -19,7 +21,7 @@ export function getBuildConfig(env: ConfigEnv<'build'>): UserConfig {
     mode,
     resolve: {
       alias: {
-        // 只是想在项目中
+        // 只是想在项目中 像使用node_modules 那样使用 electron-menubar
         'electron-menubar':resolve("./src/electron-menubar")
       }
     },

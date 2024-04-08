@@ -4,8 +4,11 @@ import { getBuildConfig, external, pluginHotRestart } from './vite.base.config';
 
 // https://vitejs.dev/config
 export default defineConfig((env) => {
+ 
+  
   const forgeEnv = env as ConfigEnv<'build'>;
   const { forgeConfigSelf } = forgeEnv;
+  console.log("--------------",forgeConfigSelf.entry);
   const config: UserConfig = {
     build: {
       rollupOptions: {

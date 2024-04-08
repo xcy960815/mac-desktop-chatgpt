@@ -6,23 +6,23 @@ import { MakerRpm } from '@electron-forge/maker-rpm';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
-
+import pkg from './package.json';
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     icon: "images/icon",
     // 应用程序的名称
-    name: "mac-desktop-chatgpt",
+    name: pkg.name,
     // 产品的版本
-    appVersion: "1.0.0",
+    appVersion: pkg.version,
     ignore: [
       ".git",
       ".vscode",
       "node_modules/.cache",
       "src"
     ],
-     // 是否覆盖已存在的打包文件
-     overwrite: true,
+    // 是否覆盖已存在的打包文件
+    overwrite: true,
   },
   rebuildConfig: {},
   makers: [new MakerSquirrel({}), new MakerZIP({}, ['darwin']), new MakerRpm({}), new MakerDeb({})],
