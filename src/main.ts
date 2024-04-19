@@ -23,6 +23,9 @@ app.on("ready", () => {
     browserWindow: {
       icon: image,
       transparent: true,
+      width: 1024,
+      height: 768,
+      useContentSize: true,
       webPreferences: {
         preload: path.join(__dirname, 'preload.js'),
         // 启用webview标签
@@ -30,8 +33,7 @@ app.on("ready", () => {
         nodeIntegration: true,
         contextIsolation: false,
       },
-      width: 500,
-      height: 550,
+
     },
     index: MAIN_WINDOW_VITE_DEV_SERVER_URL,
     tray,
@@ -90,8 +92,6 @@ app.on("ready", () => {
     });
 
     const menu = new Menu();
-    // CommandOrControl+g Command + g
-    // Alt+x option + x
     // 添加快捷键 
     globalShortcut.register("CommandOrControl+g", () => {
       const menubarVisible = browserWindow.isVisible()

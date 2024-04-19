@@ -329,8 +329,8 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 			options.dir = path.resolve(options.dir);
 		}
 
-		if (options.index === undefined) {
 
+		if (options.index === undefined) {
 			options.index = url.format({
 				pathname: path.join(options.dir, 'index.html'),
 				protocol: 'file:',
@@ -362,7 +362,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 	}
 
 	private trayToScreenRects(tray: Tray): [Rectangle, Rectangle] {
-		// There may be more than one screen, so we need to figure out on which screen our tray icon lives.
+		// 可能有多个屏幕，因此我们需要弄清楚托盘图标位于哪个屏幕上。
 		const { workArea, bounds: screenBounds } = electronScreen.getDisplayMatching(tray.getBounds());
 		workArea.x -= screenBounds.x;
 		workArea.y -= screenBounds.y;
@@ -413,7 +413,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 				return 'trayCenter';
 			// Linux
 			// Windows
-			// Supports top/bottom/left/right taskbar
+			// 支持 top/bottom/left/right 任务栏
 			case 'linux':
 			case 'win32':
 				const traySide = this.taskbarLocation(tray);
@@ -446,7 +446,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 		// 为菜单栏的 browserWindow 添加一些默认行为，使其看起来像一个菜单栏
 		const defaultBrowserWindow = {
 			show: false, // 一开始不要展示窗口
-			frame: false, // Remove browserWindow frame
+			frame: false, // 删除浏览器窗口 frame
 		};
 
 		this._browserWindow = new BrowserWindow({
@@ -473,7 +473,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 		if (this._options.showOnAllWorkspaces !== false) {
 			// https://github.com/electron/electron/issues/37832#issuecomment-1497882944
 			this._browserWindow.setVisibleOnAllWorkspaces(true, {
-				skipTransformProcessType: true, // Avoid damaging the original visible state of app.dock
+				skipTransformProcessType: true, // 避免破坏app.dock原来的可见状态
 			});
 		}
 
