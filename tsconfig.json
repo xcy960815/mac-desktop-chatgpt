@@ -11,9 +11,10 @@
     "outDir": "dist",
     "moduleResolution": "node",
     "resolveJsonModule": true,
+    "typeRoots": ["node_modules/@types", "./types/*.d.ts"],
     "paths": {
       "*": ["node_modules/*"],
-      "electron-positioner": ["electron-positioner.d.ts"],
+      "electron-positioner": ["types/electron-positioner.d.ts"],
       "electron-menubar":["./src/electron-menubar.ts"]
     }
   }

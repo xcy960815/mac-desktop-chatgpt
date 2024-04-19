@@ -1,11 +1,11 @@
 import * as path from "path"
-import {ElectronMenubar } from "electron-menubar"
+import { ElectronMenubar } from "electron-menubar"
 import contextMenu from "electron-context-menu";
 import { app, globalShortcut, nativeImage, Tray, shell, Menu } from "electron"
+
 if (require('electron-squirrel-startup')) {
   app.quit();
 }
-
 
 app.on("ready", () => {
   const dir = app.getAppPath();
@@ -24,7 +24,7 @@ app.on("ready", () => {
       icon: image,
       transparent: true,
       webPreferences: {
-        preload:path.join(__dirname, 'preload.js'),
+        preload: path.join(__dirname, 'preload.js'),
         // 启用webview标签
         webviewTag: true,
         nodeIntegration: true,
@@ -40,7 +40,7 @@ app.on("ready", () => {
     preloadWindow: true,
     showDockIcon: false,
     icon: image,
-    tooltip:"mac-desktop-chatgpt"
+    tooltip: "mac-desktop-chatgpt"
   });
 
 
@@ -107,7 +107,7 @@ app.on("ready", () => {
     });
 
     // 注册esc快捷键 快捷关闭窗口
-    globalShortcut.register("esc",()=>{
+    globalShortcut.register("esc", () => {
       const menubarVisible = browserWindow.isVisible()
       if (menubarVisible) {
         electronMenubar.hideWindow();
@@ -175,7 +175,7 @@ app.on("ready", () => {
           app.hide();
         });
       }
-      // prevent background flickering
+      // 防止背景闪烁
       app.commandLine.appendSwitch(
         "disable-backgrounding-occluded-windows",
         "true"

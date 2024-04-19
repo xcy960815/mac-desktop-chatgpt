@@ -1,110 +1,9 @@
-import { BrowserWindow, Tray, app, Rectangle, screen as electronScreen, BrowserWindowConstructorOptions, LoadURLOptions } from 'electron';
+import { BrowserWindow, Tray, app, Rectangle, screen as electronScreen } from 'electron';
 import Positioner from 'electron-positioner';
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as url from 'url';
-/**
- * Options for creating a menubar application
- */
-export interface ElectronMenubarOptions {
-	/**
-	 * 监听 `app.on('activate')` 以在应用程序激活时打开菜单栏。
-	 * @default `true`
-	 */
-	activateWithApp?: boolean;
-	/**
-	 * An Electron BrowserWindow instance, or an options object to be passed into
-	 * the BrowserWindow constructor.
-	 * @example
-	 * ```typescript
-	 * const options = { height: 640, width: 480 };
-	 *
-	 * const mb = new Menubar({
-	 *   browserWindow: options
-	 * });
-	 * ```
-	 */
-	browserWindow: BrowserWindowConstructorOptions;
-	/**
-	 * The app source directory.
-	 */
-	dir: string;
-	/**
-	 * The png icon to use for the menubar. A good size to start with is 20x20.
-	 * To support retina, supply a 2x sized image (e.g. 40x40) with @2x added to
-	 * the end of the name, so icon.png and icon@2x.png and Electron will
-	 * automatically use your @2x version on retina screens.
-	 */
-	icon?: string | Electron.NativeImage;
-	/**
-	 * The URL to load the menubar's browserWindow with. The url can be a remote
-	 * address (e.g. `http://`) or a path to a local HTML file using the
-	 * `file://` protocol. If false, then menubar won't call `loadURL` on
-	 * start.
-	 * @default `file:// + options.dir + index.html`
-	 * @see https://electronjs.org/docs/api/browser-browserWindow#winloadurlurl-options
-	 */
-	index: string | false;
-	/**
-	 * The options passed when loading the index URL in the menubar's
-	 * browserWindow. Everything browserWindow.loadURL supports is supported;
-	 * this object is simply passed onto browserWindow.loadURL
-	 * @default `{}`
-	 * @see https://electronjs.org/docs/api/browser-browserWindow#winloadurlurl-options
-	 */
-	loadUrlOptions?: LoadURLOptions;
-	/**
-	 * Create BrowserWindow instance before it is used -- increasing resource
-	 * usage, but making the click on the menubar load faster.
-	 */
-	preloadWindow?: boolean;
-	/**
-	 * Configure the visibility of the application dock icon, macOS only. Calls
-	 * [`app.dock.hide`](https://electronjs.org/docs/api/app#appdockhide-macos).
-	 */
-	showDockIcon?: boolean;
-	/**
-	 * Makes the browserWindow available on all OS X workspaces. Calls
-	 * [`setVisibleOnAllWorkspaces`](https://electronjs.org/docs/api/browser-browserWindow#winsetvisibleonallworkspacesvisible-options).
-	 */
-	showOnAllWorkspaces?: boolean;
-	/**
-	 * Show the browserWindow on 'right-click' event instead of regular 'click'.
-	 */
-	showOnRightClick?: boolean;
-	/**
-	 * Menubar tray icon tooltip text. Calls [`tray.setTooltip`](https://electronjs.org/docs/api/tray#traysettooltiptooltip).
-	 */
-	tooltip: string;
-	/**
-	 * An electron Tray instance. If provided, `options.icon` will be ignored.
-	 */
-	tray?: Tray;
-	/**
-	 * Sets the browserWindow position (x and y will still override this), check
-	 * electron-positioner docs for valid values.
-	 */
-	windowPosition?: Positioner.Position;
-}
-
-
-// 任务栏位置
-export type TaskbarLocation = 'top' | 'bottom' | 'left' | 'right';
-
-
-export interface MenubarEvents {
-	ready: [ElectronMenubar];
-	hide: [ElectronMenubar];
-	show: [ElectronMenubar];
-	'create-browserWindow': [ElectronMenubar];
-	'after-create-browserWindow': [ElectronMenubar];
-	'after-close': [ElectronMenubar];
-	'after-hide': [ElectronMenubar];
-	'after-show': [ElectronMenubar],
-	"focus-lost": [ElectronMenubar],
-	"before-load": [ElectronMenubar]
-}
 
 export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 	private readonly _DEFAULT_WINDOW_HEIGHT: number = 400;
@@ -566,7 +465,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 				this.emit('focus-lost', this)
 			} else {
 				this._blurTimeout = setTimeout(() => {
-					// this.hideWindow()
+					this.hideWindow()
 				}, 100)
 			};
 		});
