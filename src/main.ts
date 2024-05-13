@@ -73,7 +73,7 @@ app.on("ready", () => {
         label: "Open in browser",
         accelerator: "Command+O",
         click: () => {
-          // shell.openExternal("https://chatweb.vdian.net/#/chat/");
+          // shell.openExternal("https://chatweb.xxx.net/#/chat/");
           shell.openExternal("https://chat.openai.com/chat");
         },
       },
@@ -92,6 +92,7 @@ app.on("ready", () => {
     });
 
     const menu = new Menu();
+
     // 添加快捷键 
     globalShortcut.register("CommandOrControl+g", () => {
       const menubarVisible = browserWindow.isVisible()
@@ -106,19 +107,13 @@ app.on("ready", () => {
       }
     });
 
-    // 注册esc快捷键 快捷关闭窗口
-    globalShortcut.register("esc", () => {
-      const menubarVisible = browserWindow.isVisible()
-      if (menubarVisible) {
-        electronMenubar.hideWindow();
-      }
-    })
-
     Menu.setApplicationMenu(menu);
 
     // 打开开发工具
     // browserWindow.webContents.openDevTools();
   });
+
+
 
   app.on("web-contents-created", (_event, webContents) => {
 

@@ -1,4 +1,4 @@
-import { BrowserWindow, Tray, app, Rectangle, screen as electronScreen } from 'electron';
+import { BrowserWindow, Tray, app, Rectangle, screen as electronScreen, globalShortcut } from 'electron';
 import Positioner from 'electron-positioner';
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
@@ -73,7 +73,6 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 				'Please access `this.tray` after the `ready` event has fired.'
 			);
 		}
-
 		return this._tray;
 	}
 
@@ -88,6 +87,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 
 	/**
 	 * @desc 订正箭头位置
+	 * @return {void}
 	 */
 	private correctArrowPosition() {
 		// 获取 Tray 的位置
@@ -468,6 +468,21 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 					this.hideWindow()
 				}, 100)
 			};
+		});
+
+
+		this._browserWindow.on("focus", () => {
+			// 注册esc快捷键 快捷关闭窗口
+			globalShortcut.register("esc", () => {
+				const menubarVisible = this._browserWindow.isVisible()
+				if (menubarVisible) {
+					this.hideWindow();
+				}
+			})
+		})
+
+		this._browserWindow.on('blur', () => {
+			globalShortcut.unregister('esc');
 		});
 
 		if (this._options.showOnAllWorkspaces !== false) {
