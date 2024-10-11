@@ -15,7 +15,7 @@ app.on("ready", () => {
    * @param {nativeImage} image - 图标
    */
   const image = nativeImage.createFromPath(
-    path.join(dir, 'images', `gpt-icon.png`)
+    path.join(dir, 'images', `gptIconTemplate.png`)
   );
 
   const tray = new Tray(image);
