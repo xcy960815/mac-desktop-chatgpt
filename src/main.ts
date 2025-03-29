@@ -67,10 +67,8 @@ app.on("ready", () => {
       app.dock.hide();
     }
 
-    const modelName = await readUserData("modelName") || "ChatGPT";
-
+    const modelName = await readUserData("modelName", "", "ChatGPT"); // 默认值
     const isChatGPT = modelName === "ChatGPT";
-
     const isDeepSeek = modelName === "DeepSeek";
 
     // 创建右键菜单
@@ -93,9 +91,15 @@ app.on("ready", () => {
         label: "Open in browser",
         accelerator: "Command+O",
         click: async () => {
-
-          // shell.openExternal("https://chatweb.xxx.net/#/chat/");
-          // shell.openExternal("https://chat.openai.com/chat");
+          const modelName = await readUserData("modelName", "", "ChatGPT"); // 默认值
+          const isChatGPT = modelName === "ChatGPT";
+          const isDeepSeek = modelName === "DeepSeek";
+          if(isChatGPT){
+            shell.openExternal("https://chat.openai.com/chat");
+          }
+          if(isDeepSeek){
+            shell.openExternal("https://chat.deepseek.com/");
+          }
         },
       },
       {
@@ -124,14 +128,13 @@ app.on("ready", () => {
 
     // 右键菜单 弹出菜单
     tray.on("right-click", () => {
-      // @ts-ignore TODO
       electronMenubar.tray.popUpContextMenu(Menu.buildFromTemplate(contextMenuTemplate));
+      
     });
 
     // 左键事件 组合点击 ctrl + 左键 或者 command + 左键 弹出菜单
     tray.on("click", (e) => {
       const isCtrlOrMetaKey = e.ctrlKey || e.metaKey
-      // @ts-ignore TODO
       isCtrlOrMetaKey && electronMenubar.tray.popUpContextMenu(Menu.buildFromTemplate(contextMenuTemplate))
 
     });
