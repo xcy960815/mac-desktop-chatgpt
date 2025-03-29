@@ -306,12 +306,8 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 		}
 
 		this._cachedBounds = bounds || this._cachedBounds;
-		// const currentModel = await readUserData("modelName", "", "ChatGPT");
-		// console.log("currentModel--currentModel", currentModel);
-
 		
 		await this.showWindow(this._cachedBounds);
-		// this.browserWindow.webContents.send('model-changed', currentModel);
 	}
 
 	/**

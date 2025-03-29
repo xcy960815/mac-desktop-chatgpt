@@ -7,14 +7,19 @@ declare global {
   }
 }
 
-window.electronAPI.onModelChanged((modelName: string) => {
+function setWebviewSrc(webviewUrl: string) {
   const webview = document.getElementById('webview-container') as HTMLIFrameElement;
-  const webviewUrl = modelName === 'DeepSeek'
-    ? 'https://chat.deepseek.com/'
-    : 'https://chat.openai.com/chat';
   webview.src = ""
   setTimeout(() => {
     webview.src = `${webviewUrl}`;
-    
   }, 100)
+}
+
+window.electronAPI.onModelChanged((modelName: string) => {
+  const webviewUrl = modelName === 'DeepSeek'
+    ? 'https://chat.deepseek.com/'
+    : 'https://chat.openai.com/chat';
+    setWebviewSrc(webviewUrl);
 });
+
+// setWebviewSrc("https://chat.openai.com/chat");

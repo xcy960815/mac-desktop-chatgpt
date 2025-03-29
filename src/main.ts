@@ -8,7 +8,11 @@ import { app, globalShortcut, nativeImage, Tray, shell, Menu, ipcMain } from "el
 
 import { writeUserData, readUserData } from "./utils/user-data"
 
-app.commandLine.appendSwitch('no-proxy-server'); // 禁用代理
+// // 禁用代理
+// app.commandLine.appendSwitch('no-proxy-server'); 
+
+// // 或指定忽略某些域名的代理
+// app.commandLine.appendSwitch('ignore-certificate-errors', 'chat.openai.com');
 
 if (require('electron-squirrel-startup')) {
   app.quit();
@@ -70,7 +74,7 @@ app.on("ready", () => {
     } else {
       app.dock.hide();
     }
-    
+
 
     async function buildContextMenu() {
       const currentModel = await readUserData("modelName", "", "ChatGPT");
@@ -164,17 +168,24 @@ app.on("ready", () => {
     Menu.setApplicationMenu(menu);
 
     // 打开开发工具
-    browserWindow.webContents.openDevTools();
-    // browserWindow.webContents.on('devtools-opened', () => {
-    //   browserWindow.webContents.executeJavaScript(`
-    //     if (window.DevToolsAPI) {
-    //       window.DevToolsAPI.setSetting('autoFillEnabled', false);
-    //     }
-    //   `);
-    // });
+    setTimeout(() => {
+      browserWindow.webContents.openDevTools();
+      browserWindow.webContents.on('devtools-opened', () => {
+        browserWindow.webContents.executeJavaScript(`
+        if (window.DevToolsAPI) {
+          window.DevToolsAPI.setSetting('autoFillEnabled', false);
+        }
+      `);
+      });
+    }, 1000)
   });
 
-
+  electronMenubar.on("after-show", async ({ browserWindow }) => {
+    const currentModel = await readUserData("modelName", "", "ChatGPT");
+    console.log("currentModel--currentModel",currentModel);
+    
+    browserWindow.webContents.send('model-changed', currentModel);
+  })
 
   app.on("web-contents-created", (_event, webContents) => {
 
