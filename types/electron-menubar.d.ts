@@ -6,7 +6,7 @@ type LoadURLOptions = import("electron").LoadURLOptions
 
 type Position = import("electron-positioner").Position
 
-
+type Tray = import("electron").Tray
 
 /**
  * 用于创建菜单栏应用程序的选项

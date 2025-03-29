@@ -1,24 +1,38 @@
 import * as path from "path"
+
 import { ElectronMenubar } from "electron-menubar"
+
 import contextMenu from "electron-context-menu";
+
 import { app, globalShortcut, nativeImage, Tray, shell, Menu } from "electron"
+
+import { writeUserData, readUserData } from "./utils/user-data"
+
+app.commandLine.appendSwitch('no-proxy-server'); // 禁用代理
 
 if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
+/**
+ * app title
+ */
+const TOOLTIP = "mac-desktop-chatgpt";
+
 app.on("ready", () => {
-  const dir = app.getAppPath();
+
+  const appPath = app.getAppPath();
   /**
    * @desc 创建菜单栏图标
    * @type {Tray}
    * @param {nativeImage} image - 图标
    */
   const image = nativeImage.createFromPath(
-    path.join(dir, 'images', `gptIconTemplate.png`)
+    path.join(appPath, 'images', `gptIconTemplate.png`)
   );
 
   const tray = new Tray(image);
+
   const electronMenubar = new ElectronMenubar(app, {
     browserWindow: {
       icon: image,
@@ -37,21 +51,27 @@ app.on("ready", () => {
     },
     index: MAIN_WINDOW_VITE_DEV_SERVER_URL,
     tray,
-    dir,
+    dir: appPath,
     showOnAllWorkspaces: true,
     preloadWindow: true,
     showDockIcon: false,
     icon: image,
-    tooltip: "mac-desktop-chatgpt"
+    tooltip: TOOLTIP
   });
 
 
-  electronMenubar.on("ready", ({ browserWindow }) => {
+  electronMenubar.on("ready", async ({ browserWindow }) => {
     if (process.platform !== "darwin") {
       browserWindow.setSkipTaskbar(true);
     } else {
       app.dock.hide();
     }
+
+    const modelName = await readUserData("modelName") || "ChatGPT";
+
+    const isChatGPT = modelName === "ChatGPT";
+
+    const isDeepSeek = modelName === "DeepSeek";
 
     // 创建右键菜单
     const contextMenuTemplate = [
@@ -72,21 +92,46 @@ app.on("ready", () => {
       {
         label: "Open in browser",
         accelerator: "Command+O",
-        click: () => {
+        click: async () => {
+
           // shell.openExternal("https://chatweb.xxx.net/#/chat/");
-          shell.openExternal("https://chat.openai.com/chat");
+          // shell.openExternal("https://chat.openai.com/chat");
         },
       },
+      {
+        label: "Ai model",
+        submenu: [
+          {
+            label: "ChatGPT",
+            type: 'radio',
+            checked: isChatGPT,
+            click: async () => {
+              await writeUserData("modelName", "ChatGPT");
+            }
+          },
+          // { type: 'separator' }, // 分隔线
+          {
+            label: "DeepSeek",
+            type: 'radio',
+            checked: isDeepSeek,
+            click: async () => {
+              await writeUserData("modelName", "DeepSeek");
+            }
+          },
+        ]
+      }
     ];
 
     // 右键菜单 弹出菜单
     tray.on("right-click", () => {
+      // @ts-ignore TODO
       electronMenubar.tray.popUpContextMenu(Menu.buildFromTemplate(contextMenuTemplate));
     });
 
     // 左键事件 组合点击 ctrl + 左键 或者 command + 左键 弹出菜单
     tray.on("click", (e) => {
       const isCtrlOrMetaKey = e.ctrlKey || e.metaKey
+      // @ts-ignore TODO
       isCtrlOrMetaKey && electronMenubar.tray.popUpContextMenu(Menu.buildFromTemplate(contextMenuTemplate))
 
     });
@@ -110,7 +155,14 @@ app.on("ready", () => {
     Menu.setApplicationMenu(menu);
 
     // 打开开发工具
-    // browserWindow.webContents.openDevTools();
+    browserWindow.webContents.openDevTools();
+    // browserWindow.webContents.on('devtools-opened', () => {
+    //   browserWindow.webContents.executeJavaScript(`
+    //     if (window.DevToolsAPI) {
+    //       window.DevToolsAPI.setSetting('autoFillEnabled', false);
+    //     }
+    //   `);
+    // });
   });
 
 

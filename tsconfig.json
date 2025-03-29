@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "module": "commonjs",
+    "module": "Node16",
     "allowJs": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -9,13 +9,15 @@
     "sourceMap": true,
     "baseUrl": ".",
     "outDir": "dist",
-    "moduleResolution": "node",
+    "moduleResolution": "node16",
     "resolveJsonModule": true,
     "typeRoots": ["node_modules/@types", "./types/*.d.ts"],
+    "types": [],
     "paths": {
       "*": ["node_modules/*"],
       "electron-positioner": ["types/electron-positioner.d.ts"],
-      "electron-menubar":["./src/electron-menubar.ts"]
+      "electron-menubar":["./src/electron-menubar.ts"],
+      
     }
   }
 }
