@@ -4,7 +4,7 @@ import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as url from 'url';
-
+import { readUserData } from "./utils/user-data"
 export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 	private readonly _DEFAULT_WINDOW_HEIGHT: number = 400;
 	private readonly _DEFAULT_WINDOW_WIDTH: number = 400;
@@ -150,7 +150,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 
 		if (!this._browserWindow) {
 			await this.createWindow();
-			
+
 		}
 
 		if (!this._browserWindow) {
@@ -291,7 +291,8 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 	private async clicked(event?: Electron.KeyboardEvent, bounds?: Electron.Rectangle): Promise<void> {
 
 		if (event && (event.shiftKey || event.ctrlKey || event.metaKey)) {
-			return this.hideWindow();
+			this.hideWindow();
+			return 
 		}
 
 		// if blur was invoked clear timeout
@@ -305,8 +306,12 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 		}
 
 		this._cachedBounds = bounds || this._cachedBounds;
+		// const currentModel = await readUserData("modelName", "", "ChatGPT");
+		// console.log("currentModel--currentModel", currentModel);
 
+		
 		await this.showWindow(this._cachedBounds);
+		// this.browserWindow.webContents.send('model-changed', currentModel);
 	}
 
 	/**

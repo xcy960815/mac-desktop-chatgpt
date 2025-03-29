@@ -70,10 +70,7 @@ app.on("ready", () => {
     } else {
       app.dock.hide();
     }
-    const currentModel = await readUserData("modelName", "", "ChatGPT");
-    console.log("currentModel--currentModel",currentModel);
     
-    browserWindow.webContents.send('model-changed', currentModel);
 
     async function buildContextMenu() {
       const currentModel = await readUserData("modelName", "", "ChatGPT");
@@ -136,7 +133,7 @@ app.on("ready", () => {
         ]
       ))
     }
-    
+
     // 右键菜单 弹出菜单
     tray.on("right-click", () => {
       buildContextMenu()
