@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="UTF-8" />
     <title>ChatGPT</title>
@@ -9,16 +10,9 @@
 <body class="container">
     <div class="triangle"></div>
     <div class="webview-box">
-        <!-- chartgpt 内容 -->
-        <!-- <webview class="webview" src="https://chat.openai.com/chat" disablewebsecurity autosize="on" allowpopups></webview> -->
-        <webview class="webview" src="https://chat.deepseek.com/" disablewebsecurity autosize="on" allowpopups></webview>
+        <webview class="webview" id="webview-container" disablewebsecurity autosize="on" allowpopups></webview>
     </div>
     <script type="module" src="src/renderer.ts"></script>
-    <script>
-        const electron = require('electron')
-        // 但是可以通过 electron 的 romote 属性的 getGloabal() 来拿到
-        console.log('electron',electron);
-    </script>
 </body>
 
 </html>

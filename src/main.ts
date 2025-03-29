@@ -4,7 +4,7 @@ import { ElectronMenubar } from "electron-menubar"
 
 import contextMenu from "electron-context-menu";
 
-import { app, globalShortcut, nativeImage, Tray, shell, Menu } from "electron"
+import { app, globalShortcut, nativeImage, Tray, shell, Menu, ipcMain } from "electron"
 
 import { writeUserData, readUserData } from "./utils/user-data"
 
@@ -13,11 +13,15 @@ app.commandLine.appendSwitch('no-proxy-server'); // 禁用代理
 if (require('electron-squirrel-startup')) {
   app.quit();
 }
-
 /**
  * app title
  */
 const TOOLTIP = "mac-desktop-chatgpt";
+
+// 处理渲染进程的请求
+// ipcMain.handle('get-user-data', async (_event, key: string, defaultValue?: string) => {
+//   return await readUserData(key, defaultValue);
+// });
 
 app.on("ready", () => {
 
@@ -44,8 +48,8 @@ app.on("ready", () => {
         preload: path.join(__dirname, 'preload.js'),
         // 启用webview标签
         webviewTag: true,
-        nodeIntegration: true,
-        contextIsolation: false,
+        contextIsolation: true,
+        nodeIntegration: false
       },
 
     },
@@ -66,77 +70,82 @@ app.on("ready", () => {
     } else {
       app.dock.hide();
     }
+    const currentModel = await readUserData("modelName", "", "ChatGPT");
+    console.log("currentModel--currentModel",currentModel);
+    
+    browserWindow.webContents.send('model-changed', currentModel);
 
-    const modelName = await readUserData("modelName", "", "ChatGPT"); // 默认值
-    const isChatGPT = modelName === "ChatGPT";
-    const isDeepSeek = modelName === "DeepSeek";
-
-    // 创建右键菜单
-    const contextMenuTemplate = [
-      {
-        label: "Quit",
-        accelerator: "Command+Q",
-        click: () => {
-          app.quit();
-        },
-      },
-      {
-        label: "Reload",
-        accelerator: "Command+R",
-        click: () => {
-          browserWindow.reload();
-        },
-      },
-      {
-        label: "Open in browser",
-        accelerator: "Command+O",
-        click: async () => {
-          const modelName = await readUserData("modelName", "", "ChatGPT"); // 默认值
-          const isChatGPT = modelName === "ChatGPT";
-          const isDeepSeek = modelName === "DeepSeek";
-          if(isChatGPT){
-            shell.openExternal("https://chat.openai.com/chat");
-          }
-          if(isDeepSeek){
-            shell.openExternal("https://chat.deepseek.com/");
-          }
-        },
-      },
-      {
-        label: "Ai model",
-        submenu: [
+    async function buildContextMenu() {
+      const currentModel = await readUserData("modelName", "", "ChatGPT");
+      const isChatGPT = currentModel === "ChatGPT";
+      const isDeepSeek = currentModel === "DeepSeek";
+      electronMenubar.tray.popUpContextMenu(Menu.buildFromTemplate(
+        [
           {
-            label: "ChatGPT",
-            type: 'radio',
-            checked: isChatGPT,
-            click: async () => {
-              await writeUserData("modelName", "ChatGPT");
-            }
+            label: "Quit",
+            accelerator: "Command+Q",
+            click: () => {
+              app.quit();
+            },
           },
-          // { type: 'separator' }, // 分隔线
           {
-            label: "DeepSeek",
-            type: 'radio',
-            checked: isDeepSeek,
-            click: async () => {
-              await writeUserData("modelName", "DeepSeek");
-            }
+            label: "Reload",
+            accelerator: "Command+R",
+            click: () => {
+              browserWindow.reload();
+            },
           },
+          {
+            label: "Open in browser",
+            accelerator: "Command+O",
+            click: async () => {
+              if (isChatGPT) {
+                shell.openExternal("https://chat.openai.com/chat");
+              }
+              if (isDeepSeek) {
+                shell.openExternal("https://chat.deepseek.com/");
+              }
+            },
+          },
+          {
+            label: "model",
+            submenu: [
+              {
+                label: "ChatGPT",
+                type: 'radio',
+                checked: isChatGPT,
+                click: async () => {
+                  await writeUserData("modelName", "ChatGPT");
+                  electronMenubar.tray.popUpContextMenu(menu);
+                  browserWindow.webContents.send('model-changed', 'ChatGPT');
+                }
+              },
+              { type: 'separator' }, // 分隔线
+              {
+                label: "DeepSeek",
+                type: 'radio',
+                checked: isDeepSeek,
+                click: async () => {
+                  await writeUserData("modelName", "DeepSeek");
+                  electronMenubar.tray.popUpContextMenu(menu);
+                  browserWindow.webContents.send('model-changed', 'DeepSeek');
+                }
+              },
+            ]
+          }
         ]
-      }
-    ];
-
+      ))
+    }
+    
     // 右键菜单 弹出菜单
     tray.on("right-click", () => {
-      electronMenubar.tray.popUpContextMenu(Menu.buildFromTemplate(contextMenuTemplate));
-      
+      buildContextMenu()
     });
 
     // 左键事件 组合点击 ctrl + 左键 或者 command + 左键 弹出菜单
     tray.on("click", (e) => {
       const isCtrlOrMetaKey = e.ctrlKey || e.metaKey
-      isCtrlOrMetaKey && electronMenubar.tray.popUpContextMenu(Menu.buildFromTemplate(contextMenuTemplate))
-
+      isCtrlOrMetaKey && buildContextMenu();
     });
 
     const menu = new Menu();
@@ -182,7 +191,6 @@ app.on("ready", () => {
         // 阻止当前浏览器打开页面
         return { action: 'deny' };
       });
-
 
       // 在 webview 中设置上下文菜单
       contextMenu({

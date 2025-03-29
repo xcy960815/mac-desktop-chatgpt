@@ -2,6 +2,7 @@ import fsSync, { promises } from 'fs';
 import path from "path";
 import { app } from "electron";
 
+
 function getDataPath(subPath: string = '') {
   const basePath = app.getPath('userData');
   const fullPath = subPath ? path.join(basePath, subPath) : basePath;
@@ -21,16 +22,12 @@ async function writeUserData(filename: string, data: Object, subPath = '') {
 async function readUserData(filename: string, subPath: string = '', defaultValue: string = null) {
   const dirPath = getDataPath(subPath);
   const filePath = path.join(dirPath, filename);
-
-  try {
-    const data = await promises.readFile(filePath, 'utf-8');
-    return JSON.parse(data);
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      return defaultValue;
-    }
-    throw error;
-  }
+  const data = await promises.readFile(filePath, 'utf-8');
+  return data ? data : defaultValue
 }
 
-export { writeUserData, readUserData, getDataPath };
+export {
+  writeUserData,
+  readUserData,
+  getDataPath
+};

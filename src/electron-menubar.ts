@@ -150,6 +150,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 
 		if (!this._browserWindow) {
 			await this.createWindow();
+			
 		}
 
 		if (!this._browserWindow) {
