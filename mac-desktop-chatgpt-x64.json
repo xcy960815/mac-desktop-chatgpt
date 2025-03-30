@@ -1,0 +1,25 @@
+{
+    "title": "mac-desktop-chatgpt",
+    "icon": "./images/icon.png",
+    "contents": [
+        {
+            "x": 380,
+            "y": 170,
+            "type": "link",
+            "path": "/Applications"
+        },
+        {
+            "x": 200,
+            "y": 170,
+            "type": "file",
+            "path": "./out/mac-desktop-chatgpt-darwin-x64/mac-desktop-chatgpt.app"
+        }
+    ],
+    "window": {
+        "size": {
+            "width": 580,
+            "height": 360
+        }
+    },
+    "format": "UDBZ"
+}

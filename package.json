@@ -1,7 +1,7 @@
 {
   "name": "mac-desktop-chatgpt",
   "productName": "mac-desktop-chatgpt",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "一款基于 electron + vite + typescript 开发的桌面级应用",
   "main": ".vite/build/main.js",
   "scripts": {
