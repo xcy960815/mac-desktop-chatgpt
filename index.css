@@ -24,6 +24,8 @@ body {
   top: 0;
   left: 50%;
   transform: translateX(-50%);
+  /* 新增过渡效果 */
+  transition: left 0.3s ease-out;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -52,4 +54,49 @@ body {
   width: 100%;
   height: calc(100vh - 12px);
   display: inline-flex !important;
+}
+
+/* Loading 动画样式 */
+.loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.8);
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  /* 防止点击穿透 */
+}
+
+.loading.active {
+  opacity: 1;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top-color: #4CAF50;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading span {
+  margin-top: 10px;
+  font-size: 14px;
+  color: #333;
 }

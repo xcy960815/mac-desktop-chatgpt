@@ -11,25 +11,41 @@
     <!-- 三角箭头 -->
     <div class="triangle"></div>
     <div class="webview-box">
-        <webview src="https://chat.openai.com/chat" class="webview" id="webview-container" disablewebsecurity
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <span>model loading...</span>
+        </div>
+        <!--  src="https://chat.openai.com/chat" -->
+        <webview class="webview" id="webview-container" disablewebsecurity
             autosize="on" allowpopups></webview>
     </div>
     <!-- TODO 为什么打包之后找不到资源？ -->
     <!-- <script type="module" src="src/renderer.ts"></script> -->
     <script>
-        function setWebviewSrc(webviewUrl) {
+        function setWebviewSrc(modelName) {
             const webview = document.getElementById('webview-container');
-            webview.src = ""
-            setTimeout(() => {
-                webview.src = `${webviewUrl}`;
-            }, 100)
-        }
-        window.electronAPI.onModelChanged((modelName) => {
+            const loading = document.getElementById('loading');
+            const originWebviewUrl = webview.src;
+            if (originWebviewUrl && originWebviewUrl.includes(modelName.toLocaleLowerCase())) return;
             const webviewUrl = modelName === 'DeepSeek'
                 ? 'https://chat.deepseek.com/'
                 : 'https://chat.openai.com/chat';
-            setWebviewSrc(webviewUrl);
-        });
+            // 显示 loading
+            loading.classList.add('active');
+            webview.src = `${webviewUrl}`;
+            // 监听 webview 加载完成
+            webview.addEventListener('did-stop-loading', () => {
+                loading.classList.remove('active');
+            });
+
+        }
+        // window.electronAPI.onModelChanged((modelName) => {
+        //     const webviewUrl = modelName === 'DeepSeek'
+        //         ? 'https://chat.deepseek.com/'
+        //         : 'https://chat.openai.com/chat';
+        //     setWebviewSrc(webviewUrl);
+        // });
+        window.electronAPI.onModelChanged(setWebviewSrc);
     </script>
 </body>
 

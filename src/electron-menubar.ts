@@ -17,6 +17,9 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 	private _options: ElectronMenubarOptions;
 	private _positioner: Positioner | undefined;
 	private _tray?: Tray;
+	// 在类中新增私有变量
+	private _trayPositionChecker: NodeJS.Timeout | null = null;
+	private _lastTrayBounds: Electron.Rectangle | null = null;
 
 	constructor(app: Electron.App, options?: Partial<ElectronMenubarOptions>) {
 		super();
@@ -83,6 +86,38 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 	 */
 	get browserWindow(): BrowserWindow | undefined {
 		return this._browserWindow;
+	}
+
+	/**
+ * @desc 开始监听 Tray 位置变化
+ */
+	private startTrayPositionWatcher() {
+		if (!this._tray) return;
+		// 初始记录位置
+		this._lastTrayBounds = this._tray.getBounds();
+		// 每 500ms 检查一次位置变化
+		this._trayPositionChecker = setInterval(() => {
+			const currentBounds = this._tray.getBounds();
+			if (
+				!this._lastTrayBounds ||
+				currentBounds.x !== this._lastTrayBounds.x ||
+				currentBounds.y !== this._lastTrayBounds.y
+			) {
+				this._lastTrayBounds = currentBounds;
+				this.emit('tray-position-changed', this); // 触发事件
+				this.correctArrowPosition(); // 修正箭头位置（如果窗口可见）
+			}
+		}, 500);
+	}
+
+	/**
+	 * @desc 停止监听 Tray 位置变化
+	 */
+	private stopTrayPositionWatcher() {
+		if (this._trayPositionChecker) {
+			clearInterval(this._trayPositionChecker);
+			this._trayPositionChecker = null;
+		}
 	}
 
 	/**
@@ -250,8 +285,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 
 		// 初始化托盘
 		this._tray = this._options.tray || new Tray(trayImage);
-
-		// Type guards for TS not to complain
+		this.startTrayPositionWatcher();
 		if (!this.tray) {
 			throw new Error('Tray has been initialized above');
 		}
@@ -292,7 +326,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 
 		if (event && (event.shiftKey || event.ctrlKey || event.metaKey)) {
 			this.hideWindow();
-			return 
+			return
 		}
 
 		// if blur was invoked clear timeout
@@ -306,7 +340,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 		}
 
 		this._cachedBounds = bounds || this._cachedBounds;
-		
+
 		await this.showWindow(this._cachedBounds);
 	}
 
@@ -387,18 +421,9 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 			return 'top';
 		}
 
-		// TASKBAR RIGHT
-		// Here both workArea.y and workArea.x are 0 so we can no longer leverage them.
-		// We can use the workarea and display width though.
-		// Determine taskbar location
 		if (workArea.width < screenBounds.width) {
-			// The taskbar is either on the left or right, but since the LEFT case was handled above,
-			// we can be sure we're dealing with a right taskbar
 			return 'right';
 		}
-
-		// TASKBAR BOTTOM
-		// Since all the other cases were handled, we can be sure we're dealing with a bottom taskbar
 		return 'bottom';
 	}
 
@@ -511,6 +536,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 	 */
 	private windowClear(): void {
 		this._browserWindow = undefined;
+		this.stopTrayPositionWatcher();
 		this.emit('after-close', this);
 	}
 }

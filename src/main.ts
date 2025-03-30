@@ -175,14 +175,7 @@ app.on("ready", () => {
 
     // 打开开发工具
     // setTimeout(() => {
-      // browserWindow.webContents.openDevTools();
-      // browserWindow.webContents.on('devtools-opened', () => {
-      //   browserWindow.webContents.executeJavaScript(`
-      //   if (window.DevToolsAPI) {
-      //     window.DevToolsAPI.setSetting('autoFillEnabled', false);
-      //   }
-      // `);
-      // });
+    //   browserWindow.webContents.openDevTools();
     // }, 1000)
   });
 

@@ -114,5 +114,6 @@ declare interface MenubarEvents {
     'after-hide': [ElectronMenubar];
     'after-show': [ElectronMenubar],
     "focus-lost": [ElectronMenubar],
-    "before-load": [ElectronMenubar]
+    "before-load": [ElectronMenubar],
+    "tray-position-changed":[ElectronMenubar]
 }
