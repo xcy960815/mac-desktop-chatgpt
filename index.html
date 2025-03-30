@@ -8,12 +8,29 @@
 </head>
 
 <body class="container">
+    <!-- 三角箭头 -->
     <div class="triangle"></div>
     <div class="webview-box">
-        <!-- src="https://chat.openai.com/chat" -->
-        <webview class="webview" id="webview-container" disablewebsecurity autosize="on" allowpopups></webview>
+        <webview src="https://chat.openai.com/chat" class="webview" id="webview-container" disablewebsecurity
+            autosize="on" allowpopups></webview>
     </div>
-    <script type="module" src="src/renderer.ts"></script>
+    <!-- TODO 为什么打包之后找不到资源？ -->
+    <!-- <script type="module" src="src/renderer.ts"></script> -->
+    <script>
+        function setWebviewSrc(webviewUrl) {
+            const webview = document.getElementById('webview-container');
+            webview.src = ""
+            setTimeout(() => {
+                webview.src = `${webviewUrl}`;
+            }, 100)
+        }
+        window.electronAPI.onModelChanged((modelName) => {
+            const webviewUrl = modelName === 'DeepSeek'
+                ? 'https://chat.deepseek.com/'
+                : 'https://chat.openai.com/chat';
+            setWebviewSrc(webviewUrl);
+        });
+    </script>
 </body>
 
 </html>

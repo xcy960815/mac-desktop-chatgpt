@@ -21,7 +21,6 @@
     "@electron-forge/plugin-fuses": "^7.8.0",
     "@electron-forge/plugin-vite": "^7.8.0",
     "@electron/fuses": "^1.7.0",
-    "@types/electron-store": "^3.2.2",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
     "electron": "35.1.2",
@@ -52,8 +51,7 @@
   "dependencies": {
     "electron-context-menu": "^3.6.1",
     "electron-positioner": "^4.1.0",
-    "electron-squirrel-startup": "^1.0.1",
-    "electron-store": "^10.0.1"
+    "electron-squirrel-startup": "^1.0.1"
   },
   "volta": {
     "node": "20.19.0"

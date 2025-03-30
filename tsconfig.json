@@ -12,12 +12,12 @@
     "moduleResolution": "node16",
     "resolveJsonModule": true,
     "typeRoots": ["node_modules/@types", "./types/*.d.ts"],
-    "types": [],
+    "types": ["node"],
     "paths": {
       "*": ["node_modules/*"],
       "electron-positioner": ["types/electron-positioner.d.ts"],
+      "electron-squirrel-startup": ["types/electron-squirrel-startup.d.ts"],
       "electron-menubar":["./src/electron-menubar.ts"],
-      
     }
   }
 }

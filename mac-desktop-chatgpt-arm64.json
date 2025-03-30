@@ -1,5 +1,6 @@
 {
     "title": "mac-desktop-chatgpt",
+    "icon": "./images/icon.png",
     "contents": [
         {
             "x": 380,

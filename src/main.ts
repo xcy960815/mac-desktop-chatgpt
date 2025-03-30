@@ -8,15 +8,21 @@ import { app, globalShortcut, nativeImage, Tray, shell, Menu, ipcMain } from "el
 
 import { writeUserData, readUserData } from "./utils/user-data"
 
+
+// import electronSquirrelStartup from 'electron-squirrel-startup'
+
+
 // // 禁用代理
 // app.commandLine.appendSwitch('no-proxy-server'); 
 
 // // 或指定忽略某些域名的代理
 // app.commandLine.appendSwitch('ignore-certificate-errors', 'chat.openai.com');
+// app.commandLine.appendSwitch('ignore-certificate-errors', 'chat.deepseek.com');
+app.commandLine.appendSwitch('--ignore-certificate-errors', 'true')
 
-if (require('electron-squirrel-startup')) {
-  app.quit();
-}
+// if (electronSquirrelStartup) {
+//   app.quit();
+// }
 /**
  * app title
  */
@@ -168,23 +174,23 @@ app.on("ready", () => {
     Menu.setApplicationMenu(menu);
 
     // 打开开发工具
-    setTimeout(() => {
-      browserWindow.webContents.openDevTools();
-      browserWindow.webContents.on('devtools-opened', () => {
-        browserWindow.webContents.executeJavaScript(`
-        if (window.DevToolsAPI) {
-          window.DevToolsAPI.setSetting('autoFillEnabled', false);
-        }
-      `);
-      });
-    }, 1000)
+    // setTimeout(() => {
+      // browserWindow.webContents.openDevTools();
+      // browserWindow.webContents.on('devtools-opened', () => {
+      //   browserWindow.webContents.executeJavaScript(`
+      //   if (window.DevToolsAPI) {
+      //     window.DevToolsAPI.setSetting('autoFillEnabled', false);
+      //   }
+      // `);
+      // });
+    // }, 1000)
   });
 
   electronMenubar.on("after-show", async ({ browserWindow }) => {
     const currentModel = await readUserData("modelName", "", "ChatGPT");
-    console.log("currentModel--currentModel",currentModel);
-    
+
     browserWindow.webContents.send('model-changed', currentModel);
+    
   })
 
   app.on("web-contents-created", (_event, webContents) => {
