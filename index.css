@@ -24,7 +24,6 @@ body {
   top: 0;
   left: 50%;
   transform: translateX(-50%);
-  /* 新增过渡效果 */
   transition: left 0.3s ease-out;
 }
 
@@ -56,8 +55,7 @@ body {
   display: inline-flex !important;
 }
 
-/* Loading 动画样式 */
-.loading {
+.webview-loading {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -76,7 +74,7 @@ body {
   /* 防止点击穿透 */
 }
 
-.loading.active {
+.webview-loading.active {
   opacity: 1;
 }
 
@@ -95,7 +93,7 @@ body {
   }
 }
 
-.loading span {
+.webview-loading span {
   margin-top: 10px;
   font-size: 14px;
   color: #333;

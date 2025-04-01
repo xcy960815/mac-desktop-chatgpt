@@ -1,12 +1,11 @@
 
-declare global {
-  interface Window {
-    electronAPI: {
-      onModelChanged: (callback: (modelName: string) => void) => void;
-    };
-  }
-}
-
+// declare global {
+//   interface Window {
+//     electronAPI: {
+//       onModelChanged: (callback: (modelName: string) => void) => void;
+//     };
+//   }
+// }
 // function setWebviewSrc(webviewUrl: string) {
 //   const webview = document.getElementById('webview-container') as HTMLIFrameElement;
 //   webview.src = ""
