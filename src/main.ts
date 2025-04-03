@@ -4,37 +4,22 @@ import { ElectronMenubar } from "electron-menubar"
 
 import contextMenu from "electron-context-menu";
 
-import { app, globalShortcut, nativeImage, Tray, shell, Menu, ipcMain } from "electron"
+import { app, globalShortcut, nativeImage, Tray, shell, Menu } from "electron"
 
-import { writeUserData, readUserData } from "./utils/user-data"
-
+import { readUserSetting, writeUserSetting } from "./utils/user-setting"
 
 // import electronSquirrelStartup from 'electron-squirrel-startup'
 
-
-// // 禁用代理
-// app.commandLine.appendSwitch('no-proxy-server'); 
-
-// // 或指定忽略某些域名的代理
-// app.commandLine.appendSwitch('ignore-certificate-errors', 'chat.openai.com');
-// app.commandLine.appendSwitch('ignore-certificate-errors', 'chat.deepseek.com');
 app.commandLine.appendSwitch('--ignore-certificate-errors', 'true')
 
 // if (electronSquirrelStartup) {
 //   app.quit();
 // }
-/**
- * app title
- */
+
 const TOOLTIP = "mac-desktop-chatgpt";
 
-// 处理渲染进程的请求
-// ipcMain.handle('get-user-data', async (_event, key: string, defaultValue?: string) => {
-//   return await readUserData(key, defaultValue);
-// });
-
 app.on("ready", () => {
-
+  
   const appPath = app.getAppPath();
   /**
    * @desc 创建菜单栏图标
@@ -81,11 +66,16 @@ app.on("ready", () => {
       app.dock.hide();
     }
 
-
-    async function buildContextMenu() {
-      const currentModel = await readUserData("modelName", "", "ChatGPT");
-      const isChatGPT = currentModel === "ChatGPT";
-      const isDeepSeek = currentModel === "DeepSeek";
+    /**
+     * 构建右键菜单
+     */
+    function buildContextMenu() {
+      const userSetting = readUserSetting();
+      // const userSetting = {
+      //   model:"ChatGPT"
+      // }
+      const isChatGPT = userSetting.model === "ChatGPT";
+      const isDeepSeek = userSetting.model === "DeepSeek";
       electronMenubar.tray.popUpContextMenu(Menu.buildFromTemplate(
         [
           {
@@ -121,10 +111,12 @@ app.on("ready", () => {
                 label: "ChatGPT",
                 type: 'radio',
                 checked: isChatGPT,
-                click: async () => {
-                  await writeUserData("modelName", "ChatGPT");
+                click: () => {
+                  const userSetting = readUserSetting();
+                  const newUserSetting = writeUserSetting({ ...userSetting, model: 'ChatGPT' });
                   electronMenubar.tray.popUpContextMenu(menu);
-                  browserWindow.webContents.send('model-changed', 'ChatGPT');
+                  browserWindow?.webContents.send('model-changed', newUserSetting.model);
+                  // browserWindow?.webContents.send('model-changed', "ChatGPT");
                 }
               },
               { type: 'separator' }, // 分隔线
@@ -132,10 +124,12 @@ app.on("ready", () => {
                 label: "DeepSeek",
                 type: 'radio',
                 checked: isDeepSeek,
-                click: async () => {
-                  await writeUserData("modelName", "DeepSeek");
+                click: () => {
+                  const userSetting = readUserSetting();
+                  const newUserSetting = writeUserSetting({ ...userSetting, model: 'DeepSeek' });
                   electronMenubar.tray.popUpContextMenu(menu);
-                  browserWindow.webContents.send('model-changed', 'DeepSeek');
+                  browserWindow?.webContents.send('model-changed', newUserSetting.model);
+                  // browserWindow?.webContents.send('model-changed', "DeepSeek");
                 }
               },
             ]
@@ -174,16 +168,15 @@ app.on("ready", () => {
     Menu.setApplicationMenu(menu);
 
     // 打开开发工具
-    // setTimeout(() => {
-    //   browserWindow.webContents.openDevTools();
-    // }, 1000)
+    // browserWindow.webContents.openDevTools();
   });
 
   electronMenubar.on("after-show", async ({ browserWindow }) => {
-    const currentModel = await readUserData("modelName", "", "ChatGPT");
-
-    browserWindow.webContents.send('model-changed', currentModel);
-    
+    const userSetting = await readUserSetting();
+    // const userSetting = {
+    //   model:"ChatGPT"
+    // }
+    browserWindow.webContents.send('model-changed', userSetting.model);
   })
 
   app.on("web-contents-created", (_event, webContents) => {

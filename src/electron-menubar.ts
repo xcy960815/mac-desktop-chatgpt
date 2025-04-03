@@ -4,7 +4,6 @@ import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as url from 'url';
-import { readUserData } from "./utils/user-data"
 export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 	private readonly _DEFAULT_WINDOW_HEIGHT: number = 400;
 	private readonly _DEFAULT_WINDOW_WIDTH: number = 400;
@@ -367,8 +366,9 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 
 
 		if (options.index === undefined) {
+			// 如果用户没有配置 index 选项 就加载项目根路径的 index.html
 			options.index = url.format({
-				pathname: path.join(options.dir, 'index.html'),
+				pathname: path.join(__dirname, `./renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
 				protocol: 'file:',
 				slashes: true,
 			});
@@ -407,12 +407,8 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 
 	private taskbarLocation(tray: Tray): TaskbarLocation {
 		const [screenBounds, workArea] = this.trayToScreenRects(tray);
-
-		// TASKBAR LEFT
 		if (workArea.x > 0) {
-			// Most likely Ubuntu hence assuming the browserWindow should be on top
 			if (this._isLinux && workArea.y > 0) return 'top';
-			// The workspace starts more on the right
 			return 'left';
 		}
 

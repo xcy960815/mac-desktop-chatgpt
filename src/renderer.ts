@@ -1,28 +1,31 @@
+export { }
 
-// declare global {
-//   interface Window {
-//     electronAPI: {
-//       onModelChanged: (callback: (modelName: string) => void) => void;
-//     };
-//   }
-// }
-// function setWebviewSrc(webviewUrl: string) {
-//   const webview = document.getElementById('webview-container') as HTMLIFrameElement;
-//   webview.src = ""
-//   setTimeout(() => {
-//     webview.src = `${webviewUrl}`;
-//   }, 100)
-//   // const webviewBox = document.querySelector(".webview-box")
-//   // webviewBox.innerHTML = webviewUrl
-//   // const strong = document.createElement('div');
-//   // strong.textContent = webviewUrl;
-//   // document.body.appendChild(strong);
-//   // // document.body.innerHTML = webviewUrl
-// }
+declare global {
+    interface Window {
+        electronAPI: {
+            onModelChanged: (callback: (modelName: string) => void) => void;
+        };
+    }
+}
 
-// window.electronAPI.onModelChanged((modelName: string) => {
-//   const webviewUrl = modelName === 'DeepSeek'
-//     ? 'https://chat.deepseek.com/'
-//     : 'https://chat.openai.com/chat';
-//     setWebviewSrc(webviewUrl);
-// });
+
+function setWebviewSrc(modelName: string) {
+    const webview = document.getElementById('webview-container') as HTMLIFrameElement;
+    const webviewLoading = document.getElementById('webview-loading') as HTMLDivElement;
+    const originWebviewUrl = webview?.src;
+
+    if (originWebviewUrl && originWebviewUrl.includes(modelName.toLocaleLowerCase())) return;
+    const webviewUrl = modelName === 'DeepSeek'
+        ? 'https://chat.deepseek.com/'
+        : 'https://chat.openai.com/chat';
+    // 显示 webviewLoading
+    webviewLoading.classList.add('active');
+    webview.src = `${webviewUrl}`;
+    // 监听 webview 加载完成
+    webview.addEventListener('did-stop-loading', () => {
+        webviewLoading.classList.remove('active');
+    });
+
+}
+
+window.electronAPI.onModelChanged(setWebviewSrc);
