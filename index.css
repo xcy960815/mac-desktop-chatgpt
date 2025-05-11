@@ -44,8 +44,6 @@ body {
   overflow: hidden;
 }
 
-
-
 .webview {
   position: absolute;
   top: 0;
@@ -65,13 +63,13 @@ body {
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.9);
   width: 100%;
   height: 100%;
   opacity: 0;
   transition: opacity 0.3s ease;
   pointer-events: none;
-  /* 防止点击穿透 */
+  backdrop-filter: blur(5px);
 }
 
 .webview-loading.active {
@@ -79,22 +77,68 @@ body {
 }
 
 .spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid rgba(0, 0, 0, 0.1);
+  width: 50px;
+  height: 50px;
+  position: relative;
+}
+
+.spinner:before,
+.spinner:after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
+  border: 3px solid transparent;
   border-top-color: #4CAF50;
-  animation: spin 1s ease-in-out infinite;
+}
+
+.spinner:before {
+  animation: spin 1.5s linear infinite;
+}
+
+.spinner:after {
+  border-top-color: #2196F3;
+  animation: spin 2s linear infinite reverse;
 }
 
 @keyframes spin {
-  to {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
     transform: rotate(360deg);
   }
 }
 
 .webview-loading span {
-  margin-top: 10px;
-  font-size: 14px;
+  margin-top: 20px;
+  font-size: 18px;
   color: #333;
+  font-weight: 400;
+  letter-spacing: 1px;
+  animation: pulse 1.5s ease-in-out infinite;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.6;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .webview-loading {
+    background: rgba(0, 0, 0, 0.8);
+  }
+  
+  .webview-loading span {
+    color: #fff;
+  }
 }

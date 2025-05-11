@@ -13,11 +13,15 @@
     <div class="webview-box">
         <div class="webview-loading" id="webview-loading">
             <div class="spinner"></div>
-            <span>model loading...</span>
+            <span>正在加载模型...</span>
         </div>
         <!--  src="https://chat.openai.com/chat" -->
-        <webview class="webview" id="webview-container" disablewebsecurity
-            autosize="on" allowpopups></webview>
+        <webview class="webview" id="webview-container" 
+            disablewebsecurity
+            webpreferences="allowRunningInsecureContent"
+            autosize="on" 
+            allowpopups
+            partition="persist:main"></webview>
     </div>
     <script type="module" src="src/renderer.ts"></script>
     <!-- <script>

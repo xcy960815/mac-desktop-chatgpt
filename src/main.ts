@@ -28,6 +28,16 @@ app.commandLine.appendSwitch(
   'true'
 )
 
+app.commandLine.appendSwitch(
+  '--disable-web-security',
+  'true'
+)
+
+app.commandLine.appendSwitch(
+  '--allow-running-insecure-content',
+  'true'
+)
+
 // if (electronSquirrelStartup) {
 //   app.quit();
 // }
