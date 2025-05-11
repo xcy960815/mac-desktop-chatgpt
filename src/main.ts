@@ -10,9 +10,7 @@ import {
   nativeImage,
   Tray,
   shell,
-  Menu,
-  BrowserWindow,
-  ipcMain
+  Menu
 } from 'electron'
 
 import {
@@ -297,15 +295,5 @@ app.on('ready', () => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
-  }
-})
-
-ipcMain.on('update-background-color', (event, color) => {
-  const webContents = event.sender
-  const win = BrowserWindow.fromWebContents(webContents)
-  if (win) {
-    win.webContents.executeJavaScript(`
-      document.documentElement.style.setProperty('--bg-color', '${color}');
-    `)
   }
 })

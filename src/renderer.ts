@@ -53,7 +53,7 @@ function updateBackgroundColor(webview: any) {
 function setWebviewSrc(modelName: string) {
   const webview = document.getElementById(
     'webview-container'
-  ) as any
+  ) as HTMLIFrameElement
   const webviewLoading = document.getElementById(
     'webview-loading'
   ) as HTMLDivElement
@@ -73,52 +73,23 @@ function setWebviewSrc(modelName: string) {
   webviewLoading.classList.add('active')
 
   // 添加错误处理
-  webview.addEventListener(
-    'did-fail-load',
-    (event: any) => {
-      console.error('Webview failed to load:', event)
-      webviewLoading.classList.remove('active')
-    }
-  )
+  webview.addEventListener('did-fail-load', (event) => {
+    console.error('Webview failed to load:', event)
+    webviewLoading.classList.remove('active')
+  })
 
   // 添加 SSL 错误处理
-  webview.addEventListener(
-    'certificate-error',
-    (event: any) => {
-      console.warn('SSL Certificate Error:', event)
-      event.preventDefault()
-      return true
-    }
-  )
+  webview.addEventListener('certificate-error', (event) => {
+    console.warn('SSL Certificate Error:', event)
+    event.preventDefault()
+    return true
+  })
 
   webview.src = `${webviewUrl}`
 
   // 监听 webview 加载完成
   webview.addEventListener('did-stop-loading', () => {
     webviewLoading.classList.remove('active')
-
-    // 监听 webview 背景色变化
-    webview.addEventListener('dom-ready', () => {
-      // 立即获取一次背景色
-      updateBackgroundColor(webview)
-
-      // 设置观察器监听后续变化
-      webview
-        .executeJavaScript(
-          `
-        const observer = new MutationObserver((mutations) => {
-          const bgColor = window.getComputedStyle(document.body).backgroundColor;
-          window.electronAPI.updateBackgroundColor(bgColor);
-        });
-        
-        observer.observe(document.body, {
-          attributes: true,
-          attributeFilter: ['style', 'class']
-        });
-      `
-        )
-        .catch(console.error)
-    })
   })
 }
 

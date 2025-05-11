@@ -3,18 +3,10 @@ body {
   padding: 0;
   margin: 0;
   overflow: hidden;
-  background-color: var(--bg-color);
 }
 
 :root {
   --actual-height: calc(100vh - 12px);
-  --bg-color: #ffffff;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-color: #343541;
-  }
 }
 
 .container {
@@ -27,13 +19,12 @@ body {
   width: 0;
   border-width: 0 8px 12px 8px;
   border-style: solid;
-  border-color: transparent transparent currentColor transparent;
+  border-color: transparent transparent white transparent;
   position: absolute;
   top: 0;
   left: 50%;
   transform: translateX(-50%);
   transition: left 0.3s ease-out;
-  color: inherit;
 }
 
 @media (prefers-color-scheme: dark) {

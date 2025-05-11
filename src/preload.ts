@@ -1,16 +1,12 @@
 // See the Electron documentation for details on how to use preload scripts:
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 
-import {
-  contextBridge,
-  ipcRenderer,
-  IpcRendererEvent
-} from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 
 // 定义 API 类型
 interface ElectronAPI {
   onModelChanged: (
-    callback: (model: string) => void
+    callback: (modelName: string) => void
   ) => void
   sendModelChanged: (model: string) => void
   updateBackgroundColor: (color: string) => void
@@ -18,18 +14,12 @@ interface ElectronAPI {
 
 // 暴露安全的 API 到渲染进程
 contextBridge.exposeInMainWorld('electronAPI', {
-  onModelChanged: (callback: (model: string) => void) => {
-    const subscription = (
-      _event: IpcRendererEvent,
-      model: string
-    ) => callback(model)
-    ipcRenderer.on('model-changed', subscription)
-    return () => {
-      ipcRenderer.removeListener(
-        'model-changed',
-        subscription
-      )
-    }
+  onModelChanged: (
+    callback: (modelName: string) => void
+  ) => {
+    ipcRenderer.on('model-changed', (_event, modelName) => {
+      callback(modelName)
+    })
   },
   sendModelChanged: (model: string) => {
     ipcRenderer.send('model-changed', model)
