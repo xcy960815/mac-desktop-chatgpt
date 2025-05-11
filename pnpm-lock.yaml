@@ -58,8 +58,8 @@ importers:
         specifier: ^5.62.0
         version: 5.62.0(eslint@8.57.1)(typescript@5.8.2)
       electron:
-        specifier: 35.1.2
-        version: 35.1.2
+        specifier: ^36.2.0
+        version: 36.2.0
       eslint:
         specifier: ^8.57.0
         version: 8.57.1
@@ -1321,8 +1321,8 @@ packages:
     resolution: {integrity: sha512-bO3y10YikuUwUuDUQRM4KfwNkKhnpVO7IPdbsrejwN9/AABJzzTQ4GeHwyzNSrVO+tEH3/Np255a3sVZpZDjvg==}
     engines: {node: '>=8.0.0'}
 
-  electron@35.1.2:
-    resolution: {integrity: sha512-ipYSDZEV3+PpHfJ8/oWlpMCvxwutX6xLvBz2HRPgEzSFzgLmGO7YXTjEow4DhDtCpGE+b95NTGoJaRAVQi5n7A==}
+  electron@36.2.0:
+    resolution: {integrity: sha512-5yldoRjBKxPQfI0QMX+qq750o3Nl8N1SZnJqOPMq0gZ6rIJ+7y4ZLp808GrFwjfTm05TYgq3GSD8FGuKQZqwEw==}
     engines: {node: '>= 12.20.55'}
     hasBin: true
 
@@ -5003,7 +5003,7 @@ snapshots:
       - supports-color
     optional: true
 
-  electron@35.1.2:
+  electron@36.2.0:
     dependencies:
       '@electron/get': 2.0.3
       '@types/node': 22.13.14
