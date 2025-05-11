@@ -25,16 +25,6 @@ declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string
 
 app.commandLine.appendSwitch('ignore-certificate-errors')
 
-app.commandLine.appendSwitch(
-  '--disable-web-security',
-  'true'
-)
-
-app.commandLine.appendSwitch(
-  '--allow-running-insecure-content',
-  'true'
-)
-
 // if (electronSquirrelStartup) {
 //   app.quit();
 // }
