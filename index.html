@@ -12,34 +12,18 @@
     <div class="triangle"></div>
     <div class="webview-box">
         <div class="webview-loading" id="webview-loading">
-            <div class="spinner"></div>
-            <span>model loading...</span>
+            <div class="spinner">
+                <div class="spinner-dot"></div>
+                <div class="spinner-dot"></div>
+                <div class="spinner-dot"></div>
+            </div>
+            <span>模型加载中...</span>
         </div>
         <!--  src="https://chat.openai.com/chat" -->
         <webview class="webview" id="webview-container" disablewebsecurity
             autosize="on" allowpopups></webview>
     </div>
     <script type="module" src="src/renderer.ts"></script>
-    <!-- <script>
-        function setWebviewSrc(modelName) {
-            const webview = document.getElementById('webview-container');
-            const webviewLoading = document.getElementById('webview-loading');
-            const originWebviewUrl = webview.src;
-            if (originWebviewUrl && originWebviewUrl.includes(modelName.toLocaleLowerCase())) return;
-            const webviewUrl = modelName === 'DeepSeek'
-                ? 'https://chat.deepseek.com/'
-                : 'https://chat.openai.com/chat';
-            // 显示 webviewLoading
-            webviewLoading.classList.add('active');
-            webview.src = `${webviewUrl}`;
-            // 监听 webview 加载完成
-            webview.addEventListener('did-stop-loading', () => {
-                webviewLoading.classList.remove('active');
-            });
-
-        }
-        window.electronAPI.onModelChanged(setWebviewSrc);
-    </script> -->
 </body>
 
 </html>
