@@ -88,7 +88,6 @@ app.on('ready', () => {
       'did-navigate',
       (event, url) => {
         const currentSetting = readUserSetting()
-        console.log('currentSetting', currentSetting)
         writeUserSetting({
           ...currentSetting,
           lastVisitedUrl: url
