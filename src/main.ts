@@ -77,14 +77,30 @@ app.on('ready', () => {
       app.dock.hide()
     }
 
+    // 读取上次访问的 URL
+    const userSetting = readUserSetting()
+    if (userSetting.lastVisitedUrl) {
+      browserWindow.loadURL(userSetting.lastVisitedUrl)
+    }
+
+    // 监听 URL 变化
+    browserWindow.webContents.on(
+      'did-navigate',
+      (event, url) => {
+        const currentSetting = readUserSetting()
+        console.log('currentSetting', currentSetting)
+        writeUserSetting({
+          ...currentSetting,
+          lastVisitedUrl: url
+        })
+      }
+    )
+
     /**
      * 构建右键菜单
      */
     function buildContextMenu() {
       const userSetting = readUserSetting()
-      // const userSetting = {
-      //   model:"ChatGPT"
-      // }
       const isChatGPT = userSetting.model === 'ChatGPT'
       const isDeepSeek = userSetting.model === 'DeepSeek'
       electronMenubar.tray.popUpContextMenu(
