@@ -19,6 +19,12 @@
             </div>
             <span>模型加载中...</span>
         </div>
+        <div class="webview-error" id="webview-error">
+            <div class="error-icon">⚠️</div>
+            <div class="error-title">加载失败</div>
+            <div class="error-message" id="error-message">网络连接失败，无法加载模型</div>
+            <button class="retry-button" id="retry-button">重试</button>
+        </div>
         <!--  src="https://chat.openai.com/chat" -->
         <webview class="webview" id="webview-container" disablewebsecurity
             autosize="on" allowpopups></webview>

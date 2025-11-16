@@ -8,6 +8,9 @@ interface ElectronAPI {
   onModelChanged: (
     callback: (modelName: string, url?: string) => void
   ) => void
+  onLoadError: (
+    callback: (errorMessage: string) => void
+  ) => void
   sendModelChanged: (model: string) => void
   updateBackgroundColor: (color: string) => void
 }
@@ -23,6 +26,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
         callback(modelName, url)
       }
     )
+  },
+  onLoadError: (
+    callback: (errorMessage: string) => void
+  ) => {
+    ipcRenderer.on('load-error', (_event, errorMessage) => {
+      callback(errorMessage)
+    })
   },
   sendModelChanged: (model: string) => {
     ipcRenderer.send('model-changed', model)

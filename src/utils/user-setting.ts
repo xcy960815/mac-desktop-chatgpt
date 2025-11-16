@@ -6,7 +6,7 @@ const SUBPATH = 'config'
 const DEFAULTSETTING: UserSetting = {
   model: 'ChatGPT',
   urls: {
-    ChatGPT: 'https://chat.openai.com/chat',
+    ChatGPT: 'https://chatgpt.com',
     DeepSeek: 'https://chat.deepseek.com/'
   }
 }

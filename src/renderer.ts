@@ -6,6 +6,9 @@ declare global {
       onModelChanged: (
         callback: (modelName: string, url?: string) => void
       ) => void
+      onLoadError: (
+        callback: (errorMessage: string) => void
+      ) => void
     }
   }
 }
@@ -44,7 +47,7 @@ function setWebviewSrc(
     webviewUrl =
       modelName === 'DeepSeek'
         ? 'https://chat.deepseek.com/'
-        : 'https://chat.openai.com/chat'
+        : 'https://chatgpt.com'
     console.log('⚠️  [默认] 使用默认 URL:', webviewUrl)
   }
 
@@ -65,4 +68,50 @@ function setWebviewSrc(
   })
 }
 
+// 显示错误提示
+function showError(errorMessage: string) {
+  console.log('❌ [显示错误] 错误信息:', errorMessage)
+  const webviewLoading = document.getElementById(
+    'webview-loading'
+  ) as HTMLDivElement
+  const webviewError = document.getElementById(
+    'webview-error'
+  ) as HTMLDivElement
+  const errorMessageEl = document.getElementById(
+    'error-message'
+  ) as HTMLDivElement
+
+  // 隐藏加载动画
+  webviewLoading.classList.remove('active')
+  // 显示错误提示
+  errorMessageEl.textContent = errorMessage
+  webviewError.classList.add('active')
+}
+
+// 隐藏错误提示
+function hideError() {
+  const webviewError = document.getElementById(
+    'webview-error'
+  ) as HTMLDivElement
+  webviewError.classList.remove('active')
+}
+
+// 重试按钮点击事件
+const retryButton = document.getElementById('retry-button')
+retryButton?.addEventListener('click', () => {
+  console.log('🔄 [重试] 用户点击重试按钮')
+  hideError()
+  const webview = document.getElementById(
+    'webview-container'
+  ) as any // webview 是 Electron 的特殊标签
+  if (webview && webview.src) {
+    const webviewLoading = document.getElementById(
+      'webview-loading'
+    ) as HTMLDivElement
+    webviewLoading.classList.add('active')
+    webview.reload()
+  }
+})
+
 window.electronAPI.onModelChanged(setWebviewSrc)
+window.electronAPI.onLoadError(showError)

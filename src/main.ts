@@ -29,7 +29,7 @@ app.commandLine.appendSwitch('ignore-certificate-errors')
 //   app.quit();
 // }
 
-const TOOLTIP = 'Desktop ChatGPT'
+const TOOLTIP = 'desktop-chatgpt'
 
 app.on('ready', () => {
   const appPath = app.getAppPath()
@@ -123,9 +123,7 @@ app.on('ready', () => {
             accelerator: 'Command+O',
             click: async () => {
               if (isChatGPT) {
-                shell.openExternal(
-                  'https://chat.openai.com/chat'
-                )
+                shell.openExternal('https://chatgpt.com')
               }
               if (isDeepSeek) {
                 shell.openExternal(
@@ -142,9 +140,6 @@ app.on('ready', () => {
                 type: 'radio',
                 checked: isChatGPT,
                 click: () => {
-                  console.log(
-                    '🔄 [模型切换] 切换到 ChatGPT'
-                  )
                   const userSetting = readUserSetting()
                   const newUserSetting = writeUserSetting({
                     ...userSetting,
@@ -155,11 +150,7 @@ app.on('ready', () => {
                   )
                   const savedUrl =
                     newUserSetting.urls?.ChatGPT ||
-                    'https://chat.openai.com/chat'
-                  console.log(
-                    '📂 [加载 URL] ChatGPT URL:',
-                    savedUrl
-                  )
+                    'https://chatgpt.com'
                   browserWindow?.webContents.send(
                     'model-changed',
                     newUserSetting.model,
@@ -173,9 +164,6 @@ app.on('ready', () => {
                 type: 'radio',
                 checked: isDeepSeek,
                 click: () => {
-                  console.log(
-                    '🔄 [模型切换] 切换到 DeepSeek'
-                  )
                   const userSetting = readUserSetting()
                   const newUserSetting = writeUserSetting({
                     ...userSetting,
@@ -187,10 +175,6 @@ app.on('ready', () => {
                   const savedUrl =
                     newUserSetting.urls?.DeepSeek ||
                     'https://chat.deepseek.com/'
-                  console.log(
-                    '📂 [加载 URL] DeepSeek URL:',
-                    savedUrl
-                  )
                   browserWindow?.webContents.send(
                     'model-changed',
                     newUserSetting.model,
@@ -240,23 +224,13 @@ app.on('ready', () => {
   electronMenubar.on(
     'after-show',
     async ({ browserWindow }) => {
-      console.log('👁️  [窗口显示] 窗口已显示')
       const userSetting = readUserSetting()
-      console.log(
-        '📖 [读取设置] 当前设置:',
-        JSON.stringify(userSetting, null, 2)
-      )
 
       const savedUrl =
         userSetting.urls?.[userSetting.model] ||
         (userSetting.model === 'DeepSeek'
           ? 'https://chat.deepseek.com/'
-          : 'https://chat.openai.com/chat')
-
-      console.log(
-        `🚀 [窗口加载] 模型: ${userSetting.model}, URL: ${savedUrl}`
-      )
-
+          : 'https://chatgpt.com')
       browserWindow.webContents.send(
         'model-changed',
         userSetting.model,
@@ -274,30 +248,72 @@ app.on('ready', () => {
         url: string,
         eventType: string
       ) => {
-        console.log(`🔗 [${eventType}] 当前 URL:`, url)
-
         const currentSetting = readUserSetting()
         const currentModel = currentSetting.model
-        console.log('📊 [当前模型]:', currentModel)
 
         // 确保 urls 对象存在
         if (!currentSetting.urls) {
           currentSetting.urls = {
-            ChatGPT: 'https://chat.openai.com/chat',
+            ChatGPT: 'https://chatgpt.com',
             DeepSeek: 'https://chat.deepseek.com/'
           }
-          console.log('✨ [初始化] 创建 urls 对象')
         }
 
         // 保存当前模型的 URL
         currentSetting.urls[currentModel] = url
-        console.log(
-          `💾 [保存 URL] ${currentModel} -> ${url}`
-        )
 
         writeUserSetting(currentSetting)
-        console.log('✅ [保存成功] 设置已写入文件')
       }
+
+      // 监听加载失败事件
+      webContents.on(
+        'did-fail-load',
+        (
+          event,
+          errorCode,
+          errorDescription,
+          validatedURL
+        ) => {
+          console.error(
+            `❌ [加载失败] URL: ${validatedURL}`
+          )
+          console.error(
+            `❌ [错误码] ${errorCode}: ${errorDescription}`
+          )
+
+          // 忽略某些非关键错误
+          // -3 = ERR_ABORTED (用户主动取消)
+          // -102 = ERR_CONNECTION_REFUSED
+          // -7 = ERR_TIMED_OUT
+          if (errorCode !== -3 && Math.abs(errorCode) > 0) {
+            // 发送错误消息到渲染进程
+            const errorMessages: { [key: number]: string } =
+              {
+                '-7': '网络连接超时，请检查您的网络连接',
+                '-102': '无法连接到服务器，请稍后重试',
+                '-105': 'DNS 解析失败，请检查网络设置',
+                '-106': '无法访问互联网，请检查网络连接',
+                '-109': '无法访问该地址',
+                '-138': '网络访问被拒绝'
+              }
+
+            const errorMessage =
+              errorMessages[errorCode.toString()] ||
+              `加载失败: ${errorDescription} (错误码: ${errorCode})`
+            electronMenubar.browserWindow?.webContents.send(
+              'load-error',
+              errorMessage
+            )
+
+            // 如果是超时错误，5秒后自动重试
+            if (errorCode === -7) {
+              setTimeout(() => {
+                webContents.reload()
+              }, 5000)
+            }
+          }
+        }
+      )
 
       // 监听各种导航事件
       webContents.on('did-navigate', (_event, url) => {
@@ -315,10 +331,6 @@ app.on('ready', () => {
       // 监听导航完成
       webContents.on('did-finish-load', () => {
         const url = webContents.getURL()
-        console.log(
-          '🏁 [did-finish-load] 页面加载完成, URL:',
-          url
-        )
       })
 
       // 在 webview 中使用外部浏览器打开链接

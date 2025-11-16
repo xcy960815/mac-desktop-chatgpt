@@ -1,5 +1,5 @@
 {
-    "title": "Desktop ChatGPT",
+    "title": "desktop-chatgpt",
     "icon": "./images/icon.png",
     "contents": [
         {
@@ -12,7 +12,7 @@
             "x": 200,
             "y": 170,
             "type": "file",
-            "path": "./out/Desktop ChatGPT-darwin-arm64/Desktop ChatGPT.app"
+            "path": "./out/desktop-chatgpt-darwin-arm64/desktop-chatgpt.app"
         }
     ],
     "window": {
