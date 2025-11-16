@@ -1,13 +1,17 @@
 {
-  "name": "mac-desktop-chatgpt",
-  "productName": "mac-desktop-chatgpt",
+  "name": "desktop-chatgpt",
+  "productName": "Desktop ChatGPT",
   "version": "1.0.2",
-  "description": "一款基于 electron + vite + typescript 开发的桌面级应用",
+  "description": "一款基于 electron + vite + typescript 开发的跨平台桌面级应用",
   "main": ".vite/build/main.js",
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make --arch arm64,x64",
+    "make:mac": "electron-forge make --platform darwin --arch arm64,x64",
+    "make:win": "electron-forge make --platform win32 --arch x64,ia32 --targets @electron-forge/maker-zip",
+    "make:win-installer": "electron-forge make --platform win32 --arch x64,ia32",
+    "make:all": "electron-forge make --platform darwin,win32 --arch arm64,x64,ia32",
     "publish": "electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
     "prepare": "husky install",
@@ -41,13 +45,16 @@
     "vite": "^6.2.3"
   },
   "keywords": [
-    "mac",
     "desktop",
     "chatgpt",
     "electron",
     "vite",
     "typescript",
-    "openai"
+    "openai",
+    "deepseek",
+    "cross-platform",
+    "windows",
+    "macos"
   ],
   "author": {
     "name": "xcy960815",

@@ -6,7 +6,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 // 定义 API 类型
 interface ElectronAPI {
   onModelChanged: (
-    callback: (modelName: string) => void
+    callback: (modelName: string, url?: string) => void
   ) => void
   sendModelChanged: (model: string) => void
   updateBackgroundColor: (color: string) => void
@@ -15,11 +15,14 @@ interface ElectronAPI {
 // 暴露安全的 API 到渲染进程
 contextBridge.exposeInMainWorld('electronAPI', {
   onModelChanged: (
-    callback: (modelName: string) => void
+    callback: (modelName: string, url?: string) => void
   ) => {
-    ipcRenderer.on('model-changed', (_event, modelName) => {
-      callback(modelName)
-    })
+    ipcRenderer.on(
+      'model-changed',
+      (_event, modelName, url) => {
+        callback(modelName, url)
+      }
+    )
   },
   sendModelChanged: (model: string) => {
     ipcRenderer.send('model-changed', model)
