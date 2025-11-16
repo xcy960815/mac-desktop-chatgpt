@@ -1,6 +1,6 @@
 {
   "name": "desktop-chatgpt",
-  "productName": "Desktop ChatGPT",
+  "productName": "desktop-chatgpt",
   "version": "1.0.3",
   "description": "一款基于 electron + vite + typescript 开发的跨平台桌面级应用",
   "main": ".vite/build/main.js",
