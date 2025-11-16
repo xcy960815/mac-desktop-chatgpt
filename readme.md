@@ -66,6 +66,18 @@ npm install
 npm start
 ```
 
+启动开发服务器，支持热重载。
+
+### 构建和测试
+
+```bash
+# 构建项目（不打包）
+npm run build
+
+# 构建并运行生产版本（用于测试构建产物）
+npm run start:prod
+```
+
 ### 代码检查
 
 ```bash
@@ -74,15 +86,20 @@ npm run lint
 
 ## 📦 构建
 
-### 构建命令
+### 构建命令说明
 
-| 命令 | 说明 | 支持平台 | 输出格式 |
-|------|------|----------|----------|
-| `npm run make` | 构建 macOS 版本（默认） | macOS (arm64 + x64) | ZIP |
-| `npm run make:mac` | 构建 macOS 版本 | macOS (arm64 + x64) | ZIP |
-| `npm run make:win` | 构建 Windows 版本 | Windows (x64 + ia32) | ZIP |
-| `npm run make:win-installer` | 构建 Windows 安装程序* | Windows (x64 + ia32) | Squirrel 安装程序 |
-| `npm run make:all` | 构建所有平台 | macOS + Windows | ZIP |
+| 命令 | 说明 | 用途 |
+|------|------|------|
+| `npm start` | 启动开发模式 | 开发时使用，支持热重载 |
+| `npm run build` | 构建项目 | 仅构建代码，不打包，产物在 `.vite/build` 目录 |
+| `npm run start:prod` | 构建并运行生产版本 | 构建后直接运行，用于测试生产环境 |
+| `npm run package` | 打包应用 | 打包成可执行文件，不生成安装程序 |
+| `npm run make` | 构建 macOS 版本（默认） | 生成 macOS (arm64 + x64) ZIP 文件 |
+| `npm run make:mac` | 构建 macOS 版本 | 生成 macOS (arm64 + x64) ZIP 文件 |
+| `npm run make:win` | 构建 Windows 版本 | 生成 Windows (x64) ZIP 文件 |
+| `npm run make:win-installer` | 构建 Windows 安装程序* | 生成 Windows Squirrel 安装程序 |
+| `npm run make:all` | 构建所有平台 | 同时构建 macOS 和 Windows 版本 |
+| `npm run lint` | 代码检查 | 运行 ESLint 检查代码规范 |
 
 > *注意：Windows 安装程序（.exe）需要在 Windows 环境中构建，或在 macOS 上安装 Wine 和 Mono
 
