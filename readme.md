@@ -33,16 +33,16 @@
 ### macOS
 
 1. 下载对应架构的 ZIP 文件：
-   - Apple Silicon (M1/M2/M3)：`desktop-chatgpt-darwin-arm64-1.0.2.zip`
-   - Intel 芯片：`desktop-chatgpt-darwin-x64-1.0.2.zip`
+   - Apple Silicon (M1/M2/M3)：`desktop-chatgpt-darwin-arm64-1.0.3.zip`
+   - Intel 芯片：`desktop-chatgpt-darwin-x64-1.0.3.zip`
 2. 解压并将 `Desktop ChatGPT.app` 拖入「应用程序」文件夹
 3. 首次打开可能需要右键点击 → 打开（绕过安全检查）
 
 ### Windows
 
 1. 下载对应架构的 ZIP 文件：
-   - 64位系统：`desktop-chatgpt-win32-x64-1.0.2.zip`
-   - 32位系统：`desktop-chatgpt-win32-ia32-1.0.2.zip`
+   - 64位系统：`desktop-chatgpt-win32-x64-1.0.3.zip`
+   - 32位系统：`desktop-chatgpt-win32-ia32-1.0.3.zip`
 2. 解压到任意目录
 3. 运行 `Desktop ChatGPT.exe`
 4. 首次运行可能需要允许通过 Windows Defender 防火墙
@@ -98,9 +98,9 @@ npm run make:mac
 ```
 out/make/zip/darwin/
 ├── arm64/
-│   └── desktop-chatgpt-darwin-arm64-1.0.2.zip
+│   └── desktop-chatgpt-darwin-arm64-1.0.3.zip
 └── x64/
-    └── desktop-chatgpt-darwin-x64-1.0.2.zip
+    └── desktop-chatgpt-darwin-x64-1.0.3.zip
 ```
 
 #### 构建 Windows 版本
@@ -113,9 +113,9 @@ npm run make:win
 ```
 out/make/zip/win32/
 ├── x64/
-│   └── desktop-chatgpt-win32-x64-1.0.2.zip
+│   └── desktop-chatgpt-win32-x64-1.0.3.zip
 └── ia32/
-    └── desktop-chatgpt-win32-ia32-1.0.2.zip
+    └── desktop-chatgpt-win32-ia32-1.0.3.zip
 ```
 
 #### 构建所有平台
@@ -204,6 +204,11 @@ webContents.on('did-navigate-in-page', (_event, url) => {
 - `chore`: 构建/工具链相关
 
 ## 📝 更新日志
+
+### v1.0.3
+
+- ♻️ 重构：项目完整重命名，移除 mac 前缀，改为 desktop-chatgpt
+- 📦 优化：更新所有配置文件和文档中的项目名称
 
 ### v1.0.2
 
