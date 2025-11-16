@@ -72,8 +72,25 @@ function writeUserSetting<US = UserSetting>(data: US): US {
   return data
 }
 
+/**
+ * 重置保存的 URLs 到默认值
+ */
+function resetUserUrls(): UserSetting {
+  const currentSetting = readUserSetting()
+  const resetSetting: UserSetting = {
+    ...currentSetting,
+    urls: {
+      ChatGPT: 'https://chatgpt.com',
+      DeepSeek: 'https://chat.deepseek.com/'
+    },
+    lastVisitedUrl: undefined
+  }
+  return writeUserSetting(resetSetting)
+}
+
 export {
   writeUserSetting,
   readUserSetting,
-  getUserSettingPath
+  getUserSettingPath,
+  resetUserUrls
 }
