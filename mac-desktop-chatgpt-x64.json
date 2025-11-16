@@ -1,5 +1,5 @@
 {
-    "title": "mac-desktop-chatgpt",
+    "title": "Desktop ChatGPT",
     "icon": "./images/icon.png",
     "contents": [
         {
@@ -12,7 +12,7 @@
             "x": 200,
             "y": 170,
             "type": "file",
-            "path": "./out/mac-desktop-chatgpt-darwin-x64/mac-desktop-chatgpt.app"
+            "path": "./out/Desktop ChatGPT-darwin-x64/Desktop ChatGPT.app"
         }
     ],
     "window": {
