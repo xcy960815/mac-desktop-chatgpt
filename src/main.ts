@@ -42,6 +42,17 @@ app.on('ready', () => {
 
   const tray = new Tray(image)
 
+  // 判断开发环境还是生产环境
+  const isDev = !!MAIN_WINDOW_VITE_DEV_SERVER_URL
+  const indexUrl = isDev
+    ? MAIN_WINDOW_VITE_DEV_SERVER_URL
+    : // 在打包后的应用中，__dirname 指向 /.vite/build（在 asar 包内），所以正确的相对路径应该是
+      // ./renderer/main_window/index.html，而不是 ../renderer/main_window/index.html。
+      `file://${path.join(
+        __dirname,
+        './renderer/main_window/index.html'
+      )}`
+
   const electronMenubar = new ElectronMenubar(app, {
     browserWindow: {
       icon: image,
@@ -58,7 +69,7 @@ app.on('ready', () => {
         sandbox: false
       }
     },
-    index: MAIN_WINDOW_VITE_DEV_SERVER_URL || false,
+    index: indexUrl,
     tray,
     dir: appPath,
     showOnAllWorkspaces: true,
