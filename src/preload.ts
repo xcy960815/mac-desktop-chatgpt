@@ -13,6 +13,7 @@ interface ElectronAPI {
   ) => void
   sendModelChanged: (model: string) => void
   updateBackgroundColor: (color: string) => void
+  platform: string
 }
 
 // 暴露安全的 API 到渲染进程
@@ -39,5 +40,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   updateBackgroundColor: (color: string) => {
     ipcRenderer.send('update-background-color', color)
-  }
+  },
+  platform: process.platform
 } as ElectronAPI)
