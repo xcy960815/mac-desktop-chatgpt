@@ -10,7 +10,6 @@ import Positioner from 'electron-positioner'
 import { EventEmitter } from 'events'
 import * as fs from 'fs'
 import * as path from 'path'
-import * as url from 'url'
 export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   private readonly _DEFAULT_WINDOW_HEIGHT: number = 400
   private readonly _DEFAULT_WINDOW_WIDTH: number = 400
@@ -427,17 +426,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
       options.dir = path.resolve(options.dir)
     }
 
-    if (options.index === undefined) {
-      // 如果用户没有配置 index 选项 就加载项目根路径的 index.html
-      options.index = url.format({
-        pathname: path.join(
-          __dirname,
-          `./renderer/${MAIN_WINDOW_VITE_NAME}/index.html`
-        ),
-        protocol: 'file:',
-        slashes: true
-      })
-    }
+    // index 由外部传入，不在此处设置默认值
 
     options.loadUrlOptions = options.loadUrlOptions || {}
 
