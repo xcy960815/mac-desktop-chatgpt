@@ -15,7 +15,8 @@ import {
 
 import {
   readUserSetting,
-  writeUserSetting
+  writeUserSetting,
+  resetUserUrls
 } from './utils/user-setting'
 
 // import electronSquirrelStartup from 'electron-squirrel-startup'
@@ -108,6 +109,7 @@ app.on('ready', () => {
             label: 'Quit',
             accelerator: 'Command+Q',
             click: () => {
+              resetUserUrls()
               app.quit()
             }
           },
@@ -115,6 +117,7 @@ app.on('ready', () => {
             label: 'Reload',
             accelerator: 'Command+R',
             click: () => {
+              resetUserUrls()
               browserWindow.reload()
             }
           },
