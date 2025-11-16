@@ -27,8 +27,14 @@ const config: ForgeConfig = {
   },
   rebuildConfig: {},
   makers: [
-    new MakerSquirrel({}),
-    new MakerZIP({}, ['darwin']),
+    new MakerSquirrel(
+      {
+        // Windows Squirrel 安装程序配置
+        name: pkg.name
+      },
+      ['win32']
+    ),
+    new MakerZIP({}, ['darwin', 'win32']),
     new MakerRpm({}),
     new MakerDeb({})
   ],

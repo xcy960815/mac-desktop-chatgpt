@@ -3,12 +3,22 @@ import path from 'path'
 import { app } from 'electron'
 
 const SUBPATH = 'config'
-const DEFAULTSETTING: UserSetting = { model: 'ChatGPT' }
+const DEFAULTSETTING: UserSetting = {
+  model: 'ChatGPT',
+  urls: {
+    ChatGPT: 'https://chat.openai.com/chat',
+    DeepSeek: 'https://chat.deepseek.com/'
+  }
+}
 const FILENAME = 'settings.json'
 
 export interface UserSetting {
   model: 'ChatGPT' | 'DeepSeek'
-  lastVisitedUrl?: string
+  lastVisitedUrl?: string // 保留用于向后兼容
+  urls?: {
+    ChatGPT?: string
+    DeepSeek?: string
+  }
 }
 
 /**
