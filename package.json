@@ -6,6 +6,8 @@
   "main": ".vite/build/main.js",
   "scripts": {
     "start": "electron-forge start",
+    "build": "electron-forge package",
+    "start:prod": "npm run build && electron .",
     "package": "electron-forge package",
     "make": "electron-forge make --arch arm64,x64",
     "make:mac": "electron-forge make --platform darwin --arch arm64,x64",

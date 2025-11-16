@@ -21,9 +21,6 @@ import {
 
 // import electronSquirrelStartup from 'electron-squirrel-startup'
 
-// 添加开发服务器 URL
-declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string
-
 app.commandLine.appendSwitch('ignore-certificate-errors')
 
 // if (electronSquirrelStartup) {
@@ -61,7 +58,7 @@ app.on('ready', () => {
         sandbox: false
       }
     },
-    index: MAIN_WINDOW_VITE_DEV_SERVER_URL,
+    index: MAIN_WINDOW_VITE_DEV_SERVER_URL || false,
     tray,
     dir: appPath,
     showOnAllWorkspaces: true,
@@ -290,7 +287,7 @@ app.on('ready', () => {
           // -7 = ERR_TIMED_OUT
           if (errorCode !== -3 && Math.abs(errorCode) > 0) {
             // 发送错误消息到渲染进程
-            const errorMessages: { [key: number]: string } =
+            const errorMessages: { [key: string]: string } =
               {
                 '-7': '网络连接超时，请检查您的网络连接',
                 '-102': '无法连接到服务器，请稍后重试',
