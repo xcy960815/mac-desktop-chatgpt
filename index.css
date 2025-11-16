@@ -33,6 +33,15 @@ body {
   }
 }
 
+/* Windows 平台样式 */
+.platform-win32 .triangle {
+  display: none;
+}
+
+.platform-win32 .container {
+  padding: 0;
+}
+
 .webview-box {
   background: #eeeeee;
   width: 100%;
@@ -51,6 +60,11 @@ body {
   width: 100%;
   height: calc(100vh - 12px);
   display: inline-flex !important;
+}
+
+/* Windows 平台样式 */
+.platform-win32 .webview {
+  height: 100vh;
 }
 
 .webview-loading {
@@ -110,10 +124,14 @@ body {
 }
 
 @keyframes bounce {
-  0%, 80%, 100% {
+
+  0%,
+  80%,
+  100% {
     transform: scale(0.7) translateY(0);
     opacity: 0.7;
   }
+
   40% {
     transform: scale(1.2) translateY(-16px);
     opacity: 1;
@@ -185,9 +203,19 @@ body {
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-10px); }
-  75% { transform: translateX(10px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-10px);
+  }
+
+  75% {
+    transform: translateX(10px);
+  }
 }
 
 .error-title {
