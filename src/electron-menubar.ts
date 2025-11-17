@@ -10,6 +10,13 @@ import Positioner from 'electron-positioner'
 import { EventEmitter } from 'events'
 import * as fs from 'fs'
 import * as path from 'path'
+
+/**
+ * @description 负责控制托盘图标、BrowserWindow 以及定位逻辑的菜单栏管理器。
+ * @fires ElectronMenubar#ready
+ * @fires ElectronMenubar#show
+ * @fires ElectronMenubar#hide
+ */
 export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   private readonly _DEFAULT_WINDOW_HEIGHT: number = 400
   private readonly _DEFAULT_WINDOW_WIDTH: number = 400
@@ -27,6 +34,11 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   private _trayPositionChecker: NodeJS.Timeout | null = null
   private _lastTrayBounds: Electron.Rectangle | null = null
 
+  /**
+   * @description 创建一个菜单栏实例，同时在 app ready 后初始化托盘与窗口。
+   * @param app Electron App 实例
+   * @param options 自定义配置
+   */
   constructor(
     app: Electron.App,
     options?: Partial<ElectronMenubarOptions>
@@ -55,7 +67,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @desc Electron App 实例
+   * @description Electron App 实例
    * @link https://electronjs.org/docs/api/app
    * @returns {Electron.App}
    */
@@ -64,7 +76,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @desc electron-positioner 实例
+   * @description electron-positioner 实例
    * @link https://github.com/jenslind/electron-positioner
    * @returns {Positioner}
    */
@@ -79,7 +91,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @desc Electron Tray 实例
+   * @description Electron Tray 实例
    * @link https://electronjs.org/docs/api/tray
    * @returns {Tray}
    */
@@ -93,7 +105,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @desc Electron BrowserWindow 实例
+   * @description Electron BrowserWindow 实例
    * @link https://electronjs.org/docs/api/browser-browserWindow
    * @returns {BrowserWindow | undefined}
    */
@@ -102,7 +114,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @desc 开始监听 Tray 位置变化
+   * @description 开始监听 Tray 位置变化
    */
   private startTrayPositionWatcher() {
     if (!this._tray) return
@@ -124,7 +136,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @desc 停止监听 Tray 位置变化
+   * @description 停止监听 Tray 位置变化
    */
   private stopTrayPositionWatcher() {
     if (this._trayPositionChecker) {
@@ -134,7 +146,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @desc 订正箭头位置
+   * @description 订正箭头位置
    * @return {void}
    */
   private correctArrowPosition() {
@@ -150,7 +162,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @desc 获取配置项
+   * @description 获取配置项
    * @see ElectronMenubarOptions
    * @param key { K extends keyof ElectronMenubarOptions }
    * @returns { ElectronMenubarOptions[keyof ElectronMenubarOptions]}
@@ -162,7 +174,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @desc 修改配置项
+   * @description 修改配置项
    * @see ElectronMenubarOptions
    * @param key {K extends keyof ElectronMenubarOptions}
    * @param value {ElectronMenubarOptions[K]}
@@ -176,7 +188,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @desc 隐藏菜单栏窗口
+   * @description 隐藏菜单栏窗口
    * @return {void}
    */
   public hideWindow(): void {
@@ -192,7 +204,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @desc 显示菜单栏窗口
+   * @description 显示菜单栏窗口
    * @param trayPosition {Electron.Rectangle}
    * @returns {Promise<void>}
    */
@@ -216,7 +228,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     }
 
     /**
-     * @desc Windows任务栏：每次显示前同步窗口位置
+     * @description Windows任务栏：每次显示前同步窗口位置
      * @link https://github.com/maxogden/menubar/issues/232
      */
     if (['win32', 'linux'].includes(process.platform)) {
@@ -226,6 +238,18 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     }
 
     this.emit('show', this)
+
+    // Windows 平台：显示在屏幕中央
+    if (
+      process.platform !== 'darwin' &&
+      process.platform !== 'linux'
+    ) {
+      this._browserWindow.center()
+      this._browserWindow.show()
+      this._isVisible = true
+      this.emit('after-show', this)
+      return
+    }
 
     if (trayPosition && trayPosition.x !== 0) {
       // 将位置缓存起来
@@ -247,7 +271,8 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
       this._options.windowPosition.startsWith('tray')
     ) {
       windowPosition =
-        process.platform === 'win32'
+        process.platform !== 'darwin' &&
+        process.platform !== 'linux'
           ? 'bottomRight'
           : 'topRight'
     }
@@ -257,7 +282,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
       trayPosition
     )
 
-    // 不使用“||”，因为 x 和 y 可以为零。
+    // 不使用"||"，因为 x 和 y 可以为零。
     const x = Math.round(
       this._options.browserWindow.x !== undefined
         ? this._options.browserWindow.x
@@ -271,7 +296,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     )
 
     /**
-     * @desc setPosition 方法只能使用整数
+     * @description setPosition 方法只能使用整数
      * @link https://github.com/maxogden/menubar/issues/233
      */
     this._browserWindow.setPosition(x, y)
@@ -289,7 +314,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @desc 菜单栏应用程序准备就绪
+   * @description 菜单栏应用程序准备就绪
    * @return {Promise<void>}
    */
   private async appReady(): Promise<void> {
@@ -370,7 +395,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @desc 点击菜单栏图标
+   * @description 点击菜单栏图标
    * @param e {Electron.KeyboardEvent}
    * @param bounds {Electron.Rectangle}
    * @return {Promise<void>}
@@ -403,7 +428,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @desc 初始化配置项
+   * @description 初始化配置项
    * @param opts {Partial<ElectronMenubarOptions>}
    * @returns {ElectronMenubarOptions}
    */
@@ -451,6 +476,11 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     return options as ElectronMenubarOptions
   }
 
+  /**
+   * @description 依据托盘所在屏幕返回屏幕的全尺寸和可用工作区。
+   * @param tray 托盘实例
+   * @returns [屏幕边界, 工作区边界]
+   */
   private trayToScreenRects(
     tray: Tray
   ): [Rectangle, Rectangle] {
@@ -462,6 +492,11 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     return [screenBounds, workArea]
   }
 
+  /**
+   * @description 计算托盘所在任务栏的位置（顶部/底部/左右）。
+   * @param tray 托盘实例
+   * @returns 任务栏方位
+   */
   private taskbarLocation(tray: Tray): TaskbarLocation {
     const [screenBounds, workArea] =
       this.trayToScreenRects(tray)
@@ -482,7 +517,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @desc 获取窗口位置
+   * @description 获取窗口位置
    * @param tray {Tray}
    * @returns {Positioner.Position}
    */
@@ -523,7 +558,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @desc 创建窗口
+   * @description 创建窗口
    * @return {Promise<void>}
    */
   private async createWindow(): Promise<void> {
@@ -596,7 +631,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @desc 清除窗口
+   * @description 清除窗口
    * @return {void}
    */
   private windowClear(): void {
