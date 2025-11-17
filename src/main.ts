@@ -95,7 +95,7 @@ app.on('ready', () => {
     // 监听 URL 变化
     browserWindow.webContents.on(
       'did-navigate',
-      (event, url) => {
+      (_event, url) => {
         const currentSetting = readUserSetting()
         writeUserSetting({
           ...currentSetting,
