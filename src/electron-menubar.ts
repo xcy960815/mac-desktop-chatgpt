@@ -22,6 +22,8 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   private readonly _DEFAULT_WINDOW_WIDTH: number = 400
   private readonly _isLinux: boolean =
     process.platform === 'linux'
+  private readonly _isWindows: boolean =
+    process.platform === 'win32'
   private _app: Electron.App
   private _browserWindow?: BrowserWindow
   private _blurTimeout: NodeJS.Timeout | null
@@ -150,7 +152,11 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
    * @return {void}
    */
   private correctArrowPosition() {
-    if (!this._tray || !this._browserWindow) {
+    if (
+      this._isWindows ||
+      !this._tray ||
+      !this._browserWindow
+    ) {
       return
     }
     // 获取 Tray 的位置
@@ -243,11 +249,10 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     this.emit('show', this)
 
     // Windows 平台：显示在屏幕中央
-    if (
-      process.platform !== 'darwin' &&
-      process.platform !== 'linux'
-    ) {
+    if (this._isWindows) {
       this._browserWindow.center()
+      this._browserWindow.restore()
+      this._browserWindow.focus()
       this._browserWindow.show()
       this._isVisible = true
       this.emit('after-show', this)
@@ -416,6 +421,14 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     }
 
     if (this._browserWindow && this._isVisible) {
+      if (this._isWindows) {
+        if (this._browserWindow.isMinimized()) {
+          this._browserWindow.restore()
+        }
+        this._browserWindow.show()
+        this._browserWindow.focus()
+        return
+      }
       this.hideWindow()
       return
     }
@@ -563,14 +576,27 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     this.emit('create-browserWindow', this)
 
     // 为菜单栏的 browserWindow 添加一些默认行为，使其看起来像一个菜单栏
-    const defaultBrowserWindow = {
-      show: false, // 一开始不要展示窗口
-      frame: false // 删除浏览器窗口 frame
-    }
+    const defaultBrowserWindow = this._isWindows
+      ? {
+          show: false, // 仍由 showWindow 控制展示时机
+          frame: true, // Windows 使用常规窗口
+          transparent: false
+        }
+      : {
+          show: false, // 一开始不要展示窗口
+          frame: false // 删除浏览器窗口 frame
+        }
 
     this._browserWindow = new BrowserWindow({
       ...defaultBrowserWindow,
-      ...this._options.browserWindow
+      ...this._options.browserWindow,
+      ...(this._isWindows
+        ? {
+            frame: true,
+            transparent: false,
+            skipTaskbar: false
+          }
+        : {})
     })
 
     this._positioner = new Positioner(this._browserWindow)
@@ -581,18 +607,20 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     })
 
     // 给窗口添加失去焦点事件
-    this._browserWindow.on('blur', () => {
-      if (!this._browserWindow) return
-      // 窗口是否始终位于其他窗口之上。
-      const isOnTop = this._browserWindow.isAlwaysOnTop()
-      if (isOnTop) {
-        this.emit('focus-lost', this)
-      } else {
-        this._blurTimeout = setTimeout(() => {
-          this.hideWindow()
-        }, 100)
-      }
-    })
+    if (!this._isWindows) {
+      this._browserWindow.on('blur', () => {
+        if (!this._browserWindow) return
+        // 窗口是否始终位于其他窗口之上。
+        const isOnTop = this._browserWindow.isAlwaysOnTop()
+        if (isOnTop) {
+          this.emit('focus-lost', this)
+        } else {
+          this._blurTimeout = setTimeout(() => {
+            this.hideWindow()
+          }, 100)
+        }
+      })
+    }
 
     this._browserWindow.on('focus', () => {
       // 注册esc快捷键 快捷关闭窗口
