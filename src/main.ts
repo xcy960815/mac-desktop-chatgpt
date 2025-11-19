@@ -78,10 +78,10 @@ app.on('ready', () => {
   })
 
   electronMenubar.on('ready', async ({ browserWindow }) => {
-    if (process.platform !== 'darwin') {
-      browserWindow.setSkipTaskbar(true)
-    } else {
+    if (process.platform === 'darwin') {
       app.dock.hide()
+    } else if (process.platform === 'linux') {
+      browserWindow.setSkipTaskbar(true)
     }
 
     // 读取上次访问的 URL
