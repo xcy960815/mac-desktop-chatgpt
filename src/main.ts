@@ -19,13 +19,11 @@ import {
   resetUserUrls
 } from './utils/user-setting'
 
-// import electronSquirrelStartup from 'electron-squirrel-startup'
+const DEEPSEEK = 'https://chat.deepseek.com/'
+const CHATGPT = 'https://chatgpt.com'
+const GROK = 'https://grok.com/'
 
 app.commandLine.appendSwitch('ignore-certificate-errors')
-
-// if (electronSquirrelStartup) {
-//   app.quit();
-// }
 
 const TOOLTIP = 'desktop-chatgpt'
 
@@ -111,6 +109,7 @@ app.on('ready', () => {
       const userSetting = readUserSetting()
       const isChatGPT = userSetting.model === 'ChatGPT'
       const isDeepSeek = userSetting.model === 'DeepSeek'
+      const isGrok = userSetting.model === 'Grok'
       electronMenubar.tray.popUpContextMenu(
         Menu.buildFromTemplate([
           {
@@ -134,12 +133,13 @@ app.on('ready', () => {
             accelerator: 'Command+O',
             click: async () => {
               if (isChatGPT) {
-                shell.openExternal('https://chatgpt.com')
+                shell.openExternal(CHATGPT)
               }
               if (isDeepSeek) {
-                shell.openExternal(
-                  'https://chat.deepseek.com/'
-                )
+                shell.openExternal(DEEPSEEK)
+              }
+              if (isGrok) {
+                shell.openExternal(GROK)
               }
             }
           },
@@ -160,8 +160,7 @@ app.on('ready', () => {
                     menu
                   )
                   const savedUrl =
-                    newUserSetting.urls?.ChatGPT ||
-                    'https://chatgpt.com'
+                    newUserSetting.urls?.ChatGPT || CHATGPT
                   browserWindow?.webContents.send(
                     'model-changed',
                     newUserSetting.model,
@@ -185,7 +184,30 @@ app.on('ready', () => {
                   )
                   const savedUrl =
                     newUserSetting.urls?.DeepSeek ||
-                    'https://chat.deepseek.com/'
+                    DEEPSEEK
+                  browserWindow?.webContents.send(
+                    'model-changed',
+                    newUserSetting.model,
+                    savedUrl
+                  )
+                }
+              },
+              { type: 'separator' }, // 分隔线
+              {
+                label: 'Grok',
+                type: 'radio',
+                checked: isGrok,
+                click: () => {
+                  const userSetting = readUserSetting()
+                  const newUserSetting = writeUserSetting({
+                    ...userSetting,
+                    model: 'Grok'
+                  })
+                  electronMenubar.tray.popUpContextMenu(
+                    menu
+                  )
+                  const savedUrl =
+                    newUserSetting.urls?.Grok || GROK
                   browserWindow?.webContents.send(
                     'model-changed',
                     newUserSetting.model,
@@ -236,12 +258,14 @@ app.on('ready', () => {
     'after-show',
     async ({ browserWindow }) => {
       const userSetting = readUserSetting()
-
       const savedUrl =
         userSetting.urls?.[userSetting.model] ||
         (userSetting.model === 'DeepSeek'
-          ? 'https://chat.deepseek.com/'
-          : 'https://chatgpt.com')
+          ? DEEPSEEK
+          : userSetting.model === 'ChatGPT'
+          ? CHATGPT
+          : GROK)
+
       browserWindow.webContents.send(
         'model-changed',
         userSetting.model,
@@ -265,8 +289,9 @@ app.on('ready', () => {
         // 确保 urls 对象存在
         if (!currentSetting.urls) {
           currentSetting.urls = {
-            ChatGPT: 'https://chatgpt.com',
-            DeepSeek: 'https://chat.deepseek.com/'
+            ChatGPT: CHATGPT,
+            DeepSeek: DEEPSEEK,
+            Grok: GROK
           }
         }
 
