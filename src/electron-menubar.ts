@@ -150,13 +150,16 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
    * @return {void}
    */
   private correctArrowPosition() {
+    if (!this._tray || !this._browserWindow) {
+      return
+    }
     // 获取 Tray 的位置
     const { x: trayX, width: trayWidth } =
-      this.tray.getBounds()
-    const { x: windowX } = this.browserWindow.getBounds()
+      this._tray.getBounds()
+    const { x: windowX } = this._browserWindow.getBounds()
     const triangleLeft = trayX + trayWidth / 2 - windowX
     // 不能使用变量承接会报错
-    this.browserWindow.webContents.executeJavaScript(`
+    this._browserWindow.webContents.executeJavaScript(`
 			document.getElementsByClassName('triangle')[0].style.left = ${triangleLeft}+'px'
 		`)
   }
@@ -386,11 +389,6 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
       await this.createWindow()
     }
 
-    // 监听窗口大小变化 调整箭头的位置
-    this.browserWindow.addListener('resize', () => {
-      this.correctArrowPosition()
-    })
-
     this.emit('ready', this)
   }
 
@@ -576,6 +574,11 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     })
 
     this._positioner = new Positioner(this._browserWindow)
+
+    // 监听窗口大小变化 调整箭头的位置
+    this._browserWindow.on('resize', () => {
+      this.correctArrowPosition()
+    })
 
     // 给窗口添加失去焦点事件
     this._browserWindow.on('blur', () => {
