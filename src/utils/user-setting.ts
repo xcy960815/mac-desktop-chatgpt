@@ -9,7 +9,8 @@ const DEFAULTSETTING: UserSetting = {
     ChatGPT: 'https://chatgpt.com',
     DeepSeek: 'https://chat.deepseek.com/',
     Grok: 'https://grok.com/'
-  }
+  },
+  toggleShortcut: 'CommandOrControl+g'
 }
 const FILENAME = 'settings.json'
 
@@ -21,6 +22,7 @@ export interface UserSetting {
     DeepSeek?: string
     Grok?: string
   }
+  toggleShortcut?: string // 用于打开/关闭窗口的快捷键，默认 CommandOrControl+g
 }
 
 /**

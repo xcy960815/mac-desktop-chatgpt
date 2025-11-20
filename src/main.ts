@@ -10,7 +10,11 @@ import {
   nativeImage,
   Tray,
   shell,
-  Menu
+  Menu,
+  ipcMain,
+  dialog,
+  BrowserWindow,
+  screen
 } from 'electron'
 
 import {
@@ -26,6 +30,11 @@ const GROK = 'https://grok.com/'
 app.commandLine.appendSwitch('ignore-certificate-errors')
 
 const TOOLTIP = 'desktop-chatgpt'
+
+// 保存 browserWindow 引用，以便在菜单点击时使用
+let mainBrowserWindow: BrowserWindow | null = null
+// 标记 ready 事件是否已触发
+let isMenubarReady = false
 
 app.on('ready', () => {
   const appPath = app.getAppPath()
@@ -77,7 +86,305 @@ app.on('ready', () => {
     tooltip: TOOLTIP
   })
 
-  electronMenubar.on('ready', async ({ browserWindow }) => {
+  // 创建输入对话框的函数
+  function showShortcutInputDialog(
+    parentWindow: BrowserWindow,
+    currentShortcut: string
+  ): Promise<string | null> {
+    return new Promise((resolve, reject) => {
+      // 验证父窗口是否有效
+      if (!parentWindow || parentWindow.isDestroyed()) {
+        console.error(
+          '❌ showShortcutInputDialog: 父窗口无效'
+        )
+        reject(new Error('父窗口无效'))
+        return
+      }
+
+      // 在显示对话框前，禁用主窗口的自动隐藏
+      electronMenubar.disableAutoHide()
+
+      // 获取父窗口的位置，以便将对话框居中显示
+      let parentBounds
+      try {
+        parentBounds = parentWindow.getBounds()
+      } catch (error) {
+        console.error(
+          '❌ showShortcutInputDialog: 获取窗口位置失败',
+          error
+        )
+        // 如果获取位置失败，使用屏幕中心
+        const primaryDisplay = screen.getPrimaryDisplay()
+        const { width: screenWidth, height: screenHeight } =
+          primaryDisplay.workAreaSize
+        parentBounds = {
+          x: 0,
+          y: 0,
+          width: screenWidth,
+          height: screenHeight
+        }
+      }
+
+      const dialogWidth = 500
+      const dialogHeight = 280
+      const x = Math.round(
+        parentBounds.x +
+          (parentBounds.width - dialogWidth) / 2
+      )
+      const y = Math.round(
+        parentBounds.y +
+          (parentBounds.height - dialogHeight) / 2
+      )
+
+      const inputWindow = new BrowserWindow({
+        width: dialogWidth,
+        height: dialogHeight,
+        x: x,
+        y: y,
+        // 不设置 parent，避免主窗口隐藏时对话框也被隐藏
+        // parent: parentWindow,
+        // modal: true, // modal 需要 parent，所以也不设置
+        resizable: false,
+        frame: true,
+        alwaysOnTop: true, // 确保对话框始终在最上层
+        webPreferences: {
+          nodeIntegration: false,
+          contextIsolation: true,
+          sandbox: false,
+          preload: path.join(__dirname, 'preload.js')
+        },
+        title: '设置快捷键',
+        show: false
+      })
+
+      // 创建 HTML 内容
+      const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>设置快捷键</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #333;
+    }
+    .description {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+    .current-shortcut {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 12px;
+    }
+    .input-group {
+      margin-bottom: 16px;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      font-family: monospace;
+    }
+    input:focus {
+      outline: none;
+      border-color: #007AFF;
+      box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+    }
+    .examples {
+      font-size: 11px;
+      color: #999;
+      margin-top: 8px;
+      line-height: 1.6;
+    }
+    .buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+    button {
+      padding: 8px 20px;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-cancel {
+      background: #f0f0f0;
+      color: #333;
+    }
+    .btn-cancel:hover {
+      background: #e0e0e0;
+    }
+    .btn-ok {
+      background: #007AFF;
+      color: white;
+    }
+    .btn-ok:hover {
+      background: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="title">设置快捷键</div>
+    <div class="description">请输入用于打开/关闭窗口的快捷键</div>
+    <div class="current-shortcut">当前快捷键: <strong>${currentShortcut}</strong></div>
+    <div class="input-group">
+      <input type="text" id="shortcut-input" value="${currentShortcut}" placeholder="例如: CommandOrControl+g">
+      <div class="examples">
+        格式示例:<br>
+        • CommandOrControl+g (Mac: ⌘+G, Windows/Linux: Ctrl+G)<br>
+        • CommandOrControl+Shift+g<br>
+        • Alt+Shift+g<br>
+        • F12
+      </div>
+    </div>
+    <div class="buttons">
+      <button class="btn-cancel" id="cancel-btn">取消</button>
+      <button class="btn-ok" id="ok-btn">确定</button>
+    </div>
+  </div>
+  <script>
+    const input = document.getElementById('shortcut-input');
+    const okBtn = document.getElementById('ok-btn');
+    const cancelBtn = document.getElementById('cancel-btn');
+
+    input.focus();
+    input.select();
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        okBtn.click();
+      } else if (e.key === 'Escape') {
+        cancelBtn.click();
+      }
+    });
+
+    okBtn.addEventListener('click', () => {
+      const value = input.value.trim();
+      // 即使为空字符串也传递，让主进程判断是否有效
+      window.electronAPI?.sendShortcutInput(value);
+    });
+
+    cancelBtn.addEventListener('click', () => {
+      window.electronAPI?.sendShortcutInput(null);
+    });
+  </script>
+</body>
+</html>
+      `
+
+      inputWindow.loadURL(
+        `data:text/html;charset=utf-8,${encodeURIComponent(
+          html
+        )}`
+      )
+
+      let isResolved = false
+
+      // 监听来自渲染进程的消息
+      ipcMain.once(
+        'shortcut-input-response',
+        (_event, value: string | null) => {
+          if (isResolved) {
+            console.log(
+              '⚠️ shortcut-input-response 已处理过，忽略重复消息'
+            )
+            return
+          }
+          isResolved = true
+          console.log('✅ 收到用户输入:', value)
+          // 恢复主窗口的自动隐藏
+          electronMenubar.enableAutoHide()
+          // 延迟关闭窗口，确保消息已处理
+          setTimeout(() => {
+            if (!inputWindow.isDestroyed()) {
+              inputWindow.close()
+            }
+          }, 50)
+          resolve(value)
+        }
+      )
+
+      inputWindow.once('closed', () => {
+        if (!isResolved) {
+          console.log(
+            '⚠️ 窗口关闭但未收到用户输入，返回 null'
+          )
+          // 恢复主窗口的自动隐藏
+          electronMenubar.enableAutoHide()
+          isResolved = true
+          resolve(null)
+        }
+      })
+
+      inputWindow.once('ready-to-show', () => {
+        // 确保主窗口可见（防止被自动隐藏）
+        if (parentWindow && !parentWindow.isDestroyed()) {
+          if (!parentWindow.isVisible()) {
+            parentWindow.show()
+          }
+        }
+        inputWindow.show()
+        inputWindow.focus()
+      })
+
+      // 如果对话框被关闭（用户点击关闭按钮），也 resolve null
+      inputWindow.on('close', (event) => {
+        if (!isResolved) {
+          console.log('⚠️ 用户点击关闭按钮')
+          // 恢复主窗口的自动隐藏
+          electronMenubar.enableAutoHide()
+          isResolved = true
+          event.preventDefault()
+          inputWindow.destroy()
+          resolve(null)
+        }
+      })
+    })
+  }
+
+  electronMenubar.on('ready', async (menubar) => {
+    // 从 menubar 实例获取 browserWindow
+    const browserWindow = menubar.browserWindow
+    if (!browserWindow) {
+      console.error(
+        '❌ ready 事件触发时 browserWindow 不存在'
+      )
+      return
+    }
+    // 保存 browserWindow 引用
+    mainBrowserWindow = browserWindow
+    isMenubarReady = true
+    console.log(
+      '✅ Menubar ready 事件已触发，browserWindow 已保存'
+    )
+
     if (process.platform === 'darwin') {
       app.dock.hide()
     } else if (process.platform === 'linux') {
@@ -216,6 +523,474 @@ app.on('ready', () => {
                 }
               }
             ]
+          },
+          { type: 'separator' }, // 分隔线
+          {
+            label: '设置快捷键',
+            click: async () => {
+              console.log('🔧 开始设置快捷键...')
+              try {
+                const userSetting = readUserSetting()
+                const savedShortcut =
+                  userSetting.toggleShortcut ||
+                  'CommandOrControl+g'
+                console.log('📋 当前快捷键:', savedShortcut)
+
+                // 如果 menubar 还没有 ready，等待一下
+                if (!isMenubarReady) {
+                  console.log('⏳ 等待 menubar ready...')
+                  // 等待最多 2 秒
+                  for (
+                    let i = 0;
+                    i < 20 && !isMenubarReady;
+                    i++
+                  ) {
+                    await new Promise((resolve) =>
+                      setTimeout(resolve, 100)
+                    )
+                  }
+                  if (!isMenubarReady) {
+                    console.log(
+                      '⚠️ Menubar 尚未 ready，但继续尝试...'
+                    )
+                  }
+                }
+
+                // 获取窗口实例：优先使用保存的引用，其次从 electronMenubar 获取
+                let browserWindow =
+                  mainBrowserWindow ||
+                  electronMenubar.browserWindow
+                console.log('🔍 初始窗口状态:', {
+                  isMenubarReady,
+                  mainBrowserWindow: !!mainBrowserWindow,
+                  electronMenubarBrowserWindow:
+                    !!electronMenubar.browserWindow,
+                  browserWindow: !!browserWindow,
+                  isDestroyed: browserWindow
+                    ? browserWindow.isDestroyed()
+                    : 'N/A'
+                })
+
+                // 如果窗口不存在或已销毁，先创建/显示窗口
+                if (
+                  !browserWindow ||
+                  browserWindow.isDestroyed()
+                ) {
+                  console.log(
+                    '📦 窗口不存在或已销毁，创建窗口...'
+                  )
+                  try {
+                    // 确保 electronMenubar 已经准备好
+                    if (!electronMenubar.tray) {
+                      console.error(
+                        '❌ Tray 未初始化，无法创建窗口'
+                      )
+                      dialog.showMessageBox({
+                        type: 'error',
+                        title: '错误',
+                        message:
+                          '应用程序未完全初始化，请稍后再试',
+                        buttons: ['确定']
+                      })
+                      return
+                    }
+
+                    await electronMenubar.showWindow()
+                    console.log('✅ showWindow() 调用完成')
+
+                    // 等待一小段时间确保窗口创建完成
+                    await new Promise((resolve) =>
+                      setTimeout(resolve, 200)
+                    )
+
+                    // 重新获取窗口引用，多次尝试
+                    for (let i = 0; i < 5; i++) {
+                      browserWindow =
+                        electronMenubar.browserWindow ||
+                        mainBrowserWindow
+                      if (
+                        browserWindow &&
+                        !browserWindow.isDestroyed()
+                      ) {
+                        console.log(
+                          `✅ 窗口获取成功 (尝试 ${
+                            i + 1
+                          }/5)`
+                        )
+                        break
+                      }
+                      console.log(
+                        `⏳ 等待窗口创建... (尝试 ${
+                          i + 1
+                        }/5)`
+                      )
+                      await new Promise((resolve) =>
+                        setTimeout(resolve, 100)
+                      )
+                    }
+
+                    // 更新保存的引用
+                    if (
+                      browserWindow &&
+                      !browserWindow.isDestroyed()
+                    ) {
+                      mainBrowserWindow = browserWindow
+                      console.log('✅ 窗口引用已更新')
+                    }
+                  } catch (error) {
+                    console.error(
+                      '❌ 创建窗口时出错:',
+                      error
+                    )
+                    // 即使出错，也尝试获取窗口
+                    browserWindow =
+                      electronMenubar.browserWindow ||
+                      mainBrowserWindow
+                  }
+
+                  // 再次检查窗口是否准备好
+                  if (
+                    !browserWindow ||
+                    browserWindow.isDestroyed()
+                  ) {
+                    console.error(
+                      '❌ 窗口创建失败或未准备好',
+                      {
+                        browserWindow: !!browserWindow,
+                        isDestroyed: browserWindow
+                          ? browserWindow.isDestroyed()
+                          : 'N/A',
+                        electronMenubarBrowserWindow:
+                          !!electronMenubar.browserWindow
+                      }
+                    )
+                    dialog.showMessageBox({
+                      type: 'error',
+                      title: '错误',
+                      message: '窗口未准备好，请稍后再试',
+                      buttons: ['确定']
+                    })
+                    return
+                  }
+
+                  // 等待窗口加载完成
+                  await new Promise<void>((resolve) => {
+                    if (
+                      browserWindow!.webContents.isLoading()
+                    ) {
+                      browserWindow!.webContents.once(
+                        'did-finish-load',
+                        () => {
+                          console.log('✅ 窗口加载完成')
+                          resolve()
+                        }
+                      )
+                      // 设置超时，避免无限等待
+                      setTimeout(() => {
+                        console.log(
+                          '⏰ 窗口加载超时，继续执行'
+                        )
+                        resolve()
+                      }, 5000)
+                    } else {
+                      console.log('✅ 窗口已加载')
+                      resolve()
+                    }
+                  })
+                }
+
+                console.log('✅ 窗口已准备好')
+
+                // 确保窗口可见，以便显示输入框
+                if (!browserWindow.isVisible()) {
+                  console.log('👁️ 窗口不可见，显示窗口...')
+                  try {
+                    await electronMenubar.showWindow()
+                    browserWindow =
+                      electronMenubar.browserWindow ||
+                      mainBrowserWindow
+                    if (
+                      browserWindow &&
+                      !browserWindow.isDestroyed()
+                    ) {
+                      mainBrowserWindow = browserWindow
+                    }
+                    // 等待窗口显示和加载完成
+                    await new Promise((resolve) =>
+                      setTimeout(resolve, 300)
+                    )
+                  } catch (error) {
+                    console.error(
+                      '❌ 显示窗口时出错:',
+                      error
+                    )
+                  }
+                }
+
+                // 最终检查窗口是否可用
+                if (
+                  !browserWindow ||
+                  browserWindow.isDestroyed()
+                ) {
+                  console.error('❌ 窗口最终检查失败')
+                  dialog.showMessageBox({
+                    type: 'error',
+                    title: '错误',
+                    message: '窗口未准备好，请稍后再试',
+                    buttons: ['确定']
+                  })
+                  return
+                }
+
+                console.log('✅ 窗口已可见')
+
+                // 等待页面加载完成
+                console.log('⏳ 等待页面加载完成...')
+                await new Promise<void>((resolve) => {
+                  if (
+                    browserWindow!.webContents.isLoading()
+                  ) {
+                    browserWindow!.webContents.once(
+                      'did-finish-load',
+                      () => {
+                        console.log('✅ 页面加载完成')
+                        resolve()
+                      }
+                    )
+                    // 设置超时，避免无限等待
+                    setTimeout(() => {
+                      console.log(
+                        '⏰ 页面加载超时，继续执行'
+                      )
+                      resolve()
+                    }, 5000)
+                  } else {
+                    console.log('✅ 页面已加载')
+                    resolve()
+                  }
+                })
+
+                // 最后一次验证窗口是否可用（在调用对话框之前）
+                browserWindow =
+                  electronMenubar.browserWindow ||
+                  mainBrowserWindow
+                if (
+                  !browserWindow ||
+                  browserWindow.isDestroyed()
+                ) {
+                  console.error(
+                    '❌ 调用对话框前窗口检查失败'
+                  )
+                  dialog.showMessageBox({
+                    type: 'error',
+                    title: '错误',
+                    message: '窗口未准备好，请稍后再试',
+                    buttons: ['确定']
+                  })
+                  return
+                }
+
+                // 确保窗口可见
+                if (!browserWindow.isVisible()) {
+                  browserWindow.show()
+                  await new Promise((resolve) =>
+                    setTimeout(resolve, 100)
+                  )
+                }
+
+                // 使用自定义输入对话框获取输入
+                // 注意：showShortcutInputDialog 内部会处理禁用/启用自动隐藏
+                console.log('💬 准备显示输入框...')
+                let input: string | null = null
+                try {
+                  input = await showShortcutInputDialog(
+                    browserWindow,
+                    savedShortcut
+                  )
+                  console.log('📝 用户输入:', input)
+                } catch (error) {
+                  console.error(
+                    '❌ 显示对话框时出错:',
+                    error
+                  )
+                  dialog.showMessageBox({
+                    type: 'error',
+                    title: '错误',
+                    message: '显示对话框失败，请稍后再试',
+                    buttons: ['确定']
+                  })
+                  return
+                }
+
+                if (input && input.trim()) {
+                  const shortcut = input.trim()
+
+                  // 验证快捷键格式
+                  if (!shortcut || shortcut.trim() === '') {
+                    dialog.showMessageBox(browserWindow, {
+                      type: 'error',
+                      title: '设置失败',
+                      message: '快捷键不能为空',
+                      buttons: ['确定']
+                    })
+                    return
+                  }
+
+                  // 先注销当前快捷键
+                  if (currentShortcut) {
+                    globalShortcut.unregister(
+                      currentShortcut
+                    )
+                  }
+
+                  // 尝试注册新快捷键
+                  const registered =
+                    globalShortcut.register(
+                      shortcut,
+                      () => {
+                        const menubarVisible =
+                          browserWindow.isVisible()
+                        if (menubarVisible) {
+                          electronMenubar.hideWindow()
+                        } else {
+                          electronMenubar.showWindow()
+                          if (
+                            process.platform == 'darwin'
+                          ) {
+                            electronMenubar.app.show()
+                          }
+                          electronMenubar.app.focus()
+                        }
+                      }
+                    )
+
+                  if (registered) {
+                    // 保存到用户设置
+                    const userSetting = readUserSetting()
+                    writeUserSetting({
+                      ...userSetting,
+                      toggleShortcut: shortcut
+                    })
+                    currentShortcut = shortcut
+                    dialog.showMessageBox(browserWindow, {
+                      type: 'info',
+                      title: '设置成功',
+                      message: '快捷键设置成功',
+                      buttons: ['确定']
+                    })
+                  } else {
+                    // 如果注册失败，恢复旧快捷键
+                    if (currentShortcut) {
+                      globalShortcut.register(
+                        currentShortcut,
+                        () => {
+                          const menubarVisible =
+                            browserWindow.isVisible()
+                          if (menubarVisible) {
+                            electronMenubar.hideWindow()
+                          } else {
+                            electronMenubar.showWindow()
+                            if (
+                              process.platform == 'darwin'
+                            ) {
+                              electronMenubar.app.show()
+                            }
+                            electronMenubar.app.focus()
+                          }
+                        }
+                      )
+                    }
+                    dialog.showMessageBox(browserWindow, {
+                      type: 'error',
+                      title: '设置失败',
+                      message:
+                        '快捷键已被占用或格式不正确，请尝试其他快捷键',
+                      buttons: ['确定']
+                    })
+                  }
+                } else if (input === null) {
+                  // 用户取消，不做任何操作
+                } else {
+                  // 用户输入为空，询问是否重置为默认
+                  const resetResult =
+                    await dialog.showMessageBox(
+                      browserWindow,
+                      {
+                        type: 'question',
+                        title: '重置快捷键',
+                        message: '是否重置为默认快捷键？',
+                        detail:
+                          '默认快捷键: CommandOrControl+g',
+                        buttons: ['确定', '取消'],
+                        defaultId: 0,
+                        cancelId: 1
+                      }
+                    )
+
+                  if (resetResult.response === 0) {
+                    // 重置为默认
+                    if (currentShortcut) {
+                      globalShortcut.unregister(
+                        currentShortcut
+                      )
+                    }
+                    const defaultRegistered =
+                      globalShortcut.register(
+                        'CommandOrControl+g',
+                        () => {
+                          const menubarVisible =
+                            browserWindow.isVisible()
+                          if (menubarVisible) {
+                            electronMenubar.hideWindow()
+                          } else {
+                            electronMenubar.showWindow()
+                            if (
+                              process.platform == 'darwin'
+                            ) {
+                              electronMenubar.app.show()
+                            }
+                            electronMenubar.app.focus()
+                          }
+                        }
+                      )
+
+                    if (defaultRegistered) {
+                      const userSetting = readUserSetting()
+                      writeUserSetting({
+                        ...userSetting,
+                        toggleShortcut: 'CommandOrControl+g'
+                      })
+                      currentShortcut = 'CommandOrControl+g'
+                      dialog.showMessageBox(browserWindow, {
+                        type: 'info',
+                        title: '设置成功',
+                        message:
+                          '快捷键已重置为默认值: CommandOrControl+g',
+                        buttons: ['确定']
+                      })
+                    }
+                  }
+                }
+              } catch (error) {
+                console.error(
+                  '设置快捷键时发生错误:',
+                  error
+                )
+                dialog.showMessageBox(
+                  browserWindow || undefined,
+                  {
+                    type: 'error',
+                    title: '错误',
+                    message:
+                      '设置快捷键时发生错误: ' +
+                      (error instanceof Error
+                        ? error.message
+                        : String(error)),
+                    buttons: ['确定']
+                  }
+                )
+              }
+            }
           }
         ])
       )
@@ -234,18 +1009,150 @@ app.on('ready', () => {
 
     const menu = new Menu()
 
-    // 添加快捷键
-    globalShortcut.register('CommandOrControl+g', () => {
-      const menubarVisible = browserWindow.isVisible()
-      if (menubarVisible) {
-        electronMenubar.hideWindow()
-      } else {
-        electronMenubar.showWindow()
-        if (process.platform == 'darwin') {
-          electronMenubar.app.show()
-        }
-        electronMenubar.app.focus()
+    // 注册快捷键的函数
+    let currentShortcut: string | null = null
+    const registerToggleShortcut = () => {
+      // 先注销旧的快捷键
+      if (currentShortcut) {
+        globalShortcut.unregister(currentShortcut)
       }
+
+      // 从用户设置读取快捷键
+      const userSetting = readUserSetting()
+      const shortcut =
+        userSetting.toggleShortcut || 'CommandOrControl+g'
+
+      // 注册新的快捷键
+      const registered = globalShortcut.register(
+        shortcut,
+        () => {
+          const menubarVisible = browserWindow.isVisible()
+          if (menubarVisible) {
+            electronMenubar.hideWindow()
+          } else {
+            electronMenubar.showWindow()
+            if (process.platform == 'darwin') {
+              electronMenubar.app.show()
+            }
+            electronMenubar.app.focus()
+          }
+        }
+      )
+
+      if (registered) {
+        currentShortcut = shortcut
+        console.log(`✅ 快捷键注册成功: ${shortcut}`)
+      } else {
+        console.error(`❌ 快捷键注册失败: ${shortcut}`)
+        // 如果注册失败，尝试使用默认快捷键
+        if (shortcut !== 'CommandOrControl+g') {
+          const defaultRegistered = globalShortcut.register(
+            'CommandOrControl+g',
+            () => {
+              const menubarVisible =
+                browserWindow.isVisible()
+              if (menubarVisible) {
+                electronMenubar.hideWindow()
+              } else {
+                electronMenubar.showWindow()
+                if (process.platform == 'darwin') {
+                  electronMenubar.app.show()
+                }
+                electronMenubar.app.focus()
+              }
+            }
+          )
+          if (defaultRegistered) {
+            currentShortcut = 'CommandOrControl+g'
+            console.log(
+              `✅ 使用默认快捷键: CommandOrControl+g`
+            )
+          }
+        }
+      }
+    }
+
+    // 初始注册快捷键
+    registerToggleShortcut()
+
+    // IPC 处理程序：设置快捷键
+    ipcMain.handle(
+      'set-toggle-shortcut',
+      async (_event, shortcut: string) => {
+        // 验证快捷键格式
+        if (!shortcut || shortcut.trim() === '') {
+          return {
+            success: false,
+            message: '快捷键不能为空'
+          }
+        }
+
+        // 先注销当前快捷键
+        if (currentShortcut) {
+          globalShortcut.unregister(currentShortcut)
+        }
+
+        // 尝试注册新快捷键
+        const registered = globalShortcut.register(
+          shortcut,
+          () => {
+            const menubarVisible = browserWindow.isVisible()
+            if (menubarVisible) {
+              electronMenubar.hideWindow()
+            } else {
+              electronMenubar.showWindow()
+              if (process.platform == 'darwin') {
+                electronMenubar.app.show()
+              }
+              electronMenubar.app.focus()
+            }
+          }
+        )
+
+        if (registered) {
+          // 保存到用户设置
+          const userSetting = readUserSetting()
+          writeUserSetting({
+            ...userSetting,
+            toggleShortcut: shortcut
+          })
+          currentShortcut = shortcut
+          return {
+            success: true,
+            message: '快捷键设置成功'
+          }
+        } else {
+          // 如果注册失败，恢复旧快捷键
+          if (currentShortcut) {
+            globalShortcut.register(currentShortcut, () => {
+              const menubarVisible =
+                browserWindow.isVisible()
+              if (menubarVisible) {
+                electronMenubar.hideWindow()
+              } else {
+                electronMenubar.showWindow()
+                if (process.platform == 'darwin') {
+                  electronMenubar.app.show()
+                }
+                electronMenubar.app.focus()
+              }
+            })
+          }
+          return {
+            success: false,
+            message:
+              '快捷键已被占用或格式不正确，请尝试其他快捷键'
+          }
+        }
+      }
+    )
+
+    // IPC 处理程序：获取当前快捷键
+    ipcMain.handle('get-toggle-shortcut', () => {
+      const userSetting = readUserSetting()
+      return (
+        userSetting.toggleShortcut || 'CommandOrControl+g'
+      )
     })
 
     Menu.setApplicationMenu(menu)
@@ -435,4 +1342,9 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+// 应用退出时注销所有快捷键
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll()
 })
