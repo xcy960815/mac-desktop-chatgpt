@@ -14,6 +14,12 @@ declare global {
   }
 }
 
+/**
+ * 设置 webview 地址
+ * @param {string} modelName
+ * @param {string} savedUrl
+ * @returns {void}
+ */
 function setWebviewSrc(
   modelName: string,
   savedUrl?: string
@@ -35,7 +41,9 @@ function setWebviewSrc(
     webviewUrl =
       modelName === 'DeepSeek'
         ? 'https://chat.deepseek.com/'
-        : 'https://chatgpt.com'
+        : modelName === 'ChatGPT'
+        ? 'https://chatgpt.com/'
+        : 'https://grok.com/'
   }
 
   // 如果 URL 相同，不重复加载

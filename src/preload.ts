@@ -13,6 +13,11 @@ interface ElectronAPI {
   ) => void
   sendModelChanged: (model: string) => void
   updateBackgroundColor: (color: string) => void
+  setToggleShortcut: (
+    shortcut: string
+  ) => Promise<{ success: boolean; message: string }>
+  getToggleShortcut: () => Promise<string>
+  sendShortcutInput: (value: string | null) => void
   platform: string
 }
 
@@ -40,6 +45,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   updateBackgroundColor: (color: string) => {
     ipcRenderer.send('update-background-color', color)
+  },
+  setToggleShortcut: (shortcut: string) => {
+    return ipcRenderer.invoke(
+      'set-toggle-shortcut',
+      shortcut
+    )
+  },
+  getToggleShortcut: () => {
+    return ipcRenderer.invoke('get-toggle-shortcut')
+  },
+  sendShortcutInput: (value: string | null) => {
+    ipcRenderer.send('shortcut-input-response', value)
   },
   platform: process.platform
 } as ElectronAPI)
