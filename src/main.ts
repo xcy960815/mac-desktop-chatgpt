@@ -125,8 +125,8 @@ app.on('ready', () => {
         }
       }
 
-      const dialogWidth = 500
-      const dialogHeight = 280
+      const dialogWidth = 360
+      const dialogHeight = 160
       const x = Math.round(
         parentBounds.x +
           (parentBounds.width - dialogWidth) / 2
@@ -172,53 +172,30 @@ app.on('ready', () => {
     }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      padding: 20px;
+      padding: 16px;
       background: #f5f5f5;
     }
     .container {
       background: white;
-      border-radius: 8px;
-      padding: 20px;
+      border-radius: 6px;
+      padding: 16px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    .title {
-      font-size: 16px;
-      font-weight: 600;
-      margin-bottom: 12px;
-      color: #333;
-    }
-    .description {
-      font-size: 13px;
-      color: #666;
-      margin-bottom: 16px;
-      line-height: 1.5;
-    }
-    .current-shortcut {
-      font-size: 12px;
-      color: #888;
-      margin-bottom: 12px;
     }
     .input-group {
       margin-bottom: 16px;
     }
-    input {
+    .shortcut-display {
       width: 100%;
-      padding: 10px;
+      padding: 8px;
       border: 1px solid #ddd;
       border-radius: 4px;
       font-size: 14px;
       font-family: monospace;
-    }
-    input:focus {
-      outline: none;
-      border-color: #007AFF;
-      box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
-    }
-    .examples {
-      font-size: 11px;
-      color: #999;
-      margin-top: 8px;
-      line-height: 1.6;
+      background: #fafafa;
+      color: #333;
+      min-height: 32px;
+      display: flex;
+      align-items: center;
     }
     .buttons {
       display: flex;
@@ -226,7 +203,7 @@ app.on('ready', () => {
       justify-content: flex-end;
     }
     button {
-      padding: 8px 20px;
+      padding: 6px 18px;
       border: none;
       border-radius: 4px;
       font-size: 14px;
@@ -251,18 +228,8 @@ app.on('ready', () => {
 </head>
 <body>
   <div class="container">
-    <div class="title">设置快捷键</div>
-    <div class="description">请输入用于打开/关闭窗口的快捷键</div>
-    <div class="current-shortcut">当前快捷键: <strong>${currentShortcut}</strong></div>
     <div class="input-group">
-      <input type="text" id="shortcut-input" value="${currentShortcut}" placeholder="例如: CommandOrControl+g">
-      <div class="examples">
-        格式示例:<br>
-        • CommandOrControl+g (Mac: ⌘+G, Windows/Linux: Ctrl+G)<br>
-        • CommandOrControl+Shift+g<br>
-        • Alt+Shift+g<br>
-        • F12
-      </div>
+      <div id="shortcut-display" class="shortcut-display"></div>
     </div>
     <div class="buttons">
       <button class="btn-cancel" id="cancel-btn">取消</button>
@@ -270,23 +237,82 @@ app.on('ready', () => {
     </div>
   </div>
   <script>
-    const input = document.getElementById('shortcut-input');
+    const display = document.getElementById('shortcut-display');
     const okBtn = document.getElementById('ok-btn');
     const cancelBtn = document.getElementById('cancel-btn');
 
-    input.focus();
-    input.select();
+    let currentValue = '${currentShortcut}'.trim();
 
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        okBtn.click();
-      } else if (e.key === 'Escape') {
-        cancelBtn.click();
+    function renderDisplay() {
+      display.textContent = currentValue || '请在键盘上按下新的快捷键组合';
+    }
+
+    function normalizeKey(key) {
+      if (key.length === 1) {
+        return key.toUpperCase();
       }
+      const map = {
+        'ArrowUp': 'Up',
+        'ArrowDown': 'Down',
+        'ArrowLeft': 'Left',
+        'ArrowRight': 'Right',
+        ' ': 'Space',
+        'Escape': 'Esc',
+      };
+      return map[key] || key;
+    }
+
+    function buildShortcutFromEvent(e) {
+      // 只按修饰键时不生成快捷键
+      if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta') {
+        return null;
+      }
+
+      const parts = [];
+      if (e.metaKey) {
+        parts.push('CommandOrControl');
+      } else if (e.ctrlKey) {
+        parts.push('Ctrl');
+      }
+      if (e.altKey) {
+        parts.push('Alt');
+      }
+      if (e.shiftKey) {
+        parts.push('Shift');
+      }
+
+      let key = e.key;
+      key = normalizeKey(key);
+      parts.push(key);
+      return parts.join('+');
+    }
+
+    document.addEventListener('keydown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (e.key === 'Escape') {
+        cancelBtn.click();
+        return;
+      }
+
+      if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+        if (currentValue) {
+          okBtn.click();
+        }
+        return;
+      }
+
+      const value = buildShortcutFromEvent(e);
+      if (!value) return;
+      currentValue = value;
+      renderDisplay();
     });
 
+    renderDisplay();
+
     okBtn.addEventListener('click', () => {
-      const value = input.value.trim();
+      const value = (currentValue || '').trim();
       // 即使为空字符串也传递，让主进程判断是否有效
       window.electronAPI?.sendShortcutInput(value);
     });
