@@ -35,6 +35,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   // 在类中新增私有变量
   private _trayPositionChecker: NodeJS.Timeout | null = null
   private _lastTrayBounds: Electron.Rectangle | null = null
+  private _autoHideDisabled = false // 临时禁用自动隐藏标志
 
   /**
    * @description 创建一个菜单栏实例，同时在 app ready 后初始化托盘与窗口。
@@ -194,6 +195,27 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     value: ElectronMenubarOptions[K]
   ): void {
     this._options[key] = value
+  }
+
+  /**
+   * @description 临时禁用自动隐藏（用于显示对话框时）
+   * @return {void}
+   */
+  public disableAutoHide(): void {
+    this._autoHideDisabled = true
+    // 清除可能存在的隐藏定时器
+    if (this._blurTimeout) {
+      clearTimeout(this._blurTimeout)
+      this._blurTimeout = null
+    }
+  }
+
+  /**
+   * @description 恢复自动隐藏
+   * @return {void}
+   */
+  public enableAutoHide(): void {
+    this._autoHideDisabled = false
   }
 
   /**
@@ -610,6 +632,10 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     if (!this._isWindows) {
       this._browserWindow.on('blur', () => {
         if (!this._browserWindow) return
+        // 如果自动隐藏被禁用（例如显示对话框时），则不执行隐藏逻辑
+        if (this._autoHideDisabled) {
+          return
+        }
         // 窗口是否始终位于其他窗口之上。
         const isOnTop = this._browserWindow.isAlwaysOnTop()
         if (isOnTop) {
