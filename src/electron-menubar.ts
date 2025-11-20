@@ -22,6 +22,8 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   private readonly _DEFAULT_WINDOW_WIDTH: number = 400
   private readonly _isLinux: boolean =
     process.platform === 'linux'
+  private readonly _isWindows: boolean =
+    process.platform === 'win32'
   private _app: Electron.App
   private _browserWindow?: BrowserWindow
   private _blurTimeout: NodeJS.Timeout | null
@@ -33,6 +35,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   // 在类中新增私有变量
   private _trayPositionChecker: NodeJS.Timeout | null = null
   private _lastTrayBounds: Electron.Rectangle | null = null
+  private _autoHideDisabled = false // 临时禁用自动隐藏标志
 
   /**
    * @description 创建一个菜单栏实例，同时在 app ready 后初始化托盘与窗口。
@@ -150,13 +153,20 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
    * @return {void}
    */
   private correctArrowPosition() {
+    if (
+      this._isWindows ||
+      !this._tray ||
+      !this._browserWindow
+    ) {
+      return
+    }
     // 获取 Tray 的位置
     const { x: trayX, width: trayWidth } =
-      this.tray.getBounds()
-    const { x: windowX } = this.browserWindow.getBounds()
+      this._tray.getBounds()
+    const { x: windowX } = this._browserWindow.getBounds()
     const triangleLeft = trayX + trayWidth / 2 - windowX
     // 不能使用变量承接会报错
-    this.browserWindow.webContents.executeJavaScript(`
+    this._browserWindow.webContents.executeJavaScript(`
 			document.getElementsByClassName('triangle')[0].style.left = ${triangleLeft}+'px'
 		`)
   }
@@ -185,6 +195,27 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     value: ElectronMenubarOptions[K]
   ): void {
     this._options[key] = value
+  }
+
+  /**
+   * @description 临时禁用自动隐藏（用于显示对话框时）
+   * @return {void}
+   */
+  public disableAutoHide(): void {
+    this._autoHideDisabled = true
+    // 清除可能存在的隐藏定时器
+    if (this._blurTimeout) {
+      clearTimeout(this._blurTimeout)
+      this._blurTimeout = null
+    }
+  }
+
+  /**
+   * @description 恢复自动隐藏
+   * @return {void}
+   */
+  public enableAutoHide(): void {
+    this._autoHideDisabled = false
   }
 
   /**
@@ -240,11 +271,10 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     this.emit('show', this)
 
     // Windows 平台：显示在屏幕中央
-    if (
-      process.platform !== 'darwin' &&
-      process.platform !== 'linux'
-    ) {
+    if (this._isWindows) {
       this._browserWindow.center()
+      this._browserWindow.restore()
+      this._browserWindow.focus()
       this._browserWindow.show()
       this._isVisible = true
       this.emit('after-show', this)
@@ -386,11 +416,6 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
       await this.createWindow()
     }
 
-    // 监听窗口大小变化 调整箭头的位置
-    this.browserWindow.addListener('resize', () => {
-      this.correctArrowPosition()
-    })
-
     this.emit('ready', this)
   }
 
@@ -418,6 +443,14 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     }
 
     if (this._browserWindow && this._isVisible) {
+      if (this._isWindows) {
+        if (this._browserWindow.isMinimized()) {
+          this._browserWindow.restore()
+        }
+        this._browserWindow.show()
+        this._browserWindow.focus()
+        return
+      }
       this.hideWindow()
       return
     }
@@ -565,31 +598,55 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     this.emit('create-browserWindow', this)
 
     // 为菜单栏的 browserWindow 添加一些默认行为，使其看起来像一个菜单栏
-    const defaultBrowserWindow = {
-      show: false, // 一开始不要展示窗口
-      frame: false // 删除浏览器窗口 frame
-    }
+    const defaultBrowserWindow = this._isWindows
+      ? {
+          show: false, // 仍由 showWindow 控制展示时机
+          frame: true, // Windows 使用常规窗口
+          transparent: false
+        }
+      : {
+          show: false, // 一开始不要展示窗口
+          frame: false // 删除浏览器窗口 frame
+        }
 
     this._browserWindow = new BrowserWindow({
       ...defaultBrowserWindow,
-      ...this._options.browserWindow
+      ...this._options.browserWindow,
+      ...(this._isWindows
+        ? {
+            frame: true,
+            transparent: false,
+            skipTaskbar: false
+          }
+        : {})
     })
 
     this._positioner = new Positioner(this._browserWindow)
 
-    // 给窗口添加失去焦点事件
-    this._browserWindow.on('blur', () => {
-      if (!this._browserWindow) return
-      // 窗口是否始终位于其他窗口之上。
-      const isOnTop = this._browserWindow.isAlwaysOnTop()
-      if (isOnTop) {
-        this.emit('focus-lost', this)
-      } else {
-        this._blurTimeout = setTimeout(() => {
-          this.hideWindow()
-        }, 100)
-      }
+    // 监听窗口大小变化 调整箭头的位置
+    this._browserWindow.on('resize', () => {
+      this.correctArrowPosition()
     })
+
+    // 给窗口添加失去焦点事件
+    if (!this._isWindows) {
+      this._browserWindow.on('blur', () => {
+        if (!this._browserWindow) return
+        // 如果自动隐藏被禁用（例如显示对话框时），则不执行隐藏逻辑
+        if (this._autoHideDisabled) {
+          return
+        }
+        // 窗口是否始终位于其他窗口之上。
+        const isOnTop = this._browserWindow.isAlwaysOnTop()
+        if (isOnTop) {
+          this.emit('focus-lost', this)
+        } else {
+          this._blurTimeout = setTimeout(() => {
+            this.hideWindow()
+          }, 100)
+        }
+      })
+    }
 
     this._browserWindow.on('focus', () => {
       // 注册esc快捷键 快捷关闭窗口

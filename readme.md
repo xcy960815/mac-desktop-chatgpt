@@ -234,6 +234,7 @@ webContents.on('did-navigate-in-page', (_event, url) => {
 - [Vite](https://vitejs.dev/)
 - [OpenAI ChatGPT](https://chat.openai.com/)
 - [DeepSeek](https://chat.deepseek.com/)
+- [Grok](https://grok.com/)
 
 ---
 

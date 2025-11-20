@@ -7,18 +7,22 @@ const DEFAULTSETTING: UserSetting = {
   model: 'ChatGPT',
   urls: {
     ChatGPT: 'https://chatgpt.com',
-    DeepSeek: 'https://chat.deepseek.com/'
-  }
+    DeepSeek: 'https://chat.deepseek.com/',
+    Grok: 'https://grok.com/'
+  },
+  toggleShortcut: 'CommandOrControl+g'
 }
 const FILENAME = 'settings.json'
 
 export interface UserSetting {
-  model: 'ChatGPT' | 'DeepSeek'
+  model: 'ChatGPT' | 'DeepSeek' | 'Grok'
   lastVisitedUrl?: string // 保留用于向后兼容
   urls?: {
     ChatGPT?: string
     DeepSeek?: string
+    Grok?: string
   }
+  toggleShortcut?: string // 用于打开/关闭窗口的快捷键，默认 CommandOrControl+g
 }
 
 /**
@@ -80,8 +84,9 @@ function resetUserUrls(): UserSetting {
   const resetSetting: UserSetting = {
     ...currentSetting,
     urls: {
-      ChatGPT: 'https://chatgpt.com',
-      DeepSeek: 'https://chat.deepseek.com/'
+      ChatGPT: 'https://chatgpt.com/',
+      DeepSeek: 'https://chat.deepseek.com/',
+      Grok: 'https://grok.com/'
     },
     lastVisitedUrl: undefined
   }
