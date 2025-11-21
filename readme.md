@@ -1,6 +1,8 @@
 # Desktop ChatGPT
 
-> 一款基于 Electron + Vite + TypeScript 开发的跨平台桌面级 AI 助手应用
+> 一款基于 Electron + Vite + TypeScript 开发的跨平台桌面级 AI 助手应用，以单一托盘窗口集中承载多家模型的网页端，免去在不同 AI 对话框之间频繁来回切换。
+
+桌面菜单栏是整个体验的核心：应用常驻系统托盘，快捷键唤起即可在同一视图内切换 ChatGPT、DeepSeek、Grok 与 Gemini，保持上下文与 URL 连续，适合需要在多模型间快速对比和验证的工作流。
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Electron](https://img.shields.io/badge/Electron-36.2.0-47848F?logo=electron)](https://www.electronjs.org/)
@@ -53,24 +55,24 @@
 ### 环境要求
 
 - Node.js >= 20.19.0
-- npm >= 10.8.2
+- pnpm >= 9.15.0
 
 ### 安装依赖
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### 开发模式
 
 ```bash
-npm start
+pnpm start
 ```
 
 ### 代码检查
 
 ```bash
-npm run lint
+pnpm run lint
 ```
 
 ## 📦 构建
@@ -79,11 +81,11 @@ npm run lint
 
 | 命令 | 说明 | 支持平台 | 输出格式 |
 |------|------|----------|----------|
-| `npm run make` | 构建 macOS 版本（默认） | macOS (arm64 + x64) | ZIP |
-| `npm run make:mac` | 构建 macOS 版本 | macOS (arm64 + x64) | ZIP |
-| `npm run make:win` | 构建 Windows 版本 | Windows (x64 + ia32) | ZIP |
-| `npm run make:win-installer` | 构建 Windows 安装程序* | Windows (x64 + ia32) | Squirrel 安装程序 |
-| `npm run make:all` | 构建所有平台 | macOS + Windows | ZIP |
+| `pnpm run make` | 构建 macOS 版本（默认） | macOS (arm64 + x64) | ZIP |
+| `pnpm run make:mac` | 构建 macOS 版本 | macOS (arm64 + x64) | ZIP |
+| `pnpm run make:win` | 构建 Windows 版本 | Windows (x64 + ia32) | ZIP |
+| `pnpm run make:win-installer` | 构建 Windows 安装程序* | Windows (x64 + ia32) | Squirrel 安装程序 |
+| `pnpm run make:all` | 构建所有平台 | macOS + Windows | ZIP |
 
 > *注意：Windows 安装程序（.exe）需要在 Windows 环境中构建，或在 macOS 上安装 Wine 和 Mono
 
@@ -92,7 +94,7 @@ npm run lint
 #### 构建 macOS 版本
 
 ```bash
-npm run make:mac
+pnpm run make:mac
 ```
 
 **输出文件：**
@@ -107,7 +109,7 @@ out/make/zip/darwin/
 #### 构建 Windows 版本
 
 ```bash
-npm run make:win
+pnpm run make:win
 ```
 
 **输出文件：**
@@ -122,7 +124,7 @@ out/make/zip/win32/
 #### 构建所有平台
 
 ```bash
-npm run make:all
+pnpm run make:all
 ```
 
 ## 🎮 使用指南
@@ -162,8 +164,14 @@ desktop-chatgpt/
 │   ├── renderer.ts          # 渲染进程
 │   ├── electron-menubar.ts  # 菜单栏窗口管理
 │   ├── tray-context-menu.ts # 系统托盘上下文菜单
+│   ├── window-manager.ts    # 主窗口状态与行为
+│   ├── shortcut-manager.ts  # 全局快捷键注册
+│   ├── shortcut-input-dialog.ts # 快捷键输入对话框
+│   ├── webview-handlers.ts  # WebView 事件与通信
+│   ├── url-tracker.ts       # 模型 URL 追踪
 │   ├── constants.ts         # 常量定义（模型和 URL 枚举）
 │   └── utils/
+│       ├── common.ts        # 通用工具函数
 │       └── user-setting.ts  # 用户设置管理
 ├── images/                  # 图标资源
 ├── index.html               # 主 HTML 文件
