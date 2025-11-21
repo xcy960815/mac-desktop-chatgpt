@@ -6,65 +6,83 @@ import { MakerRpm } from '@electron-forge/maker-rpm'
 import { VitePlugin } from '@electron-forge/plugin-vite'
 import { FusesPlugin } from '@electron-forge/plugin-fuses'
 import { FuseV1Options, FuseVersion } from '@electron/fuses'
-import { rmSync } from 'node:fs'
-import { join } from 'node:path'
+import path from 'node:path'
+import { existsSync } from 'node:fs'
+import { readdir, rename, rm } from 'node:fs/promises'
 import pkg from './package.json'
 
-const ELECTRON_LOCALES_TO_KEEP = ['en-US', 'zh-CN']
-
-const pruneElectronLocales = async (
-  buildPath: string,
-  _electronVersion: string,
-  platform: string
+/**
+ * 将一个文件夹下的所有内容移动至目标文件夹根目录
+ */
+const moveDirEntries = async (
+  sourceDir: string,
+  targetDir: string
 ) => {
-  try {
-    if (platform === 'win32') {
-      // Windows: 删除多余的 locales/*.pak，只保留需要的语言
-      const localesDir = join(buildPath, 'locales')
-      const fs = await import('node:fs/promises')
-      try {
-        const files = await fs.readdir(localesDir)
-        await Promise.all(
-          files.map(async (file) => {
-            // 例如：en-US.pak
-            const keep = ELECTRON_LOCALES_TO_KEEP.some((locale) =>
-              file.startsWith(locale)
-            )
-            if (!keep && file.endsWith('.pak')) {
-              await fs.unlink(join(localesDir, file))
-            }
-          })
-        )
-      } catch {
-        // 没有 locales 目录时忽略
-      }
+  const entries = await readdir(sourceDir, {
+    withFileTypes: true
+  })
+
+  for (const entry of entries) {
+    const fromPath = path.join(sourceDir, entry.name)
+    const toPath = path.join(targetDir, entry.name)
+
+    if (existsSync(toPath)) {
+      await rm(toPath, { recursive: true, force: true })
     }
 
-    if (platform === 'darwin') {
-      // macOS: 删除多余 *.lproj 目录，只保留 en / zh 相关
-      const resourcesDir = join(buildPath, 'desktop-chatgpt.app', 'Contents', 'Resources')
-      const fs = await import('node:fs/promises')
-      try {
-        const entries = await fs.readdir(resourcesDir)
-        await Promise.all(
-          entries.map(async (entry) => {
-            if (!entry.endsWith('.lproj')) return
-            const lower = entry.toLowerCase()
-            const keep =
-              lower.startsWith('en') ||
-              lower.startsWith('zh')
-            if (!keep) {
-              rmSync(join(resourcesDir, entry), { recursive: true, force: true })
-            }
-          })
-        )
-      } catch {
-        // 没有 Resources 目录时忽略
-      }
-    }
-  } catch {
-    // 裁剪失败不影响整体打包，静默忽略
+    await rename(fromPath, toPath)
   }
+}
+
+/**
+ * 将win32 文件夹重命名为window，并去掉架构子目录
+ */
+const normalizeWinZipFolder = async () => {
+  const zipRoot = path.resolve(__dirname, 'out/make/zip')
+  const win32Dir = path.join(zipRoot, 'win32')
+  const windowDir = path.join(zipRoot, 'window')
+
+  if (!existsSync(win32Dir)) return
+
+  if (existsSync(windowDir)) {
+    await rm(windowDir, { recursive: true, force: true })
+  }
+
+  await rename(win32Dir, windowDir)
+
+  await flattenArchDirs(windowDir)
+}
+
+/**
+ * 将指定目录下的 arm64/x64 等架构子目录扁平化
+ */
+const flattenArchDirs = async (
+  platformDir: string,
+  archFolders = ['arm64', 'x64']
+) => {
+  if (!existsSync(platformDir)) return
+
+  const dirEntries = await readdir(platformDir, {
+    withFileTypes: true
+  })
+
+  for (const archDir of dirEntries) {
+    if (!archDir.isDirectory()) continue
+    if (!archFolders.includes(archDir.name)) continue
+
+    const archDirPath = path.join(platformDir, archDir.name)
+    await moveDirEntries(archDirPath, platformDir)
+    await rm(archDirPath, { recursive: true, force: true })
+  }
+}
+
+/**
+ * 处理打包后 zip 目录的结构，满足 Windows/Mac 要求
+ */
+const normalizeZipOutputs = async () => {
+  const zipRoot = path.resolve(__dirname, 'out/make/zip')
+  await normalizeWinZipFolder()
+  await flattenArchDirs(path.join(zipRoot, 'darwin'))
 }
 
 const config: ForgeConfig = {
@@ -82,9 +100,7 @@ const config: ForgeConfig = {
       'src'
     ],
     // 是否覆盖已存在的打包文件
-    overwrite: true,
-    // 打包后裁剪多余的 Electron 语言包 / 资源目录
-    afterPrune: [pruneElectronLocales]
+    overwrite: true
   },
   rebuildConfig: {},
   makers: [
@@ -96,6 +112,11 @@ const config: ForgeConfig = {
     new MakerRpm({}),
     new MakerDeb({})
   ],
+  hooks: {
+    postMake: async () => {
+      await normalizeZipOutputs()
+    }
+  },
   plugins: [
     new VitePlugin({
       build: [
