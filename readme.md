@@ -44,8 +44,8 @@
 ### Windows
 
 1. 下载对应架构的 ZIP 文件：
-   - 64位系统：`desktop-chatgpt-win32-x64-1.0.3.zip`
-   - 32位系统：`desktop-chatgpt-win32-ia32-1.0.3.zip`
+   - 64位系统：`desktop-chatgpt-windows-x64-1.0.3.zip`
+   - 32位系统：`desktop-chatgpt-windows-ia32-1.0.3.zip`
 2. 解压到任意目录
 3. 运行 `Desktop ChatGPT.exe`
 4. 首次运行可能需要允许通过 Windows Defender 防火墙
@@ -116,11 +116,9 @@ pnpm run make:mac
 
 **输出文件：**
 ```
-out/make/zip/darwin/
-├── arm64/
-│   └── desktop-chatgpt-darwin-arm64-1.0.3.zip
-└── x64/
-    └── desktop-chatgpt-darwin-x64-1.0.3.zip
+out/make/zip/
+├── desktop-chatgpt-darwin-arm64-1.0.3.zip
+└── desktop-chatgpt-darwin-x64-1.0.3.zip
 ```
 
 #### 构建 Windows 版本
@@ -131,11 +129,9 @@ pnpm run make:win
 
 **输出文件：**
 ```
-out/make/zip/win32/
-├── x64/
-│   └── desktop-chatgpt-win32-x64-1.0.3.zip
-└── ia32/
-    └── desktop-chatgpt-win32-ia32-1.0.3.zip
+out/make/zip/
+├── desktop-chatgpt-windows-x64-1.0.3.zip
+└── desktop-chatgpt-windows-ia32-1.0.3.zip
 ```
 
 #### 构建所有平台

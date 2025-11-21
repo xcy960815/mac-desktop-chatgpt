@@ -35,22 +35,23 @@ const moveDirEntries = async (
 }
 
 /**
- * 将win32 文件夹重命名为window，并去掉架构子目录
+ * 将 win32 文件夹重命名为 windows，并去掉架构子目录
  */
 const normalizeWinZipFolder = async () => {
   const zipRoot = path.resolve(__dirname, 'out/make/zip')
   const win32Dir = path.join(zipRoot, 'win32')
-  const windowDir = path.join(zipRoot, 'window')
+  const windowsDir = path.join(zipRoot, 'windows')
 
   if (!existsSync(win32Dir)) return
 
-  if (existsSync(windowDir)) {
-    await rm(windowDir, { recursive: true, force: true })
+  if (existsSync(windowsDir)) {
+    await rm(windowsDir, { recursive: true, force: true })
   }
 
-  await rename(win32Dir, windowDir)
+  await rename(win32Dir, windowsDir)
 
-  await flattenArchDirs(windowDir)
+  await flattenArchDirs(windowsDir)
+  await renameWin32Artifacts(windowsDir)
 }
 
 /**
@@ -77,12 +78,86 @@ const flattenArchDirs = async (
 }
 
 /**
+ * 将 win32 字段替换为 windows，规范文件名
+ */
+const renameWin32Artifacts = async (
+  platformDir: string
+) => {
+  if (!existsSync(platformDir)) return
+
+  const dirEntries = await readdir(platformDir, {
+    withFileTypes: true
+  })
+
+  for (const entry of dirEntries) {
+    if (!entry.name.includes('win32')) continue
+
+    const oldPath = path.join(platformDir, entry.name)
+    const newName = entry.name.replace(/win32/gi, 'windows')
+    const newPath = path.join(platformDir, newName)
+
+    if (existsSync(newPath)) {
+      await rm(newPath, { recursive: true, force: true })
+    }
+
+    await rename(oldPath, newPath)
+  }
+}
+
+/**
+ * 将 out 目录下所有包含 win32 的打包产物重命名为 windows
+ */
+const renameWin32PackageDirs = async () => {
+  const outDir = path.resolve(__dirname, 'out')
+  if (!existsSync(outDir)) return
+
+  const dirEntries = await readdir(outDir, {
+    withFileTypes: true
+  })
+
+  for (const entry of dirEntries) {
+    if (!entry.isDirectory()) continue
+    if (!entry.name.includes('win32')) continue
+
+    const oldPath = path.join(outDir, entry.name)
+    const newName = entry.name.replace(/win32/gi, 'windows')
+    const newPath = path.join(outDir, newName)
+
+    if (existsSync(newPath)) {
+      await rm(newPath, { recursive: true, force: true })
+    }
+
+    await rename(oldPath, newPath)
+  }
+}
+
+/**
+ * 将指定平台目录下的产物移动到 zip 根目录，并删除该平台目录
+ */
+const movePlatformArtifactsToRoot = async (
+  platformDir: string
+) => {
+  if (!existsSync(platformDir)) return
+
+  const zipRoot = path.dirname(platformDir)
+
+  await moveDirEntries(platformDir, zipRoot)
+  await rm(platformDir, { recursive: true, force: true })
+}
+
+/**
  * 处理打包后 zip 目录的结构，满足 Windows/Mac 要求
  */
 const normalizeZipOutputs = async () => {
   const zipRoot = path.resolve(__dirname, 'out/make/zip')
   await normalizeWinZipFolder()
-  await flattenArchDirs(path.join(zipRoot, 'darwin'))
+  await movePlatformArtifactsToRoot(
+    path.join(zipRoot, 'windows')
+  )
+
+  const darwinDir = path.join(zipRoot, 'darwin')
+  await flattenArchDirs(darwinDir)
+  await movePlatformArtifactsToRoot(darwinDir)
 }
 
 const config: ForgeConfig = {
@@ -115,6 +190,7 @@ const config: ForgeConfig = {
   hooks: {
     postMake: async () => {
       await normalizeZipOutputs()
+      await renameWin32PackageDirs()
     }
   },
   plugins: [
