@@ -30,6 +30,7 @@ export interface UserSetting {
 
 /**
  * 获取用户设置路径，并确保文件存在
+ * @returns {string}
  */
 function getUserSettingPath(): string {
   const basePath = app.getPath('userData')
@@ -54,6 +55,7 @@ function getUserSettingPath(): string {
 
 /**
  * 读取用户设置（如果文件不存在，自动创建并返回默认值）
+ * @returns {UserSetting}
  */
 function readUserSetting(): UserSetting {
   const filePath = getUserSettingPath()
@@ -68,7 +70,8 @@ function readUserSetting(): UserSetting {
 
 /**
  * 写入用户设置
- * @param data 数据对象
+ * @param {US} data 数据对象
+ * @returns {US}
  */
 function writeUserSetting<US = UserSetting>(data: US): US {
   const filePath = getUserSettingPath()
@@ -81,6 +84,7 @@ function writeUserSetting<US = UserSetting>(data: US): US {
 
 /**
  * 重置保存的 URLs 到默认值
+ * @returns {UserSetting}
  */
 function resetUserUrls(): UserSetting {
   const currentSetting = readUserSetting()

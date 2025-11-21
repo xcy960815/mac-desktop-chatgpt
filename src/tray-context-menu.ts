@@ -9,14 +9,14 @@ import {
 } from 'electron'
 
 import { ElectronMenubar } from './electron-menubar'
-import { showShortcutInputDialog } from './dialogs/shortcut-input-dialog'
+import { showShortcutInputDialog } from './shortcut-input-dialog'
 import {
   readUserSetting,
   resetUserUrls,
   writeUserSetting
 } from './utils/user-setting'
-import { delay } from './utils/delay'
-import { Model } from './constants'
+import { delay } from './utils/common'
+import { Model, ModelUrl } from './constants'
 
 type WithBrowserWindowOptions = {
   onFailureMessage?: string
@@ -43,10 +43,16 @@ export interface TrayContextMenuOptions {
   ): Promise<T | null>
 }
 
+/**
+ * 获取可用的浏览器窗口
+ * @param {ElectronMenubar} electronMenubar 
+ * @param {TrayContextMenuOptions['getMainBrowserWindow']} getMainBrowserWindow 
+ * @returns {BrowserWindow | null}
+ */
 const getAvailableBrowserWindow = (
   electronMenubar: ElectronMenubar,
   getMainBrowserWindow: TrayContextMenuOptions['getMainBrowserWindow']
-) => {
+): BrowserWindow | null => {
   const mainBrowserWindow = getMainBrowserWindow()
   if (
     mainBrowserWindow &&
@@ -63,9 +69,18 @@ const getAvailableBrowserWindow = (
   return null
 }
 
+/**
+ * 设置托盘上下文菜单
+ * @param {TrayContextMenuOptions} options 
+ * @returns {void}
+ */
 export const setupTrayContextMenu = (
   options: TrayContextMenuOptions
 ) => {
+  /**
+   * 构建上下文菜单
+   * @returns {void}
+   */
   const buildContextMenu = () => {
     const userSetting = readUserSetting()
     const isChatGPT = userSetting.model === Model.ChatGPT
@@ -89,13 +104,29 @@ export const setupTrayContextMenu = (
           label: 'Reload',
           accelerator: 'Command+R',
           click: async () => {
-            resetUserUrls()
+            const newUserSetting = resetUserUrls()
             await options.withBrowserWindow(
               (win) => {
                 if (win.isDestroyed()) {
                   throw new Error('窗口已销毁')
                 }
-                win.reload()
+
+                const currentModel = newUserSetting.model
+                const defaultUrl =
+                  newUserSetting.urls?.[currentModel] ||
+                  (currentModel === Model.DeepSeek
+                    ? ModelUrl.DeepSeek
+                    : currentModel === Model.ChatGPT
+                    ? ModelUrl.ChatGPT
+                    : currentModel === Model.Gemini
+                    ? ModelUrl.Gemini
+                    : ModelUrl.Grok)
+
+                win.webContents.send(
+                  'model-changed',
+                  currentModel,
+                  defaultUrl
+                )
               },
               {
                 onFailureMessage:
@@ -126,7 +157,7 @@ export const setupTrayContextMenu = (
           label: 'model',
           submenu: [
             {
-              label: 'ChatGPT',
+              label: Model.ChatGPT,
               type: 'radio',
               checked: isChatGPT,
               click: () => {
@@ -151,7 +182,7 @@ export const setupTrayContextMenu = (
             },
             { type: 'separator' },
             {
-              label: 'DeepSeek',
+              label: Model.DeepSeek,
               type: 'radio',
               checked: isDeepSeek,
               click: () => {
@@ -176,7 +207,7 @@ export const setupTrayContextMenu = (
             },
             { type: 'separator' },
             {
-              label: 'Grok',
+              label: Model.Grok,
               type: 'radio',
               checked: isGrok,
               click: () => {
@@ -200,7 +231,7 @@ export const setupTrayContextMenu = (
             },
             { type: 'separator' },
             {
-              label: 'Gemini',
+              label: Model.Gemini,
               type: 'radio',
               checked: isGemini,
               click: () => {
