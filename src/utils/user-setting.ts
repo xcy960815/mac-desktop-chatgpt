@@ -1,26 +1,29 @@
 import fsSync from 'fs'
 import path from 'path'
 import { app } from 'electron'
+import { Model, ModelUrl } from '../constants'
 
 const SUBPATH = 'config'
 const DEFAULTSETTING: UserSetting = {
-  model: 'ChatGPT',
+  model: Model.ChatGPT,
   urls: {
-    ChatGPT: 'https://chatgpt.com',
-    DeepSeek: 'https://chat.deepseek.com/',
-    Grok: 'https://grok.com/'
+    ChatGPT: ModelUrl.ChatGPT,
+    DeepSeek: ModelUrl.DeepSeek,
+    Grok: ModelUrl.Grok,
+    Gemini: ModelUrl.Gemini
   },
   toggleShortcut: 'CommandOrControl+g'
 }
 const FILENAME = 'settings.json'
 
 export interface UserSetting {
-  model: 'ChatGPT' | 'DeepSeek' | 'Grok'
+  model: Model
   lastVisitedUrl?: string // 保留用于向后兼容
   urls?: {
     ChatGPT?: string
     DeepSeek?: string
     Grok?: string
+    Gemini?: string
   }
   toggleShortcut?: string // 用于打开/关闭窗口的快捷键，默认 CommandOrControl+g
 }
@@ -84,9 +87,10 @@ function resetUserUrls(): UserSetting {
   const resetSetting: UserSetting = {
     ...currentSetting,
     urls: {
-      ChatGPT: 'https://chatgpt.com/',
-      DeepSeek: 'https://chat.deepseek.com/',
-      Grok: 'https://grok.com/'
+      ChatGPT: ModelUrl.ChatGPT,
+      DeepSeek: ModelUrl.DeepSeek,
+      Grok: ModelUrl.Grok,
+      Gemini: ModelUrl.Gemini
     },
     lastVisitedUrl: undefined
   }

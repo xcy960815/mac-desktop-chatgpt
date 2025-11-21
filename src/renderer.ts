@@ -1,3 +1,5 @@
+import { Model, ModelUrl } from './constants'
+
 export {}
 
 declare global {
@@ -39,11 +41,13 @@ function setWebviewSrc(
   } else {
     // 否则使用默认 URL
     webviewUrl =
-      modelName === 'DeepSeek'
-        ? 'https://chat.deepseek.com/'
-        : modelName === 'ChatGPT'
-        ? 'https://chatgpt.com/'
-        : 'https://grok.com/'
+      modelName === Model.DeepSeek
+        ? ModelUrl.DeepSeek
+        : modelName === Model.ChatGPT
+        ? ModelUrl.ChatGPT
+        : modelName === Model.Gemini
+        ? ModelUrl.Gemini
+        : ModelUrl.Grok
   }
 
   // 如果 URL 相同，不重复加载
