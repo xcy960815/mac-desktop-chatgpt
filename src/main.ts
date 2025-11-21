@@ -2,6 +2,7 @@ import * as path from 'path'
 
 import { ElectronMenubar } from './electron-menubar'
 import { setupTrayContextMenu } from './tray-context-menu'
+import { ModelUrl, TOOLTIP, Model } from './constants'
 
 import contextMenu from 'electron-context-menu'
 
@@ -24,13 +25,7 @@ import {
 } from './utils/user-setting'
 import { delay } from './utils/delay'
 
-const DEEPSEEK = 'https://chat.deepseek.com/'
-const CHATGPT = 'https://chatgpt.com'
-const GROK = 'https://grok.com/'
-
 app.commandLine.appendSwitch('ignore-certificate-errors')
-
-const TOOLTIP = 'desktop-chatgpt'
 
 // 保存 browserWindow 引用，以便在菜单点击时使用
 let mainBrowserWindow: BrowserWindow | null = null
@@ -231,9 +226,10 @@ app.on('ready', () => {
       electronMenubar,
       menu,
       urls: {
-        chatgpt: CHATGPT,
-        deepseek: DEEPSEEK,
-        grok: GROK
+        chatgpt: ModelUrl.ChatGPT,
+        deepseek: ModelUrl.DeepSeek,
+        grok: ModelUrl.Grok,
+        gemini: ModelUrl.Gemini
       },
       isMenubarReady: () => isMenubarReady,
       getMainBrowserWindow: () => mainBrowserWindow,
@@ -246,7 +242,6 @@ app.on('ready', () => {
       },
       withBrowserWindow
     })
-
 
     // 注册快捷键的函数
     const registerToggleShortcut = () => {
@@ -405,11 +400,13 @@ app.on('ready', () => {
       const userSetting = readUserSetting()
       const savedUrl =
         userSetting.urls?.[userSetting.model] ||
-        (userSetting.model === 'DeepSeek'
-          ? DEEPSEEK
-          : userSetting.model === 'ChatGPT'
-          ? CHATGPT
-          : GROK)
+        (userSetting.model === Model.DeepSeek
+          ? ModelUrl.DeepSeek
+          : userSetting.model === Model.ChatGPT
+          ? ModelUrl.ChatGPT
+          : userSetting.model === Model.Gemini
+          ? ModelUrl.Gemini
+          : ModelUrl.Grok)
 
       browserWindow.webContents.send(
         'model-changed',
@@ -434,9 +431,10 @@ app.on('ready', () => {
         // 确保 urls 对象存在
         if (!currentSetting.urls) {
           currentSetting.urls = {
-            ChatGPT: CHATGPT,
-            DeepSeek: DEEPSEEK,
-            Grok: GROK
+            ChatGPT: ModelUrl.ChatGPT,
+            DeepSeek: ModelUrl.DeepSeek,
+            Grok: ModelUrl.Grok,
+            Gemini: ModelUrl.Gemini
           }
         }
 
