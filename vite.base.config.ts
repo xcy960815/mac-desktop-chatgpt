@@ -1,6 +1,6 @@
 import { builtinModules } from 'node:module';
 import type { AddressInfo } from 'node:net';
-import type { ConfigEnv, Plugin, UserConfig } from 'vite';
+import type { ConfigEnv, Plugin, UserConfig } from 'vite' with { "resolution-mode": "import" };
 import pkg from './package.json';
 import { resolve } from "path"
 

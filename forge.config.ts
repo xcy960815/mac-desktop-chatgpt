@@ -6,7 +6,66 @@ import { MakerRpm } from '@electron-forge/maker-rpm'
 import { VitePlugin } from '@electron-forge/plugin-vite'
 import { FusesPlugin } from '@electron-forge/plugin-fuses'
 import { FuseV1Options, FuseVersion } from '@electron/fuses'
+import { rmSync } from 'node:fs'
+import { join } from 'node:path'
 import pkg from './package.json'
+
+const ELECTRON_LOCALES_TO_KEEP = ['en-US', 'zh-CN']
+
+const pruneElectronLocales = async (
+  buildPath: string,
+  _electronVersion: string,
+  platform: string
+) => {
+  try {
+    if (platform === 'win32') {
+      // Windows: 删除多余的 locales/*.pak，只保留需要的语言
+      const localesDir = join(buildPath, 'locales')
+      const fs = await import('node:fs/promises')
+      try {
+        const files = await fs.readdir(localesDir)
+        await Promise.all(
+          files.map(async (file) => {
+            // 例如：en-US.pak
+            const keep = ELECTRON_LOCALES_TO_KEEP.some((locale) =>
+              file.startsWith(locale)
+            )
+            if (!keep && file.endsWith('.pak')) {
+              await fs.unlink(join(localesDir, file))
+            }
+          })
+        )
+      } catch {
+        // 没有 locales 目录时忽略
+      }
+    }
+
+    if (platform === 'darwin') {
+      // macOS: 删除多余 *.lproj 目录，只保留 en / zh 相关
+      const resourcesDir = join(buildPath, 'desktop-chatgpt.app', 'Contents', 'Resources')
+      const fs = await import('node:fs/promises')
+      try {
+        const entries = await fs.readdir(resourcesDir)
+        await Promise.all(
+          entries.map(async (entry) => {
+            if (!entry.endsWith('.lproj')) return
+            const lower = entry.toLowerCase()
+            const keep =
+              lower.startsWith('en') ||
+              lower.startsWith('zh')
+            if (!keep) {
+              rmSync(join(resourcesDir, entry), { recursive: true, force: true })
+            }
+          })
+        )
+      } catch {
+        // 没有 Resources 目录时忽略
+      }
+    }
+  } catch {
+    // 裁剪失败不影响整体打包，静默忽略
+  }
+}
 
 const config: ForgeConfig = {
   packagerConfig: {
@@ -23,7 +82,9 @@ const config: ForgeConfig = {
       'src'
     ],
     // 是否覆盖已存在的打包文件
-    overwrite: true
+    overwrite: true,
+    // 打包后裁剪多余的 Electron 语言包 / 资源目录
+    afterPrune: [pruneElectronLocales]
   },
   rebuildConfig: {},
   makers: [
