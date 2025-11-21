@@ -94,7 +94,7 @@ export const setupTrayContextMenu = (
       Menu.buildFromTemplate([
         {
           label: 'Quit',
-          accelerator: 'Command+Q',
+          accelerator: 'CommandOrControl+Q',
           click: () => {
             resetUserUrls()
             app.quit()
@@ -102,7 +102,7 @@ export const setupTrayContextMenu = (
         },
         {
           label: 'Reload',
-          accelerator: 'Command+R',
+          accelerator: 'CommandOrControl+R',
           click: async () => {
             const newUserSetting = resetUserUrls()
             await options.withBrowserWindow(
@@ -137,7 +137,7 @@ export const setupTrayContextMenu = (
         },
         {
           label: 'Open in browser',
-          accelerator: 'Command+O',
+          accelerator: 'CommandOrControl+O',
           click: async () => {
             if (isChatGPT) {
               shell.openExternal(urls.chatgpt)
@@ -180,7 +180,7 @@ export const setupTrayContextMenu = (
                 )
               }
             },
-            { type: 'separator' },
+            // { type: 'separator' },
             {
               label: Model.DeepSeek,
               type: 'radio',
@@ -205,7 +205,7 @@ export const setupTrayContextMenu = (
                 )
               }
             },
-            { type: 'separator' },
+            // { type: 'separator' },
             {
               label: Model.Grok,
               type: 'radio',
@@ -229,7 +229,7 @@ export const setupTrayContextMenu = (
                 )
               }
             },
-            { type: 'separator' },
+            // { type: 'separator' },
             {
               label: Model.Gemini,
               type: 'radio',
