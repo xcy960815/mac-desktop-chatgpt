@@ -1,7 +1,12 @@
 import fsSync from 'fs'
 import path from 'path'
 import { app } from 'electron'
-import { Model, ModelUrl } from '../constants'
+import {
+  MenuLanguage,
+  Model,
+  ModelUrl,
+  WindowBehavior
+} from '../constants'
 
 /**
  * @description Electron userData 目录下用于保存设置的子目录
@@ -21,7 +26,9 @@ const DEFAULTSETTING: UserSetting = {
   },
   toggleShortcut: 'CommandOrControl+g',
   autoLaunchOnStartup: false,
-  lockWindowOnBlur: false
+  lockWindowOnBlur: false,
+  windowBehavior: WindowBehavior.AutoHide,
+  menuLanguage: MenuLanguage.Chinese
 }
 /**
  * @description 位于 SUBPATH 目录中的配置文件名称
@@ -43,6 +50,23 @@ export interface UserSetting {
   toggleShortcut?: string // 用于打开/关闭窗口的快捷键，默认 CommandOrControl+g
   autoLaunchOnStartup?: boolean // 是否随系统启动
   lockWindowOnBlur?: boolean // 锁定窗口，失去焦点时不隐藏
+  windowBehavior?: WindowBehavior // 窗口行为模式
+  menuLanguage?: MenuLanguage // 托盘菜单语言
+}
+
+function normalizeWindowBehavior(
+  setting: UserSetting
+): UserSetting {
+  if (setting.windowBehavior) {
+    return setting
+  }
+  const derivedBehavior = setting.lockWindowOnBlur
+    ? WindowBehavior.LockOnDesktop
+    : WindowBehavior.AutoHide
+  return {
+    ...setting,
+    windowBehavior: derivedBehavior
+  }
 }
 
 /**
@@ -78,7 +102,7 @@ function readUserSetting(): UserSetting {
   const filePath = getUserSettingPath()
   try {
     const data = fsSync.readFileSync(filePath, 'utf-8')
-    return JSON.parse(data)
+    return normalizeWindowBehavior(JSON.parse(data))
   } catch (err) {
     console.error('读取用户设置失败，返回默认值:', err)
     return DEFAULTSETTING

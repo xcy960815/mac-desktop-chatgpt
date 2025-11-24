@@ -19,6 +19,8 @@
 - 🎯 **导航事件监听** - 支持单页应用路由变化追踪
 - ⌨️ **全局快捷键** - Cmd/Ctrl+G 显示/隐藏，Esc 快速关闭
 - 🌐 **跨平台支持** - 支持 macOS (Intel/Apple Silicon) 和 Windows (32/64位)
+- 🧲 **窗口锁定模式** - 失焦后保持可见，适合比对内容
+- 🔁 **一键开机自启** - 托盘菜单直接切换自动启动
 
 ## 📸 预览
 
@@ -150,7 +152,18 @@ pnpm run make:all
 - `Cmd/Ctrl + Q` - 退出应用
 - `Cmd/Ctrl + O` - 在浏览器中打开当前模型
 
-### 切换模型
+### 托盘菜单 & 切换模型
+
+托盘菜单包含常用的窗口与启动项控制：
+
+- `Auto-launch on startup`：勾选后随系统启动（macOS 通过 Login Item 设置）
+- `窗口行为`：
+  - `自动隐藏`：失焦 100ms 自动收起（默认行为）
+  - `锁定在桌面`：窗口失焦依然保持可见，可被其他应用遮挡
+  - `置顶于所有应用`：窗口始终置顶，适合持续对照参考
+- `Set shortcut`：打开快捷键输入对话框，自定义全局快捷键
+
+切换模型步骤：
 
 1. 右键点击菜单栏图标
 2. 选择 `model` → `ChatGPT`、`DeepSeek`、`Grok` 或 `Gemini`
@@ -193,23 +206,6 @@ desktop-chatgpt/
 └── package.json            # 项目配置
 ```
 
-### 主要功能实现
-
-#### URL 记忆功能
-
-应用通过监听 WebView 的导航事件实现 URL 记忆：
-
-```typescript
-// 监听完整页面导航
-webContents.on('did-navigate', (_event, url) => {
-  saveWebViewUrl(url, 'did-navigate')
-})
-
-// 监听单页应用内部路由变化
-webContents.on('did-navigate-in-page', (_event, url) => {
-  saveWebViewUrl(url, 'did-navigate-in-page')
-})
-```
 
 ## 🤝 贡献
 
@@ -228,6 +224,25 @@ webContents.on('did-navigate-in-page', (_event, url) => {
 - `chore`: 构建/工具链相关
 
 ## 📝 更新日志
+
+### 如何维护
+
+遵循 Conventional Commits 约定后，可通过 `conventional-changelog` CLI 自动生成或更新 `CHANGELOG.md`：
+
+```bash
+pnpm changelog
+# 或使用 npm/yarn:
+# npm run changelog
+# yarn changelog
+```
+
+> 首次运行会在根目录创建 `CHANGELOG.md`，后续执行会根据最新的提交记录追加内容。
+
+### v1.1.1
+
+- ✨ 新增：托盘菜单支持 `Auto-launch on startup`，一键开机自启
+- ✨ 新增：`窗口行为` 子菜单，可在自动隐藏与锁定窗口之间切换
+- 💄 优化：快捷键设置对话框与菜单文案，体验更一致
 
 ### v1.0.4
 
