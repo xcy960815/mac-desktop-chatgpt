@@ -16,7 +16,16 @@ import {
   writeUserSetting
 } from './utils/user-setting'
 import { delay } from './utils/common'
-import { Model, ModelUrl } from './constants'
+import {
+  MenuLanguage,
+  Model,
+  ModelUrl,
+  WindowBehavior
+} from './constants'
+import {
+  getTrayMenuText,
+  TrayMenuMessageKey
+} from './i18n/tray-menu'
 
 type WithBrowserWindowOptions = {
   onFailureMessage?: string
@@ -87,15 +96,26 @@ export const setupTrayContextMenu = (
     const isDeepSeek = userSetting.model === Model.DeepSeek
     const isGrok = userSetting.model === Model.Grok
     const isGemini = userSetting.model === Model.Gemini
-    const isWindowLocked = !!userSetting.lockWindowOnBlur
+    const windowBehavior =
+      userSetting.windowBehavior ||
+      (userSetting.lockWindowOnBlur
+        ? WindowBehavior.LockOnDesktop
+        : WindowBehavior.AutoHide)
+    const isWindowLocked =
+      windowBehavior !== WindowBehavior.AutoHide
     const loginItemSettings = app.getLoginItemSettings()
     const isAutoLaunchEnabled =
       loginItemSettings?.openAtLogin ??
       !!userSetting.autoLaunchOnStartup
 
+    const menuLanguage =
+      userSetting.menuLanguage ?? MenuLanguage.Chinese
+    const t = (key: TrayMenuMessageKey) =>
+      getTrayMenuText(key, menuLanguage)
+
     const { tray, electronMenubar, urls } = options
 
-    electronMenubar.setWindowLockEnabled(isWindowLocked)
+    electronMenubar.setWindowBehavior(windowBehavior)
 
     const handleAutoLaunchToggle = (enabled: boolean) => {
       try {
@@ -116,20 +136,38 @@ export const setupTrayContextMenu = (
       }
     }
 
-    const handleWindowLockToggle = (locked: boolean) => {
+    const handleWindowBehaviorChange = (
+      behavior: WindowBehavior
+    ) => {
       const latestSetting = readUserSetting()
       writeUserSetting({
         ...latestSetting,
-        lockWindowOnBlur: locked
+        lockWindowOnBlur:
+          behavior !== WindowBehavior.AutoHide,
+        windowBehavior: behavior
       })
-      electronMenubar.setWindowLockEnabled(locked)
+      electronMenubar.setWindowBehavior(behavior)
+      tray.popUpContextMenu(options.menu)
+    }
+
+    const handleMenuLanguageChange = (
+      language: MenuLanguage
+    ) => {
+      const latestSetting = readUserSetting()
+      if (latestSetting.menuLanguage === language) {
+        return
+      }
+      writeUserSetting({
+        ...latestSetting,
+        menuLanguage: language
+      })
       tray.popUpContextMenu(options.menu)
     }
 
     tray.popUpContextMenu(
       Menu.buildFromTemplate([
         {
-          label: 'Quit',
+          label: t('quit'),
           accelerator: 'CommandOrControl+Q',
           click: () => {
             resetUserUrls()
@@ -137,7 +175,7 @@ export const setupTrayContextMenu = (
           }
         },
         {
-          label: 'Reload',
+          label: t('reload'),
           accelerator: 'CommandOrControl+R',
           click: async () => {
             const newUserSetting = resetUserUrls()
@@ -172,7 +210,7 @@ export const setupTrayContextMenu = (
           }
         },
         {
-          label: 'Open in browser',
+          label: t('openInBrowser'),
           accelerator: 'CommandOrControl+O',
           click: async () => {
             if (isChatGPT) {
@@ -190,7 +228,7 @@ export const setupTrayContextMenu = (
           }
         },
         {
-          label: 'Auto-launch on startup',
+          label: t('autoLaunchOnStartup'),
           type: 'checkbox',
           checked: isAutoLaunchEnabled,
           click: (menuItem) =>
@@ -199,24 +237,69 @@ export const setupTrayContextMenu = (
             )
         },
         {
-          label: '窗口行为',
+          label: t('windowBehavior'),
           submenu: [
             {
-              label: '自动隐藏',
+              label: t('windowAutoHide'),
               type: 'radio',
-              checked: !isWindowLocked,
-              click: () => handleWindowLockToggle(false)
+              checked:
+                windowBehavior === WindowBehavior.AutoHide,
+              click: () =>
+                handleWindowBehaviorChange(
+                  WindowBehavior.AutoHide
+                )
             },
             {
-              label: '锁定窗口',
+              label: t('windowLockOnDesktop'),
               type: 'radio',
-              checked: isWindowLocked,
-              click: () => handleWindowLockToggle(true)
+              checked:
+                windowBehavior ===
+                WindowBehavior.LockOnDesktop,
+              click: () =>
+                handleWindowBehaviorChange(
+                  WindowBehavior.LockOnDesktop
+                )
+            },
+            {
+              label: t('windowAlwaysOnTop'),
+              type: 'radio',
+              checked:
+                windowBehavior ===
+                WindowBehavior.AlwaysOnTop,
+              click: () =>
+                handleWindowBehaviorChange(
+                  WindowBehavior.AlwaysOnTop
+                )
             }
           ]
         },
         {
-          label: 'model',
+          label: t('language'),
+          submenu: [
+            {
+              label: t('languageEnglish'),
+              type: 'radio',
+              checked:
+                menuLanguage === MenuLanguage.English,
+              click: () =>
+                handleMenuLanguageChange(
+                  MenuLanguage.English
+                )
+            },
+            {
+              label: t('languageChinese'),
+              type: 'radio',
+              checked:
+                menuLanguage === MenuLanguage.Chinese,
+              click: () =>
+                handleMenuLanguageChange(
+                  MenuLanguage.Chinese
+                )
+            }
+          ]
+        },
+        {
+          label: t('model'),
           submenu: [
             {
               label: Model.ChatGPT,
@@ -319,7 +402,7 @@ export const setupTrayContextMenu = (
         },
         { type: 'separator' },
         {
-          label: 'Set shortcut',
+          label: t('setShortcut'),
           click: async () => {
             console.log('🔧 开始设置快捷键...')
             try {

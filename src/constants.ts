@@ -24,6 +24,23 @@ export enum ModelUrl {
 }
 
 /**
+ * @description 窗口行为模式
+ */
+export enum WindowBehavior {
+  AutoHide = 'auto-hide',
+  LockOnDesktop = 'lock-on-desktop',
+  AlwaysOnTop = 'always-on-top'
+}
+
+/**
+ * @description 托盘菜单支持的语言
+ */
+export enum MenuLanguage {
+  English = 'en',
+  Chinese = 'zh'
+}
+
+/**
  * @description 主窗口默认宽度
  */
 export const MAIN_WINDOW_WIDTH = 1024
