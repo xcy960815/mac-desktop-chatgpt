@@ -1,14 +1,14 @@
-import type { ConfigEnv, UserConfig } from 'vite';
-import { defineConfig, mergeConfig } from 'vite';
+import type { ConfigEnv, UserConfig } from 'vite' with { "resolution-mode": "import" };
 import { getBuildConfig, getBuildDefine, external, pluginHotRestart } from './vite.base.config';
 
 // https://vitejs.dev/config
-export default defineConfig((env) => {
+export default async function createMainConfig(env: ConfigEnv): Promise<UserConfig> {
+  const { mergeConfig } = await import('vite');
   const forgeEnv = env as ConfigEnv<'build'>;
   const { forgeConfigSelf } = forgeEnv;
   const define = getBuildDefine(forgeEnv);
   const config: UserConfig = {
-    base:"./",
+    base: './',
     build: {
       lib: {
         entry: forgeConfigSelf.entry!,
@@ -28,4 +28,4 @@ export default defineConfig((env) => {
   };
 
   return mergeConfig(getBuildConfig(forgeEnv), config);
-});
+}

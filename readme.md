@@ -1,6 +1,8 @@
 # Desktop ChatGPT
 
-> 一款基于 Electron + Vite + TypeScript 开发的跨平台桌面级 AI 助手应用
+> 一款基于 Electron + Vite + TypeScript 开发的跨平台桌面级 AI 助手应用，以单一托盘窗口集中承载多家模型的网页端，免去在不同 AI 对话框之间频繁来回切换。
+
+桌面菜单栏是整个体验的核心：应用常驻系统托盘，快捷键唤起即可在同一视图内切换 ChatGPT、DeepSeek、Grok 与 Gemini，保持上下文与 URL 连续，适合需要在多模型间快速对比和验证的工作流。
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Electron](https://img.shields.io/badge/Electron-36.2.0-47848F?logo=electron)](https://www.electronjs.org/)
@@ -9,8 +11,9 @@
 
 ## ✨ 功能特性
 
-- 🚀 **菜单栏快捷访问** - 驻留系统托盘，一键唤起 ChatGPT 和 DeepSeek
-- 🔄 **模型快速切换** - 支持 ChatGPT 和 DeepSeek 无缝切换
+- 🚀 **菜单栏快捷访问** - 驻留系统托盘，一键唤起多种 AI 助手
+- 🔄 **多模型支持** - 支持 ChatGPT、DeepSeek、Grok 和 Gemini 四种模型
+- 🔄 **模型快速切换** - 支持多种 AI 模型无缝切换
 - 💾 **智能 URL 记忆** - 自动保存每个模型的最后访问页面
 - 🔗 **会话持久化** - 重启应用自动恢复到上次访问的对话
 - 🎯 **导航事件监听** - 支持单页应用路由变化追踪
@@ -41,8 +44,8 @@
 ### Windows
 
 1. 下载对应架构的 ZIP 文件：
-   - 64位系统：`desktop-chatgpt-win32-x64-1.0.3.zip`
-   - 32位系统：`desktop-chatgpt-win32-ia32-1.0.3.zip`
+   - 64位系统：`desktop-chatgpt-windows-x64-1.0.3.zip`
+   - 32位系统：`desktop-chatgpt-windows-ia32-1.0.3.zip`
 2. 解压到任意目录
 3. 运行 `Desktop ChatGPT.exe`
 4. 首次运行可能需要允许通过 Windows Defender 防火墙
@@ -52,37 +55,54 @@
 ### 环境要求
 
 - Node.js >= 20.19.0
-- npm >= 10.8.2
+- pnpm >= 9.15.0
 
 ### 安装依赖
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### 开发模式
 
 ```bash
-npm start
+pnpm start
+```
+
+启动开发服务器，支持热重载。
+
+### 构建和测试
+
+```bash
+# 构建项目（不打包）
+npm run build
+
+# 构建并运行生产版本（用于测试构建产物）
+npm run start:prod
 ```
 
 ### 代码检查
 
 ```bash
-npm run lint
+pnpm run lint
 ```
 
 ## 📦 构建
 
-### 构建命令
+### 构建命令说明
 
-| 命令 | 说明 | 支持平台 | 输出格式 |
-|------|------|----------|----------|
-| `npm run make` | 构建 macOS 版本（默认） | macOS (arm64 + x64) | ZIP |
-| `npm run make:mac` | 构建 macOS 版本 | macOS (arm64 + x64) | ZIP |
-| `npm run make:win` | 构建 Windows 版本 | Windows (x64 + ia32) | ZIP |
-| `npm run make:win-installer` | 构建 Windows 安装程序* | Windows (x64 + ia32) | Squirrel 安装程序 |
-| `npm run make:all` | 构建所有平台 | macOS + Windows | ZIP |
+| 命令 | 说明 | 用途 |
+|------|------|------|
+| `npm start` | 启动开发模式 | 开发时使用，支持热重载 |
+| `npm run build` | 构建项目 | 仅构建代码，不打包，产物在 `.vite/build` 目录 |
+| `npm run start:prod` | 构建并运行生产版本 | 构建后直接运行，用于测试生产环境 |
+| `npm run package` | 打包应用 | 打包成可执行文件，不生成安装程序 |
+| `npm run make` | 构建 macOS 版本（默认） | 生成 macOS (arm64 + x64) ZIP 文件 |
+| `npm run make:mac` | 构建 macOS 版本 | 生成 macOS (arm64 + x64) ZIP 文件 |
+| `npm run make:win` | 构建 Windows 版本 | 生成 Windows (x64) ZIP 文件 |
+| `npm run make:win-installer` | 构建 Windows 安装程序* | 生成 Windows Squirrel 安装程序 |
+| `npm run make:all` | 构建所有平台 | 同时构建 macOS 和 Windows 版本 |
+| `npm run lint` | 代码检查 | 运行 ESLint 检查代码规范 |
 
 > *注意：Windows 安装程序（.exe）需要在 Windows 环境中构建，或在 macOS 上安装 Wine 和 Mono
 
@@ -91,37 +111,33 @@ npm run lint
 #### 构建 macOS 版本
 
 ```bash
-npm run make:mac
+pnpm run make:mac
 ```
 
 **输出文件：**
 ```
-out/make/zip/darwin/
-├── arm64/
-│   └── desktop-chatgpt-darwin-arm64-1.0.3.zip
-└── x64/
-    └── desktop-chatgpt-darwin-x64-1.0.3.zip
+out/make/zip/
+├── desktop-chatgpt-darwin-arm64-1.0.3.zip
+└── desktop-chatgpt-darwin-x64-1.0.3.zip
 ```
 
 #### 构建 Windows 版本
 
 ```bash
-npm run make:win
+pnpm run make:win
 ```
 
 **输出文件：**
 ```
-out/make/zip/win32/
-├── x64/
-│   └── desktop-chatgpt-win32-x64-1.0.3.zip
-└── ia32/
-    └── desktop-chatgpt-win32-ia32-1.0.3.zip
+out/make/zip/
+├── desktop-chatgpt-windows-x64-1.0.3.zip
+└── desktop-chatgpt-windows-ia32-1.0.3.zip
 ```
 
 #### 构建所有平台
 
 ```bash
-npm run make:all
+pnpm run make:all
 ```
 
 ## 🎮 使用指南
@@ -137,7 +153,7 @@ npm run make:all
 ### 切换模型
 
 1. 右键点击菜单栏图标
-2. 选择 `model` → `ChatGPT` 或 `DeepSeek`
+2. 选择 `model` → `ChatGPT`、`DeepSeek`、`Grok` 或 `Gemini`
 
 ### 数据存储
 
@@ -160,7 +176,15 @@ desktop-chatgpt/
 │   ├── preload.ts           # 预加载脚本（IPC 通信桥梁）
 │   ├── renderer.ts          # 渲染进程
 │   ├── electron-menubar.ts  # 菜单栏窗口管理
+│   ├── tray-context-menu.ts # 系统托盘上下文菜单
+│   ├── window-manager.ts    # 主窗口状态与行为
+│   ├── shortcut-manager.ts  # 全局快捷键注册
+│   ├── shortcut-input-dialog.ts # 快捷键输入对话框
+│   ├── webview-handlers.ts  # WebView 事件与通信
+│   ├── url-tracker.ts       # 模型 URL 追踪
+│   ├── constants.ts         # 常量定义（模型和 URL 枚举）
 │   └── utils/
+│       ├── common.ts        # 通用工具函数
 │       └── user-setting.ts  # 用户设置管理
 ├── images/                  # 图标资源
 ├── index.html               # 主 HTML 文件
@@ -205,6 +229,13 @@ webContents.on('did-navigate-in-page', (_event, url) => {
 
 ## 📝 更新日志
 
+### v1.0.4
+
+- ✨ 新增：支持 Grok 模型
+- ✨ 新增：支持 Gemini 模型
+- ♻️ 重构：使用 Model 和 ModelUrl 枚举统一管理模型和 URL
+- 📦 优化：改进代码结构和类型安全
+
 ### v1.0.3
 
 - ♻️ 重构：项目完整重命名，移除 mac 前缀，改为 desktop-chatgpt
@@ -235,6 +266,7 @@ webContents.on('did-navigate-in-page', (_event, url) => {
 - [OpenAI ChatGPT](https://chat.openai.com/)
 - [DeepSeek](https://chat.deepseek.com/)
 - [Grok](https://grok.com/)
+- [Google Gemini](https://gemini.google.com/)
 
 ---
 

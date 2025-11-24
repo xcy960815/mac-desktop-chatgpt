@@ -1,31 +1,28 @@
 import * as path from 'path'
 
 import { ElectronMenubar } from './electron-menubar'
-
-import contextMenu from 'electron-context-menu'
-
+import { setupTrayContextMenu } from './tray-context-menu'
 import {
-  app,
-  globalShortcut,
-  nativeImage,
-  Tray,
-  shell,
-  Menu
-} from 'electron'
+  ModelUrl,
+  TOOLTIP,
+  Model,
+  MAIN_WINDOW_WIDTH,
+  MAIN_WINDOW_HEIGHT
+} from './constants'
+import { resolveMainIndexUrl } from './utils/common'
+import { createWindowManager } from './window-manager'
+import { createShortcutManager } from './shortcut-manager'
+import { initializeLastVisitedUrlTracking } from './url-tracker'
+import { registerWebContentsHandlers } from './webview-handlers'
 
-import {
-  readUserSetting,
-  writeUserSetting,
-  resetUserUrls
-} from './utils/user-setting'
+import { app, globalShortcut, nativeImage, Tray, Menu } from 'electron'
 
-const DEEPSEEK = 'https://chat.deepseek.com/'
-const CHATGPT = 'https://chatgpt.com'
-const GROK = 'https://grok.com/'
+import { readUserSetting } from './utils/user-setting'
 
 app.commandLine.appendSwitch('ignore-certificate-errors')
 
-const TOOLTIP = 'desktop-chatgpt'
+// 标记 ready 事件是否已触发
+let isMenubarReady = false
 
 app.on('ready', () => {
   const appPath = app.getAppPath()
@@ -40,23 +37,17 @@ app.on('ready', () => {
 
   const tray = new Tray(image)
 
-  // 判断开发环境还是生产环境
-  const isDev = !!MAIN_WINDOW_VITE_DEV_SERVER_URL
-  const indexUrl = isDev
-    ? MAIN_WINDOW_VITE_DEV_SERVER_URL
-    : // 在打包后的应用中，__dirname 指向 /.vite/build（在 asar 包内），所以正确的相对路径应该是
-      // ./renderer/main_window/index.html，而不是 ../renderer/main_window/index.html。
-      `file://${path.join(
-        __dirname,
-        './renderer/main_window/index.html'
-      )}`
+  const indexUrl = resolveMainIndexUrl({
+    devServerUrl: MAIN_WINDOW_VITE_DEV_SERVER_URL,
+    rendererDir: __dirname
+  })
 
   const electronMenubar = new ElectronMenubar(app, {
     browserWindow: {
       icon: image,
       transparent: true,
-      width: 1024,
-      height: 768,
+      width: MAIN_WINDOW_WIDTH,
+      height: MAIN_WINDOW_HEIGHT,
       useContentSize: true,
       webPreferences: {
         preload: path.join(__dirname, 'preload.js'),
@@ -77,176 +68,58 @@ app.on('ready', () => {
     tooltip: TOOLTIP
   })
 
-  electronMenubar.on('ready', async ({ browserWindow }) => {
-    if (process.platform !== 'darwin') {
-      browserWindow.setSkipTaskbar(true)
-    } else {
-      app.dock.hide()
-    }
+  const windowManager = createWindowManager(electronMenubar)
 
-    // 读取上次访问的 URL
-    const userSetting = readUserSetting()
-    if (userSetting.lastVisitedUrl) {
-      browserWindow.loadURL(userSetting.lastVisitedUrl)
-    }
+  electronMenubar.on('ready', async (menubar) => {
+    const browserWindow = menubar.browserWindow
 
-    // 监听 URL 变化
-    browserWindow.webContents.on(
-      'did-navigate',
-      (_event, url) => {
-        const currentSetting = readUserSetting()
-        writeUserSetting({
-          ...currentSetting,
-          lastVisitedUrl: url
-        })
-      }
+    windowManager.setMainBrowserWindow(browserWindow)
+    isMenubarReady = true
+    console.log(
+      '✅ Menubar ready 事件已触发，browserWindow 已保存'
     )
 
-    /**
-     * 构建右键菜单
-     */
-    function buildContextMenu() {
-      const userSetting = readUserSetting()
-      const isChatGPT = userSetting.model === 'ChatGPT'
-      const isDeepSeek = userSetting.model === 'DeepSeek'
-      const isGrok = userSetting.model === 'Grok'
-      electronMenubar.tray.popUpContextMenu(
-        Menu.buildFromTemplate([
-          {
-            label: 'Quit',
-            accelerator: 'Command+Q',
-            click: () => {
-              resetUserUrls()
-              app.quit()
-            }
-          },
-          {
-            label: 'Reload',
-            accelerator: 'Command+R',
-            click: () => {
-              resetUserUrls()
-              browserWindow.reload()
-            }
-          },
-          {
-            label: 'Open in browser',
-            accelerator: 'Command+O',
-            click: async () => {
-              if (isChatGPT) {
-                shell.openExternal(CHATGPT)
-              }
-              if (isDeepSeek) {
-                shell.openExternal(DEEPSEEK)
-              }
-              if (isGrok) {
-                shell.openExternal(GROK)
-              }
-            }
-          },
-          {
-            label: 'model',
-            submenu: [
-              {
-                label: 'ChatGPT',
-                type: 'radio',
-                checked: isChatGPT,
-                click: () => {
-                  const userSetting = readUserSetting()
-                  const newUserSetting = writeUserSetting({
-                    ...userSetting,
-                    model: 'ChatGPT'
-                  })
-                  electronMenubar.tray.popUpContextMenu(
-                    menu
-                  )
-                  const savedUrl =
-                    newUserSetting.urls?.ChatGPT || CHATGPT
-                  browserWindow?.webContents.send(
-                    'model-changed',
-                    newUserSetting.model,
-                    savedUrl
-                  )
-                }
-              },
-              { type: 'separator' }, // 分隔线
-              {
-                label: 'DeepSeek',
-                type: 'radio',
-                checked: isDeepSeek,
-                click: () => {
-                  const userSetting = readUserSetting()
-                  const newUserSetting = writeUserSetting({
-                    ...userSetting,
-                    model: 'DeepSeek'
-                  })
-                  electronMenubar.tray.popUpContextMenu(
-                    menu
-                  )
-                  const savedUrl =
-                    newUserSetting.urls?.DeepSeek ||
-                    DEEPSEEK
-                  browserWindow?.webContents.send(
-                    'model-changed',
-                    newUserSetting.model,
-                    savedUrl
-                  )
-                }
-              },
-              { type: 'separator' }, // 分隔线
-              {
-                label: 'Grok',
-                type: 'radio',
-                checked: isGrok,
-                click: () => {
-                  const userSetting = readUserSetting()
-                  const newUserSetting = writeUserSetting({
-                    ...userSetting,
-                    model: 'Grok'
-                  })
-                  electronMenubar.tray.popUpContextMenu(
-                    menu
-                  )
-                  const savedUrl =
-                    newUserSetting.urls?.Grok || GROK
-                  browserWindow?.webContents.send(
-                    'model-changed',
-                    newUserSetting.model,
-                    savedUrl
-                  )
-                }
-              }
-            ]
-          }
-        ])
-      )
+    if (process.platform === 'darwin') {
+      app.dock.hide()
+    } else if (process.platform === 'linux') {
+      browserWindow.setSkipTaskbar(true)
     }
 
-    // 右键菜单 弹出菜单
-    tray.on('right-click', () => {
-      buildContextMenu()
-    })
-
-    // 左键事件 组合点击 ctrl + 左键 或者 command + 左键 弹出菜单
-    tray.on('click', (e) => {
-      const isCtrlOrMetaKey = e.ctrlKey || e.metaKey
-      isCtrlOrMetaKey && buildContextMenu()
-    })
+    initializeLastVisitedUrlTracking(browserWindow)
 
     const menu = new Menu()
 
-    // 添加快捷键
-    globalShortcut.register('CommandOrControl+g', () => {
-      const menubarVisible = browserWindow.isVisible()
-      if (menubarVisible) {
-        electronMenubar.hideWindow()
-      } else {
-        electronMenubar.showWindow()
-        if (process.platform == 'darwin') {
-          electronMenubar.app.show()
-        }
-        electronMenubar.app.focus()
-      }
+    const shortcutManager = createShortcutManager({
+      browserWindow,
+      electronMenubar
     })
+
+    setupTrayContextMenu({
+      tray,
+      electronMenubar,
+      menu,
+      urls: {
+        chatgpt: ModelUrl.ChatGPT,
+        deepseek: ModelUrl.DeepSeek,
+        grok: ModelUrl.Grok,
+        gemini: ModelUrl.Gemini
+      },
+      isMenubarReady: () => isMenubarReady,
+      getMainBrowserWindow: () =>
+        windowManager.getMainBrowserWindow(),
+      setMainBrowserWindow: (window) => {
+        windowManager.setMainBrowserWindow(window)
+      },
+      getCurrentShortcut: () =>
+        shortcutManager.getCurrentShortcut(),
+      setCurrentShortcut: (shortcut) => {
+        shortcutManager.setCurrentShortcut(shortcut)
+      },
+      withBrowserWindow: windowManager.withBrowserWindow
+    })
+
+    shortcutManager.registerToggleShortcut()
+    shortcutManager.registerIpcHandlers()
 
     Menu.setApplicationMenu(menu)
 
@@ -254,17 +127,21 @@ app.on('ready', () => {
     // browserWindow.webContents.openDevTools();
   })
 
+  registerWebContentsHandlers(electronMenubar)
+
   electronMenubar.on(
     'after-show',
     async ({ browserWindow }) => {
       const userSetting = readUserSetting()
       const savedUrl =
         userSetting.urls?.[userSetting.model] ||
-        (userSetting.model === 'DeepSeek'
-          ? DEEPSEEK
-          : userSetting.model === 'ChatGPT'
-          ? CHATGPT
-          : GROK)
+        (userSetting.model === Model.DeepSeek
+          ? ModelUrl.DeepSeek
+          : userSetting.model === Model.ChatGPT
+          ? ModelUrl.ChatGPT
+          : userSetting.model === Model.Gemini
+          ? ModelUrl.Gemini
+          : ModelUrl.Grok)
 
       browserWindow.webContents.send(
         'model-changed',
@@ -274,165 +151,15 @@ app.on('ready', () => {
     }
   )
 
-  app.on('web-contents-created', (_event, webContents) => {
-    const webContentType = webContents.getType()
-
-    if (webContentType == 'webview') {
-      // 保存 URL 的函数
-      const saveWebViewUrl = (
-        url: string,
-        eventType: string
-      ) => {
-        const currentSetting = readUserSetting()
-        const currentModel = currentSetting.model
-
-        // 确保 urls 对象存在
-        if (!currentSetting.urls) {
-          currentSetting.urls = {
-            ChatGPT: CHATGPT,
-            DeepSeek: DEEPSEEK,
-            Grok: GROK
-          }
-        }
-
-        // 保存当前模型的 URL
-        currentSetting.urls[currentModel] = url
-
-        writeUserSetting(currentSetting)
-      }
-
-      // 监听加载失败事件
-      webContents.on(
-        'did-fail-load',
-        (
-          event,
-          errorCode,
-          errorDescription,
-          validatedURL
-        ) => {
-          console.error(
-            `❌ [加载失败] URL: ${validatedURL}`
-          )
-          console.error(
-            `❌ [错误码] ${errorCode}: ${errorDescription}`
-          )
-
-          // 忽略某些非关键错误
-          // -3 = ERR_ABORTED (用户主动取消)
-          // -102 = ERR_CONNECTION_REFUSED
-          // -7 = ERR_TIMED_OUT
-          if (errorCode !== -3 && Math.abs(errorCode) > 0) {
-            // 发送错误消息到渲染进程
-            const errorMessages: { [key: string]: string } =
-              {
-                '-7': '网络连接超时，请检查您的网络连接',
-                '-102': '无法连接到服务器，请稍后重试',
-                '-105': 'DNS 解析失败，请检查网络设置',
-                '-106': '无法访问互联网，请检查网络连接',
-                '-109': '无法访问该地址',
-                '-138': '网络访问被拒绝'
-              }
-
-            const errorMessage =
-              errorMessages[errorCode.toString()] ||
-              `加载失败: ${errorDescription} (错误码: ${errorCode})`
-            electronMenubar.browserWindow?.webContents.send(
-              'load-error',
-              errorMessage
-            )
-
-            // 如果是超时错误，5秒后自动重试
-            if (errorCode === -7) {
-              setTimeout(() => {
-                webContents.reload()
-              }, 5000)
-            }
-          }
-        }
-      )
-
-      // 监听各种导航事件
-      webContents.on('did-navigate', (_event, url) => {
-        saveWebViewUrl(url, 'did-navigate')
-      })
-
-      // 监听页面内导航（单页应用的路由变化）
-      webContents.on(
-        'did-navigate-in-page',
-        (_event, url) => {
-          saveWebViewUrl(url, 'did-navigate-in-page')
-        }
-      )
-
-      // 监听导航完成
-      webContents.on('did-finish-load', () => {
-        const url = webContents.getURL()
-      })
-
-      // 在 webview 中使用外部浏览器打开链接
-      webContents.setWindowOpenHandler(({ url }) => {
-        // 调用默认浏览器打开
-        shell.openExternal(url)
-        // 阻止当前浏览器打开页面
-        return { action: 'deny' }
-      })
-
-      // 在 webview 中设置上下文菜单
-      contextMenu({
-        window: webContents
-      })
-
-      // 手动注册快捷键
-      webContents.on(
-        'before-input-event',
-        (_event, input) => {
-          const { control, meta, key } = input
-          if (!control && !meta) return
-          switch (key) {
-            case 'x':
-              webContents.cut()
-              break
-            case 'c':
-              webContents.copy()
-              break
-            case 'v':
-              webContents.paste()
-              break
-            case 'a':
-              webContents.selectAll()
-              break
-            case 'z':
-              webContents.undo()
-              break
-            case 'y':
-              webContents.redo()
-              break
-            case 'q':
-              app.quit()
-              break
-            case 'r':
-              webContents.reload()
-              break
-          }
-        }
-      )
-
-      if (process.platform == 'darwin') {
-        electronMenubar.on('after-hide', ({ app }) => {
-          app.hide()
-        })
-      }
-      // 防止背景闪烁
-      app.commandLine.appendSwitch(
-        'disable-backgrounding-occluded-windows',
-        'true'
-      )
-    }
-  })
 })
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+// 应用退出时注销所有快捷键
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll()
 })

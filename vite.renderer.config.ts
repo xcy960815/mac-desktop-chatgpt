@@ -1,9 +1,9 @@
-import type { ConfigEnv, UserConfig } from 'vite'
-import { defineConfig } from 'vite'
+import type { ConfigEnv, UserConfig } from 'vite' with { "resolution-mode": "import" }
+
 import { pluginExposeRenderer } from './vite.base.config'
 
 // https://vitejs.dev/config
-export default defineConfig((env) => {
+export default async function createRendererConfig(env: ConfigEnv): Promise<UserConfig> {
   const forgeEnv = env as ConfigEnv<'renderer'>
   const { root, mode, forgeConfigSelf } = forgeEnv
   const name = forgeConfigSelf.name ?? ''
@@ -40,5 +40,5 @@ export default defineConfig((env) => {
     optimizeDeps: {
       exclude: ['electron']
     }
-  } as UserConfig
-})
+  }
+}

@@ -1,14 +1,30 @@
+import { Model, ModelUrl } from './constants'
+
 export {}
 
 declare global {
   interface Window {
     electronAPI: {
+      /**
+       * 模型改变回调
+       * @param {(modelName: string, url?: string) => void} callback 
+       * @returns {void}
+       */
       onModelChanged: (
         callback: (modelName: string, url?: string) => void
       ) => void
+      /**
+       * 加载错误回调
+       * @param {(errorMessage: string) => void} callback 
+       * @returns {void}
+       */
       onLoadError: (
         callback: (errorMessage: string) => void
       ) => void
+      /**
+       * 平台
+       * @returns {string}
+       */
       platform: string
     }
   }
@@ -39,11 +55,13 @@ function setWebviewSrc(
   } else {
     // 否则使用默认 URL
     webviewUrl =
-      modelName === 'DeepSeek'
-        ? 'https://chat.deepseek.com/'
-        : modelName === 'ChatGPT'
-        ? 'https://chatgpt.com/'
-        : 'https://grok.com/'
+      modelName === Model.DeepSeek
+        ? ModelUrl.DeepSeek
+        : modelName === Model.ChatGPT
+        ? ModelUrl.ChatGPT
+        : modelName === Model.Gemini
+        ? ModelUrl.Gemini
+        : ModelUrl.Grok
   }
 
   // 如果 URL 相同，不重复加载
@@ -60,7 +78,11 @@ function setWebviewSrc(
   })
 }
 
-// 显示错误提示
+/**
+ * 显示错误提示
+ * @param {string} errorMessage 
+ * @returns {void}
+ */
 function showError(errorMessage: string) {
   const webviewLoading = document.getElementById(
     'webview-loading'
@@ -79,7 +101,11 @@ function showError(errorMessage: string) {
   webviewError.classList.add('active')
 }
 
-// 隐藏错误提示
+
+/**
+ * 隐藏错误提示
+ * @returns {void}
+ */
 function hideError() {
   const webviewError = document.getElementById(
     'webview-error'
@@ -87,7 +113,10 @@ function hideError() {
   webviewError.classList.remove('active')
 }
 
-// 重试按钮点击事件
+/**
+ * 重试按钮点击事件
+ * @returns {void}
+ */
 const retryButton = document.getElementById('retry-button')
 retryButton?.addEventListener('click', () => {
   hideError()
@@ -106,6 +135,9 @@ retryButton?.addEventListener('click', () => {
 window.electronAPI.onModelChanged(setWebviewSrc)
 window.electronAPI.onLoadError(showError)
 
-// 根据平台为 body 添加 class
+/**
+ * 根据平台为 body 添加 class
+ * @returns {void}
+ */
 const platform = window.electronAPI.platform
 document.body.classList.add(`platform-${platform}`)
