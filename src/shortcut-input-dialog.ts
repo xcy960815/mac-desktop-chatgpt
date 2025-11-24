@@ -1,9 +1,14 @@
 import * as path from 'path'
 import { existsSync } from 'fs'
 
-import { app, BrowserWindow, ipcMain, screen } from 'electron'
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  screen
+} from 'electron'
 
-import { ElectronMenubar } from '../electron-menubar'
+import { ElectronMenubar } from './electron-menubar'
 
 export function showShortcutInputDialog(
   electronMenubar: ElectronMenubar,
@@ -12,7 +17,9 @@ export function showShortcutInputDialog(
 ): Promise<string | null> {
   return new Promise((resolve, reject) => {
     if (!parentWindow || parentWindow.isDestroyed()) {
-      console.error('❌ showShortcutInputDialog: 父窗口无效')
+      console.error(
+        '❌ showShortcutInputDialog: 父窗口无效'
+      )
       reject(new Error('父窗口无效'))
       return
     }
@@ -41,10 +48,12 @@ export function showShortcutInputDialog(
     const dialogWidth = 360
     const dialogHeight = 160
     const x = Math.round(
-      parentBounds.x + (parentBounds.width - dialogWidth) / 2
+      parentBounds.x +
+        (parentBounds.width - dialogWidth) / 2
     )
     const y = Math.round(
-      parentBounds.y + (parentBounds.height - dialogHeight) / 2
+      parentBounds.y +
+        (parentBounds.height - dialogHeight) / 2
     )
 
     const resolvePreloadPath = () => {
@@ -258,14 +267,19 @@ export function showShortcutInputDialog(
     `
 
     inputWindow.loadURL(
-      `data:text/html;charset=utf-8,${encodeURIComponent(html)}`
+      `data:text/html;charset=utf-8,${encodeURIComponent(
+        html
+      )}`
     )
 
     const CHANNEL = 'shortcut-input-response'
     let isResolved = false
 
     const cleanupIpcListener = () => {
-      ipcMain.removeListener(CHANNEL, handleShortcutResponse)
+      ipcMain.removeListener(
+        CHANNEL,
+        handleShortcutResponse
+      )
     }
 
     const finalize = (value: string | null) => {
@@ -291,7 +305,9 @@ export function showShortcutInputDialog(
       value: string | null
     ) => {
       if (isResolved) {
-        console.log('⚠️ shortcut-input-response 已处理过，忽略重复消息')
+        console.log(
+          '⚠️ shortcut-input-response 已处理过，忽略重复消息'
+        )
         return
       }
       console.log('✅ 收到用户输入:', value)
@@ -303,7 +319,9 @@ export function showShortcutInputDialog(
 
     inputWindow.once('closed', () => {
       if (!isResolved) {
-        console.log('⚠️ 窗口关闭但未收到用户输入，返回 null')
+        console.log(
+          '⚠️ 窗口关闭但未收到用户输入，返回 null'
+        )
         finalize(null)
       } else {
         cleanupIpcListener()
@@ -328,4 +346,3 @@ export function showShortcutInputDialog(
     })
   })
 }
-

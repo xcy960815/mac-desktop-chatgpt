@@ -45,8 +45,8 @@ export interface TrayContextMenuOptions {
 
 /**
  * 获取可用的浏览器窗口
- * @param {ElectronMenubar} electronMenubar 
- * @param {TrayContextMenuOptions['getMainBrowserWindow']} getMainBrowserWindow 
+ * @param {ElectronMenubar} electronMenubar
+ * @param {TrayContextMenuOptions['getMainBrowserWindow']} getMainBrowserWindow
  * @returns {BrowserWindow | null}
  */
 const getAvailableBrowserWindow = (
@@ -71,7 +71,7 @@ const getAvailableBrowserWindow = (
 
 /**
  * 设置托盘上下文菜单
- * @param {TrayContextMenuOptions} options 
+ * @param {TrayContextMenuOptions} options
  * @returns {void}
  */
 export const setupTrayContextMenu = (
@@ -87,8 +87,44 @@ export const setupTrayContextMenu = (
     const isDeepSeek = userSetting.model === Model.DeepSeek
     const isGrok = userSetting.model === Model.Grok
     const isGemini = userSetting.model === Model.Gemini
+    const isWindowLocked = !!userSetting.lockWindowOnBlur
+    const loginItemSettings = app.getLoginItemSettings()
+    const isAutoLaunchEnabled =
+      loginItemSettings?.openAtLogin ??
+      !!userSetting.autoLaunchOnStartup
 
     const { tray, electronMenubar, urls } = options
+
+    electronMenubar.setWindowLockEnabled(isWindowLocked)
+
+    const handleAutoLaunchToggle = (enabled: boolean) => {
+      try {
+        app.setLoginItemSettings({
+          openAtLogin: enabled,
+          openAsHidden: true
+        })
+        writeUserSetting({
+          ...userSetting,
+          autoLaunchOnStartup: enabled
+        })
+      } catch (error) {
+        console.error('更新开机启动设置失败:', error)
+        dialog.showErrorBox(
+          '开机启动设置失败',
+          '请稍后再试或手动到系统设置中修改。'
+        )
+      }
+    }
+
+    const handleWindowLockToggle = (locked: boolean) => {
+      const latestSetting = readUserSetting()
+      writeUserSetting({
+        ...latestSetting,
+        lockWindowOnBlur: locked
+      })
+      electronMenubar.setWindowLockEnabled(locked)
+      tray.popUpContextMenu(options.menu)
+    }
 
     tray.popUpContextMenu(
       Menu.buildFromTemplate([
@@ -152,6 +188,32 @@ export const setupTrayContextMenu = (
               shell.openExternal(urls.gemini)
             }
           }
+        },
+        {
+          label: 'Auto-launch on startup',
+          type: 'checkbox',
+          checked: isAutoLaunchEnabled,
+          click: (menuItem) =>
+            handleAutoLaunchToggle(
+              Boolean(menuItem.checked)
+            )
+        },
+        {
+          label: '窗口行为',
+          submenu: [
+            {
+              label: '自动隐藏',
+              type: 'radio',
+              checked: !isWindowLocked,
+              click: () => handleWindowLockToggle(false)
+            },
+            {
+              label: '锁定窗口',
+              type: 'radio',
+              checked: isWindowLocked,
+              click: () => handleWindowLockToggle(true)
+            }
+          ]
         },
         {
           label: 'model',
@@ -257,7 +319,7 @@ export const setupTrayContextMenu = (
         },
         { type: 'separator' },
         {
-          label: '设置快捷键',
+          label: 'Set shortcut',
           click: async () => {
             console.log('🔧 开始设置快捷键...')
             try {

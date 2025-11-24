@@ -36,6 +36,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   private _trayPositionChecker: NodeJS.Timeout | null = null
   private _lastTrayBounds: Electron.Rectangle | null = null
   private _autoHideDisabled = false // 临时禁用自动隐藏标志
+  private _lockWindow = false // 锁定窗口标志
 
   /**
    * @description 创建一个菜单栏实例，同时在 app ready 后初始化托盘与窗口。
@@ -195,6 +196,31 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     value: ElectronMenubarOptions[K]
   ): void {
     this._options[key] = value
+  }
+
+  /**
+   * @description 设置窗口锁定状态
+   * @param enabled {boolean}
+   */
+  public setWindowLockEnabled(enabled: boolean): void {
+    this._lockWindow = enabled
+    if (
+      this._browserWindow &&
+      !this._browserWindow.isDestroyed()
+    ) {
+      // 锁定仅阻止自动隐藏，不需要置顶窗口
+      this._browserWindow.setAlwaysOnTop(false)
+    }
+    if (!enabled) {
+      this.enableAutoHide()
+    }
+  }
+
+  /**
+   * @description 当前窗口是否处于锁定状态
+   */
+  public isWindowLocked(): boolean {
+    return this._lockWindow
   }
 
   /**
@@ -632,19 +658,18 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     if (!this._isWindows) {
       this._browserWindow.on('blur', () => {
         if (!this._browserWindow) return
+        // 锁定状态下允许窗口失焦但保持可见
+        if (this._lockWindow) {
+          this.emit('focus-lost', this)
+          return
+        }
         // 如果自动隐藏被禁用（例如显示对话框时），则不执行隐藏逻辑
         if (this._autoHideDisabled) {
           return
         }
-        // 窗口是否始终位于其他窗口之上。
-        const isOnTop = this._browserWindow.isAlwaysOnTop()
-        if (isOnTop) {
-          this.emit('focus-lost', this)
-        } else {
-          this._blurTimeout = setTimeout(() => {
-            this.hideWindow()
-          }, 100)
-        }
+        this._blurTimeout = setTimeout(() => {
+          this.hideWindow()
+        }, 100)
       })
     }
 
