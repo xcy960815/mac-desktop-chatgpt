@@ -3,7 +3,14 @@ import path from 'path'
 import { app } from 'electron'
 import { Model, ModelUrl } from '../constants'
 
+/**
+ * @description Electron userData 目录下用于保存设置的子目录
+ */
 const SUBPATH = 'config'
+
+/**
+ * @description 首次启动或读取失败时写入磁盘的默认配置
+ */
 const DEFAULTSETTING: UserSetting = {
   model: Model.ChatGPT,
   urls: {
@@ -12,10 +19,18 @@ const DEFAULTSETTING: UserSetting = {
     Grok: ModelUrl.Grok,
     Gemini: ModelUrl.Gemini
   },
-  toggleShortcut: 'CommandOrControl+g'
+  toggleShortcut: 'CommandOrControl+g',
+  autoLaunchOnStartup: false,
+  lockWindowOnBlur: false
 }
+/**
+ * @description 位于 SUBPATH 目录中的配置文件名称
+ */
 const FILENAME = 'settings.json'
 
+/**
+ * @description 用户配置文件的数据结构定义
+ */
 export interface UserSetting {
   model: Model
   lastVisitedUrl?: string // 保留用于向后兼容
@@ -26,6 +41,8 @@ export interface UserSetting {
     Gemini?: string
   }
   toggleShortcut?: string // 用于打开/关闭窗口的快捷键，默认 CommandOrControl+g
+  autoLaunchOnStartup?: boolean // 是否随系统启动
+  lockWindowOnBlur?: boolean // 锁定窗口，失去焦点时不隐藏
 }
 
 /**
