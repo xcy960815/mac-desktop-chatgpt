@@ -10,6 +10,7 @@ import Positioner from 'electron-positioner'
 import { EventEmitter } from 'events'
 import * as fs from 'fs'
 import * as path from 'path'
+import { WindowBehavior } from './constants'
 
 /**
  * @description 负责控制托盘图标、BrowserWindow 以及定位逻辑的菜单栏管理器。
@@ -37,6 +38,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   private _lastTrayBounds: Electron.Rectangle | null = null
   private _autoHideDisabled = false // 临时禁用自动隐藏标志
   private _lockWindow = false // 锁定窗口标志
+  private _windowBehavior: WindowBehavior = WindowBehavior.AutoHide
 
   /**
    * @description 创建一个菜单栏实例，同时在 app ready 后初始化托盘与窗口。
@@ -199,21 +201,16 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @description 设置窗口锁定状态
-   * @param enabled {boolean}
+   * @description 设置窗口行为（自动隐藏、锁定、置顶）
+   * @param behavior {WindowBehavior}
    */
-  public setWindowLockEnabled(enabled: boolean): void {
-    this._lockWindow = enabled
-    if (
-      this._browserWindow &&
-      !this._browserWindow.isDestroyed()
-    ) {
-      // 锁定仅阻止自动隐藏，不需要置顶窗口
-      this._browserWindow.setAlwaysOnTop(false)
-    }
-    if (!enabled) {
+  public setWindowBehavior(behavior: WindowBehavior): void {
+    this._windowBehavior = behavior
+    this._lockWindow = behavior !== WindowBehavior.AutoHide
+    if (!this._lockWindow) {
       this.enableAutoHide()
     }
+    this.applyWindowBehaviorToWindow()
   }
 
   /**
@@ -654,24 +651,24 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
       this.correctArrowPosition()
     })
 
-    // 给窗口添加失去焦点事件
-    if (!this._isWindows) {
-      this._browserWindow.on('blur', () => {
-        if (!this._browserWindow) return
-        // 锁定状态下允许窗口失焦但保持可见
-        if (this._lockWindow) {
-          this.emit('focus-lost', this)
-          return
-        }
-        // 如果自动隐藏被禁用（例如显示对话框时），则不执行隐藏逻辑
-        if (this._autoHideDisabled) {
-          return
-        }
-        this._blurTimeout = setTimeout(() => {
-          this.hideWindow()
-        }, 100)
-      })
-    }
+    // 给窗口添加失去焦点事件，所有平台保持一致
+    this._browserWindow.on('blur', () => {
+      globalShortcut.unregister('esc')
+      if (!this._browserWindow) return
+      // 锁定状态下允许窗口失焦但保持可见
+      if (this._lockWindow) {
+        this.emit('focus-lost', this)
+        return
+      }
+      // 如果自动隐藏被禁用（例如显示对话框时），则不执行隐藏逻辑
+      if (this._autoHideDisabled) {
+        return
+      }
+      const blurHideDelay = this._isWindows ? 150 : 100
+      this._blurTimeout = setTimeout(() => {
+        this.hideWindow()
+      }, blurHideDelay)
+    })
 
     this._browserWindow.on('focus', () => {
       // 注册esc快捷键 快捷关闭窗口
@@ -682,10 +679,6 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
           this.hideWindow()
         }
       })
-    })
-
-    this._browserWindow.on('blur', () => {
-      globalShortcut.unregister('esc')
     })
 
     if (this._options.showOnAllWorkspaces !== false) {
@@ -710,6 +703,27 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     }
 
     this.emit('after-create-browserWindow', this)
+    this.applyWindowBehaviorToWindow()
+  }
+
+  /**
+   * @description 将当前窗口行为应用到 BrowserWindow
+   */
+  private applyWindowBehaviorToWindow(): void {
+    if (
+      !this._browserWindow ||
+      this._browserWindow.isDestroyed()
+    ) {
+      return
+    }
+    const shouldAlwaysOnTop =
+      this._windowBehavior === WindowBehavior.AlwaysOnTop
+    if (shouldAlwaysOnTop) {
+      // Use 'floating' so system context menus can still appear above us
+      this._browserWindow.setAlwaysOnTop(true, 'floating')
+    } else {
+      this._browserWindow.setAlwaysOnTop(false)
+    }
   }
 
   /**
