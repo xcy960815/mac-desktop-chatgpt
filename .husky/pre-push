@@ -1,0 +1,8 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+SCRIPT_DIR="$(cd "$(dirname "$0")/../.git/hooks" && pwd)"
+if [ -f "$SCRIPT_DIR/auto-switch-proxy.sh" ]; then
+  /bin/bash "$SCRIPT_DIR/auto-switch-proxy.sh" 2>/dev/null
+fi
+

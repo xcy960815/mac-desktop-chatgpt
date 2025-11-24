@@ -1,30 +1,53 @@
 import fsSync from 'fs'
 import path from 'path'
 import { app } from 'electron'
+import { Model, ModelUrl } from '../constants'
 
+/**
+ * @description Electron userData 目录下用于保存设置的子目录
+ */
 const SUBPATH = 'config'
+
+/**
+ * @description 首次启动或读取失败时写入磁盘的默认配置
+ */
 const DEFAULTSETTING: UserSetting = {
-  model: 'ChatGPT',
+  model: Model.ChatGPT,
   urls: {
-    ChatGPT: 'https://chatgpt.com',
-    DeepSeek: 'https://chat.deepseek.com/',
-    Grok: 'https://grok.com/'
-  }
+    ChatGPT: ModelUrl.ChatGPT,
+    DeepSeek: ModelUrl.DeepSeek,
+    Grok: ModelUrl.Grok,
+    Gemini: ModelUrl.Gemini
+  },
+  toggleShortcut: 'CommandOrControl+g',
+  autoLaunchOnStartup: false,
+  lockWindowOnBlur: false
 }
+/**
+ * @description 位于 SUBPATH 目录中的配置文件名称
+ */
 const FILENAME = 'settings.json'
 
+/**
+ * @description 用户配置文件的数据结构定义
+ */
 export interface UserSetting {
-  model: 'ChatGPT' | 'DeepSeek' | 'Grok'
+  model: Model
   lastVisitedUrl?: string // 保留用于向后兼容
   urls?: {
     ChatGPT?: string
     DeepSeek?: string
     Grok?: string
+    Gemini?: string
   }
+  toggleShortcut?: string // 用于打开/关闭窗口的快捷键，默认 CommandOrControl+g
+  autoLaunchOnStartup?: boolean // 是否随系统启动
+  lockWindowOnBlur?: boolean // 锁定窗口，失去焦点时不隐藏
 }
 
 /**
  * 获取用户设置路径，并确保文件存在
+ * @returns {string}
  */
 function getUserSettingPath(): string {
   const basePath = app.getPath('userData')
@@ -49,6 +72,7 @@ function getUserSettingPath(): string {
 
 /**
  * 读取用户设置（如果文件不存在，自动创建并返回默认值）
+ * @returns {UserSetting}
  */
 function readUserSetting(): UserSetting {
   const filePath = getUserSettingPath()
@@ -63,7 +87,8 @@ function readUserSetting(): UserSetting {
 
 /**
  * 写入用户设置
- * @param data 数据对象
+ * @param {US} data 数据对象
+ * @returns {US}
  */
 function writeUserSetting<US = UserSetting>(data: US): US {
   const filePath = getUserSettingPath()
@@ -76,15 +101,17 @@ function writeUserSetting<US = UserSetting>(data: US): US {
 
 /**
  * 重置保存的 URLs 到默认值
+ * @returns {UserSetting}
  */
 function resetUserUrls(): UserSetting {
   const currentSetting = readUserSetting()
   const resetSetting: UserSetting = {
     ...currentSetting,
     urls: {
-      ChatGPT: 'https://chatgpt.com/',
-      DeepSeek: 'https://chat.deepseek.com/',
-      Grok: 'https://grok.com/'
+      ChatGPT: ModelUrl.ChatGPT,
+      DeepSeek: ModelUrl.DeepSeek,
+      Grok: ModelUrl.Grok,
+      Gemini: ModelUrl.Gemini
     },
     lastVisitedUrl: undefined
   }

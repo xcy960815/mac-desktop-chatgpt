@@ -1,12 +1,11 @@
-// @ts-ignore
-import type { ConfigEnv, UserConfig } from 'vite';
-// @ts-ignore
-import { defineConfig, mergeConfig } from 'vite';
+
+import type { ConfigEnv, UserConfig } from 'vite' with { "resolution-mode": "import" };
 
 import { getBuildConfig, external, pluginHotRestart } from './vite.base.config';
 
 // https://vitejs.dev/config
-export default defineConfig((env) => {
+export default async function createPreloadConfig(env: ConfigEnv): Promise<UserConfig> {
+  const { mergeConfig } = await import('vite');
   const forgeEnv = env as ConfigEnv<'build'>;
   const { forgeConfigSelf } = forgeEnv;
   const config: UserConfig = {
@@ -29,4 +28,4 @@ export default defineConfig((env) => {
   };
 
   return mergeConfig(getBuildConfig(forgeEnv), config);
-});
+}
