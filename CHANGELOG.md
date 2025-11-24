@@ -13,6 +13,9 @@
 * docs: 更新 README 添加所有 scripts 命令说明 ([a309b35](https://github.com/xcy960815/mac-desktop-chatgpt/commit/a309b35))
 * docs: 添加中文 jsdoc ([be7e1c1](https://github.com/xcy960815/mac-desktop-chatgpt/commit/be7e1c1))
 * fix: normalize win artifacts and update tray hotkeys ([eacebcf](https://github.com/xcy960815/mac-desktop-chatgpt/commit/eacebcf))
+* feat: add distinct window behavior modes for tray menu ([pending])
+* fix: ensure always-on-top mode no longer hides context menus ([pending])
+* feat: add localized tray menu language toggle ([pending])
 
 
 
