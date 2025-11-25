@@ -1,4 +1,8 @@
-import { BrowserWindow, globalShortcut, ipcMain } from 'electron'
+import {
+  BrowserWindow,
+  globalShortcut,
+  ipcMain
+} from 'electron'
 
 import { ElectronMenubar } from './electron-menubar'
 import {
@@ -28,7 +32,7 @@ export interface ShortcutManager {
   getCurrentShortcut(): string | null
   /**
    * 设置当前的快捷键
-   * @param {string | null} shortcut 
+   * @param {string | null} shortcut
    * @returns {void}
    */
   setCurrentShortcut(shortcut: string | null): void
@@ -45,7 +49,7 @@ interface ShortcutManagerOptions {
 
 /**
  * 创建快捷键管理器
- * @param {ShortcutManagerOptions} options 
+ * @param {ShortcutManagerOptions} options
  * @returns {ShortcutManager}
  */
 export const createShortcutManager = ({
@@ -61,19 +65,27 @@ export const createShortcutManager = ({
   const toggleWindow = () => {
     const menubarVisible = browserWindow.isVisible()
     if (menubarVisible) {
-      electronMenubar.hideWindow()
-    } else {
-      electronMenubar.showWindow()
-      if (process.platform === 'darwin') {
-        electronMenubar.app.show()
+      if (
+        electronMenubar.isWindowLocked() &&
+        !browserWindow.isFocused()
+      ) {
+        void electronMenubar.bringWindowToFront()
+        return
       }
-      electronMenubar.app.focus()
+      electronMenubar.hideWindow()
+      return
     }
+
+    electronMenubar.showWindow()
+    if (process.platform === 'darwin') {
+      electronMenubar.app.show()
+    }
+    electronMenubar.app.focus()
   }
 
   /**
    * 注册快捷键
-   * @param {string} shortcut 
+   * @param {string} shortcut
    * @returns {boolean}
    */
   const registerShortcut = (shortcut: string): boolean =>
@@ -89,7 +101,8 @@ export const createShortcutManager = ({
     }
 
     const userSetting = readUserSetting()
-    const shortcut = userSetting.toggleShortcut || 'CommandOrControl+g'
+    const shortcut =
+      userSetting.toggleShortcut || 'CommandOrControl+g'
 
     const registered = registerShortcut(shortcut)
     if (registered) {
@@ -104,7 +117,9 @@ export const createShortcutManager = ({
       return
     }
 
-    const defaultRegistered = registerShortcut('CommandOrControl+g')
+    const defaultRegistered = registerShortcut(
+      'CommandOrControl+g'
+    )
     if (defaultRegistered) {
       currentShortcut = 'CommandOrControl+g'
       console.log(`✅ 使用默认快捷键: CommandOrControl+g`)
@@ -116,46 +131,52 @@ export const createShortcutManager = ({
    * @returns {void}
    */
   const registerIpcHandlers = () => {
-    ipcMain.handle('set-toggle-shortcut', async (_event, shortcut: string) => {
-      if (!shortcut || shortcut.trim() === '') {
+    ipcMain.handle(
+      'set-toggle-shortcut',
+      async (_event, shortcut: string) => {
+        if (!shortcut || shortcut.trim() === '') {
+          return {
+            success: false,
+            message: '快捷键不能为空'
+          }
+        }
+
+        if (currentShortcut) {
+          globalShortcut.unregister(currentShortcut)
+        }
+
+        const registered = registerShortcut(shortcut)
+
+        if (registered) {
+          const userSetting = readUserSetting()
+          writeUserSetting({
+            ...userSetting,
+            toggleShortcut: shortcut
+          })
+          currentShortcut = shortcut
+          return {
+            success: true,
+            message: '快捷键设置成功'
+          }
+        }
+
+        if (currentShortcut) {
+          registerShortcut(currentShortcut)
+        }
+
         return {
           success: false,
-          message: '快捷键不能为空'
+          message:
+            '快捷键已被占用或格式不正确，请尝试其他快捷键'
         }
       }
-
-      if (currentShortcut) {
-        globalShortcut.unregister(currentShortcut)
-      }
-
-      const registered = registerShortcut(shortcut)
-
-      if (registered) {
-        const userSetting = readUserSetting()
-        writeUserSetting({
-          ...userSetting,
-          toggleShortcut: shortcut
-        })
-        currentShortcut = shortcut
-        return {
-          success: true,
-          message: '快捷键设置成功'
-        }
-      }
-
-      if (currentShortcut) {
-        registerShortcut(currentShortcut)
-      }
-
-      return {
-        success: false,
-        message: '快捷键已被占用或格式不正确，请尝试其他快捷键'
-      }
-    })
+    )
 
     ipcMain.handle('get-toggle-shortcut', () => {
       const userSetting = readUserSetting()
-      return userSetting.toggleShortcut || 'CommandOrControl+g'
+      return (
+        userSetting.toggleShortcut || 'CommandOrControl+g'
+      )
     })
   }
 
@@ -168,4 +189,3 @@ export const createShortcutManager = ({
     }
   }
 }
-
