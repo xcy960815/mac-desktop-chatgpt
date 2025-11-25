@@ -19,26 +19,75 @@ import { WindowBehavior } from './constants'
  * @fires ElectronMenubar#hide
  */
 export class ElectronMenubar extends EventEmitter<MenubarEvents> {
+  /**
+   * @description 默认窗口高度
+   */
   private readonly _DEFAULT_WINDOW_HEIGHT: number = 400
+  /**
+   * @description 默认窗口宽度
+   */
   private readonly _DEFAULT_WINDOW_WIDTH: number = 400
+  /**
+   * @description 是否为 Linux 平台
+   */
   private readonly _isLinux: boolean =
     process.platform === 'linux'
+  /**
+   * @description 是否为 Windows 平台
+   */
   private readonly _isWindows: boolean =
     process.platform === 'win32'
+  /**
+   * @description Electron App 实例
+   */
   private _app: Electron.App
+  /**
+   * @description Electron BrowserWindow 实例
+   */
   private _browserWindow?: BrowserWindow
+  /**
+   * @description 模糊定时器
+   */
   private _blurTimeout: NodeJS.Timeout | null
-  private _isVisible: boolean // 是否可见
-  private _cachedBounds?: Electron.Rectangle // 双击事件需要_cachedBounds
+  /**
+   * @description 是否可见
+   */
+  private _isVisible: boolean
+  /**
+   * @description 双击事件需要_cachedBounds
+   */
+  private _cachedBounds?: Electron.Rectangle
+  /**
+   * @description 配置项
+   */
   private _options: ElectronMenubarOptions
   private _positioner: Positioner | undefined
+  /**
+   * @description Electron Tray 实例
+   */
   private _tray?: Tray
+  /**
+   * @description 托盘位置检查定时器
+   */
   // 在类中新增私有变量
   private _trayPositionChecker: NodeJS.Timeout | null = null
+  /**
+   * @description 上次托盘边界
+   */
   private _lastTrayBounds: Electron.Rectangle | null = null
-  private _autoHideDisabled = false // 临时禁用自动隐藏标志
-  private _lockWindow = false // 锁定窗口标志
-  private _windowBehavior: WindowBehavior = WindowBehavior.AutoHide
+  /**
+   * @description 临时禁用自动隐藏标志
+   */
+  private _autoHideDisabled = false
+  /**
+   * @description 锁定窗口标志
+   */
+  private _lockWindow = false
+  /**
+   * @description 窗口行为模式
+   */
+  private _windowBehavior: WindowBehavior =
+    WindowBehavior.AutoHide
 
   /**
    * @description 创建一个菜单栏实例，同时在 app ready 后初始化托盘与窗口。
