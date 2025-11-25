@@ -7,7 +7,8 @@ import {
   TOOLTIP,
   Model,
   MAIN_WINDOW_WIDTH,
-  MAIN_WINDOW_HEIGHT
+  MAIN_WINDOW_HEIGHT,
+  WindowBehavior
 } from './constants'
 import { resolveMainIndexUrl } from './utils/common'
 import { createWindowManager } from './window-manager'
@@ -15,7 +16,13 @@ import { createShortcutManager } from './shortcut-manager'
 import { initializeLastVisitedUrlTracking } from './url-tracker'
 import { registerWebContentsHandlers } from './webview-handlers'
 
-import { app, globalShortcut, nativeImage, Tray, Menu } from 'electron'
+import {
+  app,
+  globalShortcut,
+  nativeImage,
+  Tray,
+  Menu
+} from 'electron'
 
 import { readUserSetting } from './utils/user-setting'
 
@@ -67,6 +74,14 @@ app.on('ready', () => {
     icon: image,
     tooltip: TOOLTIP
   })
+
+  const initialSetting = readUserSetting()
+  const initialBehavior =
+    initialSetting.windowBehavior ||
+    (initialSetting.lockWindowOnBlur
+      ? WindowBehavior.LockOnDesktop
+      : WindowBehavior.AutoHide)
+  electronMenubar.setWindowBehavior(initialBehavior)
 
   const windowManager = createWindowManager(electronMenubar)
 
@@ -150,7 +165,6 @@ app.on('ready', () => {
       )
     }
   )
-
 })
 
 app.on('window-all-closed', () => {
