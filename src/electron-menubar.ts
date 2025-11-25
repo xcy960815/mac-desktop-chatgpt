@@ -270,6 +270,52 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
+   * @description 在锁定模式下，将窗口提升至最前但不设置置顶
+   */
+  public async bringWindowToFront(): Promise<void> {
+    if (
+      !this._browserWindow ||
+      this._browserWindow.isDestroyed()
+    ) {
+      await this.showWindow().catch((error) =>
+        console.error(
+          'bringWindowToFront:showWindow',
+          error
+        )
+      )
+      return
+    }
+
+    if (!this._browserWindow.isVisible()) {
+      await this.showWindow().catch((error) =>
+        console.error(
+          'bringWindowToFront:showWindow',
+          error
+        )
+      )
+      return
+    }
+
+    const movableWindow = this
+      ._browserWindow as BrowserWindow & {
+      moveTop?: () => void
+    }
+    if (typeof movableWindow.moveTop === 'function') {
+      try {
+        movableWindow.moveTop()
+      } catch (error) {
+        console.warn('bringWindowToFront:moveTop', error)
+      }
+    }
+
+    this._browserWindow.show()
+    this._browserWindow.focus()
+    if (process.platform === 'darwin') {
+      this._app.focus()
+    }
+  }
+
+  /**
    * @description 临时禁用自动隐藏（用于显示对话框时）
    * @return {void}
    */
@@ -521,6 +567,13 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
         }
         this._browserWindow.show()
         this._browserWindow.focus()
+        return
+      }
+      if (
+        this.isWindowLocked() &&
+        !this._browserWindow.isFocused()
+      ) {
+        await this.bringWindowToFront()
         return
       }
       this.hideWindow()
