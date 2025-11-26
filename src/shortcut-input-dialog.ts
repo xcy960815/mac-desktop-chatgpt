@@ -24,9 +24,6 @@ export function showShortcutInputDialog(
 ): Promise<string | null> {
   return new Promise((resolve, reject) => {
     if (!parentWindow || parentWindow.isDestroyed()) {
-      console.error(
-        '❌ showShortcutInputDialog: 父窗口无效'
-      )
       reject(new Error('父窗口无效'))
       return
     }
@@ -36,11 +33,7 @@ export function showShortcutInputDialog(
     let parentBounds: Electron.Rectangle
     try {
       parentBounds = parentWindow.getBounds()
-    } catch (error) {
-      console.error(
-        '❌ showShortcutInputDialog: 获取窗口位置失败',
-        error
-      )
+    } catch {
       const primaryDisplay = screen.getPrimaryDisplay()
       const { width: screenWidth, height: screenHeight } =
         primaryDisplay.workAreaSize
@@ -77,10 +70,6 @@ export function showShortcutInputDialog(
         }
       }
 
-      console.warn(
-        '⚠️ 未找到 preload.js，使用默认路径:',
-        candidates[0]
-      )
       return candidates[0]
     }
 
@@ -312,12 +301,8 @@ export function showShortcutInputDialog(
       value: string | null
     ) => {
       if (isResolved) {
-        console.log(
-          '⚠️ shortcut-input-response 已处理过，忽略重复消息'
-        )
         return
       }
-      console.log('✅ 收到用户输入:', value)
       finalize(value)
       closeWindowSafely()
     }
@@ -326,9 +311,6 @@ export function showShortcutInputDialog(
 
     inputWindow.once('closed', () => {
       if (!isResolved) {
-        console.log(
-          '⚠️ 窗口关闭但未收到用户输入，返回 null'
-        )
         finalize(null)
       } else {
         cleanupIpcListener()
@@ -347,7 +329,6 @@ export function showShortcutInputDialog(
 
     inputWindow.on('close', () => {
       if (!isResolved) {
-        console.log('⚠️ 用户点击关闭按钮')
         finalize(null)
       }
     })

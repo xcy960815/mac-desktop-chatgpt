@@ -5,14 +5,19 @@ import { ElectronMenubar } from './electron-menubar'
 import { ModelUrl } from './constants'
 import {
   readUserSetting,
-  writeUserSetting
+  writeUserSetting,
+  UserSetting
 } from './utils/user-setting'
+
+type UserSettingWithUrls = UserSetting & {
+  urls: Required<UserSetting['urls']>
+}
 
 /**
  * 确保用户设置中的 URLs 已初始化
  * @returns {UserSetting} 初始化后的用户设置对象
  */
-const ensureUrlsInitialized = () => {
+const ensureUrlsInitialized = (): UserSettingWithUrls => {
   const currentSetting = readUserSetting()
   if (!currentSetting.urls) {
     currentSetting.urls = {
@@ -22,7 +27,7 @@ const ensureUrlsInitialized = () => {
       Gemini: ModelUrl.Gemini
     }
   }
-  return currentSetting
+  return currentSetting as UserSettingWithUrls
 }
 
 /**
@@ -33,14 +38,6 @@ const ensureUrlsInitialized = () => {
 const saveWebViewUrl = (url: string) => {
   const currentSetting = ensureUrlsInitialized()
   const currentModel = currentSetting.model
-  if (!currentSetting.urls) {
-    currentSetting.urls = {
-      ChatGPT: ModelUrl.ChatGPT,
-      DeepSeek: ModelUrl.DeepSeek,
-      Grok: ModelUrl.Grok,
-      Gemini: ModelUrl.Gemini
-    }
-  }
   currentSetting.urls[currentModel] = url
   writeUserSetting(currentSetting)
 }
@@ -81,12 +78,12 @@ const registerLoadFailureHandler = (
 ) => {
   webContents.on(
     'did-fail-load',
-    (_event, errorCode, errorDescription, validatedURL) => {
-      console.error(`❌ [加载失败] URL: ${validatedURL}`)
-      console.error(
-        `❌ [错误码] ${errorCode}: ${errorDescription}`
-      )
-
+    (
+      _event,
+      errorCode,
+      errorDescription,
+      _validatedURL
+    ) => {
       if (errorCode === -3 || Math.abs(errorCode) === 0) {
         return
       }
@@ -162,6 +159,9 @@ const registerInputShortcuts = (
 /** macOS 隐藏处理器是否已注册 */
 let macHideHandlerRegistered = false
 
+/** commandLine.appendSwitch 是否已调用 */
+let commandLineSwitchAppended = false
+
 /**
  * 注册 macOS 隐藏处理器
  * @param {ElectronMenubar} electronMenubar - Electron 菜单栏实例
@@ -197,6 +197,15 @@ export const registerWebContentsHandlers = (
 ) => {
   registerMacHideHandler(electronMenubar)
 
+  // 只调用一次 commandLine.appendSwitch
+  if (!commandLineSwitchAppended) {
+    app.commandLine.appendSwitch(
+      'disable-backgrounding-occluded-windows',
+      'true'
+    )
+    commandLineSwitchAppended = true
+  }
+
   app.on('web-contents-created', (_event, webContents) => {
     if (webContents.getType() !== 'webview') {
       return
@@ -215,10 +224,5 @@ export const registerWebContentsHandlers = (
     })
 
     registerInputShortcuts(webContents)
-
-    app.commandLine.appendSwitch(
-      'disable-backgrounding-occluded-windows',
-      'true'
-    )
   })
 }

@@ -85,11 +85,8 @@ export const createWindowManager = (
           mainBrowserWindow = refreshedWindow
           return refreshedWindow
         }
-      } catch (error) {
-        console.error(
-          '❌ 确保 BrowserWindow 存在时出错',
-          error
-        )
+      } catch {
+        // 忽略拉起窗口时的异常，继续重试
       }
 
       return null
@@ -126,10 +123,6 @@ export const createWindowManager = (
           error instanceof Error &&
           /Object has been destroyed/i.test(error.message)
         ) {
-          console.warn(
-            '⚠️ 窗口已销毁，尝试重新获取窗口 (attempt %s)',
-            attempt + 1
-          )
           mainBrowserWindow = null
           await delay(50)
           continue
@@ -138,23 +131,23 @@ export const createWindowManager = (
       }
     }
 
-    dialog.showMessageBox(
-      (mainBrowserWindow && !mainBrowserWindow.isDestroyed()
+    const parentWindow =
+      mainBrowserWindow && !mainBrowserWindow.isDestroyed()
         ? mainBrowserWindow
-        : undefined) || undefined,
-      {
-        type: 'error',
-        title: '错误',
-        message:
-          options?.onFailureMessage ||
-          '窗口不可用，请稍后重试',
-        detail:
-          lastError instanceof Error
-            ? lastError.message
-            : undefined,
-        buttons: ['确定']
-      }
-    )
+        : undefined
+
+    dialog.showMessageBox(parentWindow, {
+      type: 'error',
+      title: '错误',
+      message:
+        options?.onFailureMessage ||
+        '窗口不可用，请稍后重试',
+      detail:
+        lastError instanceof Error
+          ? lastError.message
+          : undefined,
+      buttons: ['确定']
+    })
 
     return null
   }

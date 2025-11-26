@@ -111,11 +111,8 @@ export const createShortcutManager = ({
     const registered = registerShortcut(shortcut)
     if (registered) {
       currentShortcut = shortcut
-      console.log(`✅ 快捷键注册成功: ${shortcut}`)
       return
     }
-
-    console.error(`❌ 快捷键注册失败: ${shortcut}`)
 
     if (shortcut === 'CommandOrControl+g') {
       return
@@ -126,7 +123,6 @@ export const createShortcutManager = ({
     )
     if (defaultRegistered) {
       currentShortcut = 'CommandOrControl+g'
-      console.log(`✅ 使用默认快捷键: CommandOrControl+g`)
     }
   }
 
