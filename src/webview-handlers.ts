@@ -3,7 +3,15 @@ import contextMenu from 'electron-context-menu'
 
 import { ElectronMenubar } from './electron-menubar'
 import { ModelUrl } from './constants'
-import { readUserSetting, writeUserSetting } from './utils/user-setting'
+import {
+  readUserSetting,
+  writeUserSetting
+} from './utils/user-setting'
+
+/**
+ * 确保用户设置中的 URLs 已初始化
+ * @returns {UserSetting} 初始化后的用户设置对象
+ */
 const ensureUrlsInitialized = () => {
   const currentSetting = readUserSetting()
   if (!currentSetting.urls) {
@@ -17,6 +25,11 @@ const ensureUrlsInitialized = () => {
   return currentSetting
 }
 
+/**
+ * 保存 WebView 的当前 URL 到用户设置
+ * @param {string} url - 要保存的 URL 字符串
+ * @returns {void}
+ */
 const saveWebViewUrl = (url: string) => {
   const currentSetting = ensureUrlsInitialized()
   const currentModel = currentSetting.model
@@ -32,7 +45,14 @@ const saveWebViewUrl = (url: string) => {
   writeUserSetting(currentSetting)
 }
 
-const registerNavigationListeners = (webContents: WebContents) => {
+/**
+ * 注册导航监听器，监听 WebView 的导航事件
+ * @param {WebContents} webContents - WebContents 实例
+ * @returns {void}
+ */
+const registerNavigationListeners = (
+  webContents: WebContents
+) => {
   webContents.on('did-navigate', (_event, url) => {
     saveWebViewUrl(url)
   })
@@ -49,6 +69,12 @@ const registerNavigationListeners = (webContents: WebContents) => {
   })
 }
 
+/**
+ * 注册加载失败处理器，处理 WebView 加载失败的情况
+ * @param {WebContents} webContents - WebContents 实例
+ * @param {ElectronMenubar} electronMenubar - Electron 菜单栏实例
+ * @returns {void}
+ */
 const registerLoadFailureHandler = (
   webContents: WebContents,
   electronMenubar: ElectronMenubar
@@ -57,7 +83,9 @@ const registerLoadFailureHandler = (
     'did-fail-load',
     (_event, errorCode, errorDescription, validatedURL) => {
       console.error(`❌ [加载失败] URL: ${validatedURL}`)
-      console.error(`❌ [错误码] ${errorCode}: ${errorDescription}`)
+      console.error(
+        `❌ [错误码] ${errorCode}: ${errorDescription}`
+      )
 
       if (errorCode === -3 || Math.abs(errorCode) === 0) {
         return
@@ -90,7 +118,14 @@ const registerLoadFailureHandler = (
   )
 }
 
-const registerInputShortcuts = (webContents: WebContents) => {
+/**
+ * 注册输入快捷键处理器，支持复制、粘贴、撤销等快捷键
+ * @param {WebContents} webContents - WebContents 实例
+ * @returns {void}
+ */
+const registerInputShortcuts = (
+  webContents: WebContents
+) => {
   webContents.on('before-input-event', (_event, input) => {
     const { control, meta, key } = input
     if (!control && !meta) return
@@ -124,20 +159,39 @@ const registerInputShortcuts = (webContents: WebContents) => {
   })
 }
 
+/** macOS 隐藏处理器是否已注册 */
 let macHideHandlerRegistered = false
 
-const registerMacHideHandler = (electronMenubar: ElectronMenubar) => {
-  if (process.platform !== 'darwin' || macHideHandlerRegistered) {
+/**
+ * 注册 macOS 隐藏处理器
+ * @param {ElectronMenubar} electronMenubar - Electron 菜单栏实例
+ * @returns {void}
+ */
+const registerMacHideHandler = (
+  electronMenubar: ElectronMenubar
+) => {
+  if (
+    process.platform !== 'darwin' ||
+    macHideHandlerRegistered
+  ) {
     return
   }
 
-  electronMenubar.on('after-hide', ({ app: menubarApp }) => {
-    menubarApp.hide()
-  })
+  electronMenubar.on(
+    'after-hide',
+    ({ app: menubarApp }) => {
+      menubarApp.hide()
+    }
+  )
 
   macHideHandlerRegistered = true
 }
 
+/**
+ * 注册 WebContents 处理器，包括导航监听、加载失败处理、输入快捷键等
+ * @param {ElectronMenubar} electronMenubar - Electron 菜单栏实例
+ * @returns {void}
+ */
 export const registerWebContentsHandlers = (
   electronMenubar: ElectronMenubar
 ) => {
@@ -168,4 +222,3 @@ export const registerWebContentsHandlers = (
     )
   })
 }
-

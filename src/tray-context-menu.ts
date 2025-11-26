@@ -27,25 +27,48 @@ import {
   TrayMenuMessageKey
 } from './i18n/tray-menu'
 
+/**
+ * 浏览器窗口操作选项
+ * @typedef {Object} WithBrowserWindowOptions
+ */
 type WithBrowserWindowOptions = {
+  /** 失败时的错误消息（可选） */
   onFailureMessage?: string
 }
 
+/**
+ * 托盘上下文菜单配置选项
+ * @interface TrayContextMenuOptions
+ */
 export interface TrayContextMenuOptions {
+  /** 系统托盘实例 */
   tray: Tray
+  /** Electron 菜单栏实例 */
   electronMenubar: ElectronMenubar
+  /** 菜单实例 */
   menu: Menu
+  /** 各模型的 URL 配置 */
   urls: {
+    /** ChatGPT 模型 URL */
     chatgpt: string
+    /** DeepSeek 模型 URL */
     deepseek: string
+    /** Grok 模型 URL */
     grok: string
+    /** Gemini 模型 URL */
     gemini: string
   }
+  /** 检查菜单栏是否已就绪 */
   isMenubarReady(): boolean
+  /** 获取主浏览器窗口 */
   getMainBrowserWindow(): BrowserWindow | null
+  /** 设置主浏览器窗口 */
   setMainBrowserWindow(window: BrowserWindow | null): void
+  /** 获取当前快捷键 */
   getCurrentShortcut(): string | null
+  /** 设置当前快捷键 */
   setCurrentShortcut(shortcut: string | null): void
+  /** 在浏览器窗口上执行任务 */
   withBrowserWindow<T>(
     task: (win: BrowserWindow) => T | Promise<T>,
     options?: WithBrowserWindowOptions
@@ -54,9 +77,9 @@ export interface TrayContextMenuOptions {
 
 /**
  * 获取可用的浏览器窗口
- * @param {ElectronMenubar} electronMenubar
- * @param {TrayContextMenuOptions['getMainBrowserWindow']} getMainBrowserWindow
- * @returns {BrowserWindow | null}
+ * @param {ElectronMenubar} electronMenubar - Electron 菜单栏实例
+ * @param {TrayContextMenuOptions['getMainBrowserWindow']} getMainBrowserWindow - 获取主浏览器窗口的函数
+ * @returns {BrowserWindow | null} 可用的浏览器窗口，如果不存在则返回 null
  */
 const getAvailableBrowserWindow = (
   electronMenubar: ElectronMenubar,
@@ -80,8 +103,8 @@ const getAvailableBrowserWindow = (
 
 /**
  * 设置托盘上下文菜单
- * @param {TrayContextMenuOptions} options
- * @returns {void}
+ * @param {TrayContextMenuOptions} options - 托盘上下文菜单配置选项
+ * @returns {() => void} 返回构建上下文菜单的函数
  */
 export const setupTrayContextMenu = (
   options: TrayContextMenuOptions

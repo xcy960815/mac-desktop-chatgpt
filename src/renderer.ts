@@ -7,7 +7,7 @@ declare global {
     electronAPI: {
       /**
        * 模型改变回调
-       * @param {(modelName: string, url?: string) => void} callback 
+       * @param {(modelName: string, url?: string) => void} callback
        * @returns {void}
        */
       onModelChanged: (
@@ -15,7 +15,7 @@ declare global {
       ) => void
       /**
        * 加载错误回调
-       * @param {(errorMessage: string) => void} callback 
+       * @param {(errorMessage: string) => void} callback
        * @returns {void}
        */
       onLoadError: (
@@ -32,8 +32,8 @@ declare global {
 
 /**
  * 设置 webview 地址
- * @param {string} modelName
- * @param {string} savedUrl
+ * @param {string} modelName - 模型名称
+ * @param {string} [savedUrl] - 保存的 URL（可选）
  * @returns {void}
  */
 function setWebviewSrc(
@@ -80,7 +80,7 @@ function setWebviewSrc(
 
 /**
  * 显示错误提示
- * @param {string} errorMessage 
+ * @param {string} errorMessage - 错误消息文本
  * @returns {void}
  */
 function showError(errorMessage: string) {
@@ -100,7 +100,6 @@ function showError(errorMessage: string) {
   errorMessageEl.textContent = errorMessage
   webviewError.classList.add('active')
 }
-
 
 /**
  * 隐藏错误提示
