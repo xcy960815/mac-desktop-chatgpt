@@ -90,9 +90,6 @@ app.on('ready', () => {
 
     windowManager.setMainBrowserWindow(browserWindow)
     isMenubarReady = true
-    console.log(
-      '✅ Menubar ready 事件已触发，browserWindow 已保存'
-    )
 
     if (process.platform === 'darwin') {
       app.dock.hide()
@@ -148,15 +145,16 @@ app.on('ready', () => {
     'after-show',
     async ({ browserWindow }) => {
       const userSetting = readUserSetting()
+      // 使用 ModelUrl 枚举映射简化 URL 获取逻辑
+      const modelUrlMap: Record<Model, string> = {
+        [Model.ChatGPT]: ModelUrl.ChatGPT,
+        [Model.DeepSeek]: ModelUrl.DeepSeek,
+        [Model.Grok]: ModelUrl.Grok,
+        [Model.Gemini]: ModelUrl.Gemini
+      }
       const savedUrl =
         userSetting.urls?.[userSetting.model] ||
-        (userSetting.model === Model.DeepSeek
-          ? ModelUrl.DeepSeek
-          : userSetting.model === Model.ChatGPT
-          ? ModelUrl.ChatGPT
-          : userSetting.model === Model.Gemini
-          ? ModelUrl.Gemini
-          : ModelUrl.Grok)
+        modelUrlMap[userSetting.model]
 
       browserWindow.webContents.send(
         'model-changed',

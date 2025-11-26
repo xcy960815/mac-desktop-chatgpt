@@ -113,7 +113,6 @@ function readUserSetting(): UserSetting {
     const data = fsSync.readFileSync(filePath, 'utf-8')
     return normalizeWindowBehavior(JSON.parse(data))
   } catch (err) {
-    console.error('读取用户设置失败，返回默认值:', err)
     return DEFAULTSETTING
   }
 }
@@ -139,14 +138,16 @@ function writeUserSetting<US = UserSetting>(data: US): US {
  */
 function resetUserUrls(): UserSetting {
   const currentSetting = readUserSetting()
+  // 使用 Model 枚举和 ModelUrl 枚举动态生成默认 URLs
+  const defaultUrls = {
+    [Model.ChatGPT]: ModelUrl.ChatGPT,
+    [Model.DeepSeek]: ModelUrl.DeepSeek,
+    [Model.Grok]: ModelUrl.Grok,
+    [Model.Gemini]: ModelUrl.Gemini
+  } as const
   const resetSetting: UserSetting = {
     ...currentSetting,
-    urls: {
-      ChatGPT: ModelUrl.ChatGPT,
-      DeepSeek: ModelUrl.DeepSeek,
-      Grok: ModelUrl.Grok,
-      Gemini: ModelUrl.Gemini
-    },
+    urls: defaultUrls,
     lastVisitedUrl: undefined
   }
   return writeUserSetting(resetSetting)

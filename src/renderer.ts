@@ -22,6 +22,14 @@ declare global {
         callback: (errorMessage: string) => void
       ) => void
       /**
+       * 箭头位置更新回调
+       * @param {(offset: number) => void} callback
+       * @returns {void}
+       */
+      onArrowPositionUpdate: (
+        callback: (offset: number) => void
+      ) => void
+      /**
        * 平台
        * @returns {string}
        */
@@ -116,12 +124,16 @@ function hideError() {
  * 重试按钮点击事件
  * @returns {void}
  */
+type WebviewElementWithReload = HTMLIFrameElement & {
+  reload: () => void
+}
+
 const retryButton = document.getElementById('retry-button')
 retryButton?.addEventListener('click', () => {
   hideError()
   const webview = document.getElementById(
     'webview-container'
-  ) as any // webview 是 Electron 的特殊标签
+  ) as WebviewElementWithReload | null
   if (webview && webview.src) {
     const webviewLoading = document.getElementById(
       'webview-loading'
@@ -133,6 +145,16 @@ retryButton?.addEventListener('click', () => {
 
 window.electronAPI.onModelChanged(setWebviewSrc)
 window.electronAPI.onLoadError(showError)
+window.electronAPI.onArrowPositionUpdate((offset) => {
+  const triangle = document.querySelector(
+    '.triangle'
+  ) as HTMLDivElement | null
+  if (!triangle) {
+    return
+  }
+  const clampedOffset = Math.max(0, offset)
+  triangle.style.left = `${clampedOffset}px`
+})
 
 /**
  * 根据平台为 body 添加 class

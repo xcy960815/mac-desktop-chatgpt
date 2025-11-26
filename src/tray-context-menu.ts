@@ -102,6 +102,59 @@ const getAvailableBrowserWindow = (
 }
 
 /**
+ * 模型名称到 URL 配置键的映射
+ */
+const MODEL_TO_URL_KEY: Record<
+  Model,
+  keyof TrayContextMenuOptions['urls']
+> = {
+  [Model.ChatGPT]: 'chatgpt',
+  [Model.DeepSeek]: 'deepseek',
+  [Model.Grok]: 'grok',
+  [Model.Gemini]: 'gemini'
+}
+
+/**
+ * 创建模型切换处理函数
+ * @param {Model} model - 要切换到的模型
+ * @param {TrayContextMenuOptions} options - 托盘上下文菜单配置选项
+ * @param {Tray} tray - 系统托盘实例
+ * @param {ElectronMenubar} electronMenubar - Electron 菜单栏实例
+ * @param {TrayContextMenuOptions['urls']} urls - 各模型的 URL 配置
+ * @returns {() => void} 模型切换处理函数
+ */
+const createModelSwitchHandler = (
+  model: Model,
+  options: TrayContextMenuOptions,
+  tray: Tray,
+  electronMenubar: ElectronMenubar,
+  urls: TrayContextMenuOptions['urls']
+) => {
+  return () => {
+    const userSetting = readUserSetting()
+    const newUserSetting = writeUserSetting({
+      ...userSetting,
+      model
+    })
+    tray.popUpContextMenu(options.menu)
+
+    // 根据模型获取对应的 URL
+    const urlKey = MODEL_TO_URL_KEY[model]
+    const savedUrl =
+      newUserSetting.urls?.[model] || urls[urlKey]
+
+    getAvailableBrowserWindow(
+      electronMenubar,
+      options.getMainBrowserWindow
+    )?.webContents.send(
+      'model-changed',
+      newUserSetting.model,
+      savedUrl
+    )
+  }
+}
+
+/**
  * 设置托盘上下文菜单
  * @param {TrayContextMenuOptions} options - 托盘上下文菜单配置选项
  * @returns {() => void} 返回构建上下文菜单的函数
@@ -109,6 +162,27 @@ const getAvailableBrowserWindow = (
 export const setupTrayContextMenu = (
   options: TrayContextMenuOptions
 ) => {
+  const waitForWindowLoad = async (
+    targetWindow: BrowserWindow
+  ) => {
+    await new Promise<void>((resolve) => {
+      if (targetWindow.webContents.isLoading()) {
+        const timeout = setTimeout(() => {
+          resolve()
+        }, 5000)
+        targetWindow.webContents.once(
+          'did-finish-load',
+          () => {
+            clearTimeout(timeout)
+            resolve()
+          }
+        )
+      } else {
+        resolve()
+      }
+    })
+  }
+
   /**
    * 构建上下文菜单
    * @returns {void}
@@ -124,8 +198,6 @@ export const setupTrayContextMenu = (
       (userSetting.lockWindowOnBlur
         ? WindowBehavior.LockOnDesktop
         : WindowBehavior.AutoHide)
-    const isWindowLocked =
-      windowBehavior !== WindowBehavior.AutoHide
     const loginItemSettings = app.getLoginItemSettings()
     const isAutoLaunchEnabled =
       loginItemSettings?.openAtLogin ??
@@ -151,7 +223,6 @@ export const setupTrayContextMenu = (
           autoLaunchOnStartup: enabled
         })
       } catch (error) {
-        console.error('更新开机启动设置失败:', error)
         dialog.showErrorBox(
           '开机启动设置失败',
           '请稍后再试或手动到系统设置中修改。'
@@ -328,98 +399,49 @@ export const setupTrayContextMenu = (
               label: Model.ChatGPT,
               type: 'radio',
               checked: isChatGPT,
-              click: () => {
-                const userSetting = readUserSetting()
-                const newUserSetting = writeUserSetting({
-                  ...userSetting,
-                  model: Model.ChatGPT
-                })
-                tray.popUpContextMenu(options.menu)
-                const savedUrl =
-                  newUserSetting.urls?.ChatGPT ||
-                  urls.chatgpt
-                getAvailableBrowserWindow(
-                  electronMenubar,
-                  options.getMainBrowserWindow
-                )?.webContents.send(
-                  'model-changed',
-                  newUserSetting.model,
-                  savedUrl
-                )
-              }
+              click: createModelSwitchHandler(
+                Model.ChatGPT,
+                options,
+                tray,
+                electronMenubar,
+                urls
+              )
             },
-            // { type: 'separator' },
             {
               label: Model.DeepSeek,
               type: 'radio',
               checked: isDeepSeek,
-              click: () => {
-                const userSetting = readUserSetting()
-                const newUserSetting = writeUserSetting({
-                  ...userSetting,
-                  model: Model.DeepSeek
-                })
-                tray.popUpContextMenu(options.menu)
-                const savedUrl =
-                  newUserSetting.urls?.DeepSeek ||
-                  urls.deepseek
-                getAvailableBrowserWindow(
-                  electronMenubar,
-                  options.getMainBrowserWindow
-                )?.webContents.send(
-                  'model-changed',
-                  newUserSetting.model,
-                  savedUrl
-                )
-              }
+              click: createModelSwitchHandler(
+                Model.DeepSeek,
+                options,
+                tray,
+                electronMenubar,
+                urls
+              )
             },
-            // { type: 'separator' },
             {
               label: Model.Grok,
               type: 'radio',
               checked: isGrok,
-              click: () => {
-                const userSetting = readUserSetting()
-                const newUserSetting = writeUserSetting({
-                  ...userSetting,
-                  model: Model.Grok
-                })
-                tray.popUpContextMenu(options.menu)
-                const savedUrl =
-                  newUserSetting.urls?.Grok || urls.grok
-                getAvailableBrowserWindow(
-                  electronMenubar,
-                  options.getMainBrowserWindow
-                )?.webContents.send(
-                  'model-changed',
-                  newUserSetting.model,
-                  savedUrl
-                )
-              }
+              click: createModelSwitchHandler(
+                Model.Grok,
+                options,
+                tray,
+                electronMenubar,
+                urls
+              )
             },
-            // { type: 'separator' },
             {
               label: Model.Gemini,
               type: 'radio',
               checked: isGemini,
-              click: () => {
-                const userSetting = readUserSetting()
-                const newUserSetting = writeUserSetting({
-                  ...userSetting,
-                  model: Model.Gemini
-                })
-                tray.popUpContextMenu(options.menu)
-                const savedUrl =
-                  newUserSetting.urls?.Gemini || urls.gemini
-                getAvailableBrowserWindow(
-                  electronMenubar,
-                  options.getMainBrowserWindow
-                )?.webContents.send(
-                  'model-changed',
-                  newUserSetting.model,
-                  savedUrl
-                )
-              }
+              click: createModelSwitchHandler(
+                Model.Gemini,
+                options,
+                tray,
+                electronMenubar,
+                urls
+              )
             }
           ]
         },
@@ -427,27 +449,19 @@ export const setupTrayContextMenu = (
         {
           label: t('setShortcut'),
           click: async () => {
-            console.log('🔧 开始设置快捷键...')
             try {
               const userSetting = readUserSetting()
               const savedShortcut =
                 userSetting.toggleShortcut ||
                 'CommandOrControl+g'
-              console.log('📋 当前快捷键:', savedShortcut)
 
               if (!options.isMenubarReady()) {
-                console.log('⏳ 等待 menubar ready...')
                 for (
                   let i = 0;
                   i < 20 && !options.isMenubarReady();
                   i++
                 ) {
                   await delay(100)
-                }
-                if (!options.isMenubarReady()) {
-                  console.log(
-                    '⚠️ Menubar 尚未 ready，但继续尝试...'
-                  )
                 }
               }
 
@@ -456,30 +470,12 @@ export const setupTrayContextMenu = (
                   electronMenubar,
                   options.getMainBrowserWindow
                 ) || null
-              console.log('🔍 初始窗口状态:', {
-                isMenubarReady: options.isMenubarReady(),
-                mainBrowserWindow:
-                  !!options.getMainBrowserWindow(),
-                electronMenubarBrowserWindow:
-                  !!electronMenubar.browserWindow,
-                browserWindow: !!browserWindow,
-                isDestroyed: browserWindow
-                  ? browserWindow.isDestroyed()
-                  : 'N/A'
-              })
-
               if (
                 !browserWindow ||
                 browserWindow.isDestroyed()
               ) {
-                console.log(
-                  '📦 窗口不存在或已销毁，创建窗口...'
-                )
                 try {
                   if (!electronMenubar.tray) {
-                    console.error(
-                      '❌ Tray 未初始化，无法创建窗口'
-                    )
                     dialog.showMessageBox({
                       type: 'error',
                       title: '错误',
@@ -491,7 +487,6 @@ export const setupTrayContextMenu = (
                   }
 
                   await electronMenubar.showWindow()
-                  console.log('✅ showWindow() 调用完成')
                   await delay(200)
 
                   for (let i = 0; i < 5; i++) {
@@ -502,14 +497,8 @@ export const setupTrayContextMenu = (
                       browserWindow &&
                       !browserWindow.isDestroyed()
                     ) {
-                      console.log(
-                        `✅ 窗口获取成功 (尝试 ${i + 1}/5)`
-                      )
                       break
                     }
-                    console.log(
-                      `⏳ 等待窗口创建... (尝试 ${i + 1}/5)`
-                    )
                     await delay(100)
                   }
 
@@ -520,10 +509,8 @@ export const setupTrayContextMenu = (
                     options.setMainBrowserWindow(
                       browserWindow
                     )
-                    console.log('✅ 窗口引用已更新')
                   }
-                } catch (error) {
-                  console.error('❌ 创建窗口时出错:', error)
+                } catch {
                   browserWindow =
                     electronMenubar.browserWindow ||
                     options.getMainBrowserWindow()
@@ -533,17 +520,6 @@ export const setupTrayContextMenu = (
                   !browserWindow ||
                   browserWindow.isDestroyed()
                 ) {
-                  console.error(
-                    '❌ 窗口创建失败或未准备好',
-                    {
-                      browserWindow: !!browserWindow,
-                      isDestroyed: browserWindow
-                        ? browserWindow.isDestroyed()
-                        : 'N/A',
-                      electronMenubarBrowserWindow:
-                        !!electronMenubar.browserWindow
-                    }
-                  )
                   dialog.showMessageBox({
                     type: 'error',
                     title: '错误',
@@ -553,34 +529,10 @@ export const setupTrayContextMenu = (
                   return
                 }
 
-                await new Promise<void>((resolve) => {
-                  if (
-                    browserWindow!.webContents.isLoading()
-                  ) {
-                    browserWindow!.webContents.once(
-                      'did-finish-load',
-                      () => {
-                        console.log('✅ 窗口加载完成')
-                        resolve()
-                      }
-                    )
-                    setTimeout(() => {
-                      console.log(
-                        '⏰ 窗口加载超时，继续执行'
-                      )
-                      resolve()
-                    }, 5000)
-                  } else {
-                    console.log('✅ 窗口已加载')
-                    resolve()
-                  }
-                })
+                await waitForWindowLoad(browserWindow)
               }
 
-              console.log('✅ 窗口已准备好')
-
               if (!browserWindow.isVisible()) {
-                console.log('👁️ 窗口不可见，显示窗口...')
                 try {
                   await electronMenubar.showWindow()
                   browserWindow =
@@ -595,8 +547,8 @@ export const setupTrayContextMenu = (
                     )
                   }
                   await delay(300)
-                } catch (error) {
-                  console.error('❌ 显示窗口时出错:', error)
+                } catch {
+                  // 忽略在显示窗口时的瞬时错误，后续校验会提示用户
                 }
               }
 
@@ -604,7 +556,6 @@ export const setupTrayContextMenu = (
                 !browserWindow ||
                 browserWindow.isDestroyed()
               ) {
-                console.error('❌ 窗口最终检查失败')
                 dialog.showMessageBox({
                   type: 'error',
                   title: '错误',
@@ -614,29 +565,7 @@ export const setupTrayContextMenu = (
                 return
               }
 
-              console.log('✅ 窗口已可见')
-
-              console.log('⏳ 等待页面加载完成...')
-              await new Promise<void>((resolve) => {
-                if (
-                  browserWindow!.webContents.isLoading()
-                ) {
-                  browserWindow!.webContents.once(
-                    'did-finish-load',
-                    () => {
-                      console.log('✅ 页面加载完成')
-                      resolve()
-                    }
-                  )
-                  setTimeout(() => {
-                    console.log('⏰ 页面加载超时，继续执行')
-                    resolve()
-                  }, 5000)
-                } else {
-                  console.log('✅ 页面已加载')
-                  resolve()
-                }
-              })
+              await waitForWindowLoad(browserWindow)
 
               browserWindow =
                 electronMenubar.browserWindow ||
@@ -645,7 +574,6 @@ export const setupTrayContextMenu = (
                 !browserWindow ||
                 browserWindow.isDestroyed()
               ) {
-                console.error('❌ 调用对话框前窗口检查失败')
                 dialog.showMessageBox({
                   type: 'error',
                   title: '错误',
@@ -660,7 +588,6 @@ export const setupTrayContextMenu = (
                 await delay(100)
               }
 
-              console.log('💬 准备显示输入框...')
               let input: string | null = null
               try {
                 input = await showShortcutInputDialog(
@@ -668,9 +595,7 @@ export const setupTrayContextMenu = (
                   browserWindow,
                   savedShortcut
                 )
-                console.log('📝 用户输入:', input)
               } catch (error) {
-                console.error('❌ 显示对话框时出错:', error)
                 dialog.showMessageBox({
                   type: 'error',
                   title: '错误',
@@ -854,7 +779,6 @@ export const setupTrayContextMenu = (
                 }
               }
             } catch (error) {
-              console.error('设置快捷键时发生错误:', error)
               const browserWindow =
                 getAvailableBrowserWindow(
                   options.electronMenubar,

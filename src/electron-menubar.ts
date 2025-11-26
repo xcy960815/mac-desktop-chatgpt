@@ -90,6 +90,16 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     WindowBehavior.AutoHide
 
   /**
+   * @description 注册与应用生命周期相关的清理任务
+   */
+  private registerAppShutdownHandlers() {
+    this._app.once('before-quit', () => {
+      this.stopTrayPositionWatcher()
+      this.unregisterEscapeShortcut()
+    })
+  }
+
+  /**
    * @description 创建一个菜单栏实例，同时在 app ready 后初始化托盘与窗口。
    * @param app Electron App 实例
    * @param options 自定义配置
@@ -103,22 +113,63 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     this._blurTimeout = null
     this._options = this.cleanOptions(options)
     this._isVisible = false
+    this.registerAppShutdownHandlers()
     if (app.isReady()) {
       /**
        * @link https://github.com/maxogden/menubar/pull/151
        */
-      process.nextTick(() =>
-        this.appReady().catch((error) =>
-          console.error('menubar:isReady ', error)
-        )
-      )
+      process.nextTick(() => {
+        this.appReady().catch(this.handleIgnoredRejection)
+      })
     } else {
       app.on('ready', () => {
-        this.appReady().catch((error) =>
-          console.error('menubar: ready', error)
-        )
+        this.appReady().catch(this.handleIgnoredRejection)
       })
     }
+  }
+
+  /**
+   * 初始化配置项
+   * @param {Partial<ElectronMenubarOptions>} [opts] - 部分配置选项（可选）
+   * @returns {ElectronMenubarOptions} 完整的配置选项对象
+   */
+  private cleanOptions(
+    opts?: Partial<ElectronMenubarOptions>
+  ): ElectronMenubarOptions {
+    const options: Partial<ElectronMenubarOptions> = {
+      ...opts
+    }
+
+    if (options.activateWithApp === undefined) {
+      options.activateWithApp = true
+    }
+
+    if (!options.dir) {
+      options.dir = app.getAppPath()
+    }
+
+    if (!path.isAbsolute(options.dir)) {
+      options.dir = path.resolve(options.dir)
+    }
+
+    options.loadUrlOptions = options.loadUrlOptions || {}
+    options.tooltip = options.tooltip || ''
+
+    if (!options.browserWindow) {
+      options.browserWindow = {}
+    }
+
+    options.browserWindow.width =
+      options.browserWindow.width !== undefined
+        ? options.browserWindow.width
+        : this._DEFAULT_WINDOW_WIDTH
+
+    options.browserWindow.height =
+      options.browserWindow.height !== undefined
+        ? options.browserWindow.height
+        : this._DEFAULT_WINDOW_HEIGHT
+
+    return options as ElectronMenubarOptions
   }
 
   /**
@@ -172,7 +223,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
    * @description 开始监听 Tray 位置变化
    */
   private startTrayPositionWatcher() {
-    if (!this._tray) return
+    if (!this._tray || this._trayPositionChecker) return
     // 初始记录位置
     this._lastTrayBounds = this._tray.getBounds()
     // 每 500ms 检查一次位置变化
@@ -216,11 +267,99 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     const { x: trayX, width: trayWidth } =
       this._tray.getBounds()
     const { x: windowX } = this._browserWindow.getBounds()
-    const triangleLeft = trayX + trayWidth / 2 - windowX
-    // 不能使用变量承接会报错
-    this._browserWindow.webContents.executeJavaScript(`
-			document.getElementsByClassName('triangle')[0].style.left = ${triangleLeft}+'px'
-		`)
+    const rawTriangleLeft = trayX + trayWidth / 2 - windowX
+    const triangleLeft = Math.max(0, rawTriangleLeft)
+    this.sendArrowPositionUpdate(triangleLeft)
+  }
+
+  /**
+   * @description 向渲染进程发送箭头偏移量
+   * @param {number} triangleLeft
+   */
+  private sendArrowPositionUpdate(triangleLeft: number) {
+    if (
+      !this._browserWindow ||
+      this._browserWindow.isDestroyed()
+    ) {
+      return
+    }
+    this._browserWindow.webContents.send(
+      'update-arrow-position',
+      triangleLeft
+    )
+  }
+
+  /**
+   * 依据托盘所在屏幕返回屏幕的全尺寸和可用工作区
+   * @param {Tray} tray - 托盘实例
+   * @returns {[Rectangle, Rectangle]} 返回包含屏幕边界和工作区边界的元组
+   */
+  private trayToScreenRects(
+    tray: Tray
+  ): [Rectangle, Rectangle] {
+    const { workArea, bounds: screenBounds } =
+      electronScreen.getDisplayMatching(tray.getBounds())
+    workArea.x -= screenBounds.x
+    workArea.y -= screenBounds.y
+    return [screenBounds, workArea]
+  }
+
+  /**
+   * 计算托盘所在任务栏的位置（顶部/底部/左右）
+   * @param {Tray} tray - 托盘实例
+   * @returns {TaskbarLocation} 任务栏方位字符串
+   */
+  private taskbarLocation(tray: Tray): TaskbarLocation {
+    const [screenBounds, workArea] =
+      this.trayToScreenRects(tray)
+    if (workArea.x > 0) {
+      if (this._isLinux && workArea.y > 0) return 'top'
+      return 'left'
+    }
+
+    if (workArea.y > 0) {
+      return 'top'
+    }
+
+    if (workArea.width < screenBounds.width) {
+      return 'right'
+    }
+    return 'bottom'
+  }
+
+  /**
+   * 获取窗口位置
+   * @param {Tray} tray - 托盘实例
+   * @returns {Positioner.Position} 窗口位置字符串
+   */
+  private getWindowPosition(
+    tray: Tray
+  ): Positioner.Position {
+    switch (process.platform) {
+      case 'darwin':
+        return 'trayCenter'
+      case 'linux':
+      case 'win32': {
+        const traySide = this.taskbarLocation(tray)
+        if (traySide === 'top') {
+          return this._isLinux ? 'topRight' : 'trayCenter'
+        }
+        if (traySide === 'bottom') {
+          return this._isLinux
+            ? 'bottomRight'
+            : 'trayBottomCenter'
+        }
+        if (traySide === 'left') {
+          return 'bottomLeft'
+        }
+        if (traySide === 'right') {
+          return 'bottomRight'
+        }
+        break
+      }
+      default:
+        return 'topRight'
+    }
   }
 
   /**
@@ -264,6 +403,25 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
+   * 将当前窗口行为应用到 BrowserWindow
+   */
+  private applyWindowBehaviorToWindow(): void {
+    if (
+      !this._browserWindow ||
+      this._browserWindow.isDestroyed()
+    ) {
+      return
+    }
+    const shouldAlwaysOnTop =
+      this._windowBehavior === WindowBehavior.AlwaysOnTop
+    if (shouldAlwaysOnTop) {
+      this._browserWindow.setAlwaysOnTop(true, 'floating')
+    } else {
+      this._browserWindow.setAlwaysOnTop(false)
+    }
+  }
+
+  /**
    * 当前窗口是否处于锁定状态
    * @returns {boolean} 如果窗口已锁定则返回 true，否则返回 false
    */
@@ -280,21 +438,15 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
       !this._browserWindow ||
       this._browserWindow.isDestroyed()
     ) {
-      await this.showWindow().catch((error) =>
-        console.error(
-          'bringWindowToFront:showWindow',
-          error
-        )
+      await this.showWindow().catch(
+        this.handleIgnoredRejection
       )
       return
     }
 
     if (!this._browserWindow.isVisible()) {
-      await this.showWindow().catch((error) =>
-        console.error(
-          'bringWindowToFront:showWindow',
-          error
-        )
+      await this.showWindow().catch(
+        this.handleIgnoredRejection
       )
       return
     }
@@ -306,8 +458,8 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     if (typeof movableWindow.moveTop === 'function') {
       try {
         movableWindow.moveTop()
-      } catch (error) {
-        console.warn('bringWindowToFront:moveTop', error)
+      } catch {
+        // ignore moveTop errors
       }
     }
 
@@ -337,6 +489,34 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
    */
   public enableAutoHide(): void {
     this._autoHideDisabled = false
+  }
+
+  /**
+   * @description 吞掉无需关心的 Promise rejection
+   */
+  private handleIgnoredRejection(_error?: unknown): void {
+    // no-op：某些调用失败后会通过 UI 反馈给用户
+  }
+
+  /**
+   * @description 注册 ESC 快捷键用于快速关闭窗口
+   */
+  private registerEscapeShortcut(): void {
+    this.unregisterEscapeShortcut()
+    globalShortcut.register('esc', () => {
+      const menubarVisible =
+        this._browserWindow?.isVisible()
+      if (menubarVisible) {
+        this.hideWindow()
+      }
+    })
+  }
+
+  /**
+   * @description 注销 ESC 快捷键
+   */
+  private unregisterEscapeShortcut(): void {
+    globalShortcut.unregister('esc')
   }
 
   /**
@@ -478,7 +658,9 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
         'activate',
         (_event, hasVisibleWindows) => {
           if (!hasVisibleWindows) {
-            this.showWindow().catch(console.error)
+            this.showWindow().catch(
+              this.handleIgnoredRejection
+            )
           }
         }
       )
@@ -550,36 +732,15 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     event?: Electron.KeyboardEvent,
     bounds?: Electron.Rectangle
   ): Promise<void> {
-    if (
-      event &&
-      (event.shiftKey || event.ctrlKey || event.metaKey)
-    ) {
+    if (this.shouldHideOnModifierClick(event)) {
       this.hideWindow()
       return
     }
 
-    // if blur was invoked clear timeout
-    if (this._blurTimeout) {
-      clearInterval(this._blurTimeout)
-    }
+    this.clearPendingBlurTimeout()
 
     if (this._browserWindow && this._isVisible) {
-      if (this._isWindows) {
-        if (this._browserWindow.isMinimized()) {
-          this._browserWindow.restore()
-        }
-        this._browserWindow.show()
-        this._browserWindow.focus()
-        return
-      }
-      if (
-        this.isWindowLocked() &&
-        !this._browserWindow.isFocused()
-      ) {
-        await this.bringWindowToFront()
-        return
-      }
-      this.hideWindow()
+      await this.handleVisibleWindowClick()
       return
     }
 
@@ -589,133 +750,51 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * 初始化配置项
-   * @param {Partial<ElectronMenubarOptions>} [opts] - 部分配置选项（可选）
-   * @returns {ElectronMenubarOptions} 完整的配置选项对象
+   * @description 判断快捷键是否需要直接隐藏窗口
    */
-  private cleanOptions(
-    opts?: Partial<ElectronMenubarOptions>
-  ): ElectronMenubarOptions {
-    const options: Partial<ElectronMenubarOptions> = {
-      ...opts
-    }
-
-    if (options.activateWithApp === undefined) {
-      options.activateWithApp = true
-    }
-
-    if (!options.dir) {
-      options.dir = app.getAppPath()
-    }
-
-    if (!path.isAbsolute(options.dir)) {
-      options.dir = path.resolve(options.dir)
-    }
-
-    // index 由外部传入，不在此处设置默认值
-
-    options.loadUrlOptions = options.loadUrlOptions || {}
-
-    options.tooltip = options.tooltip || ''
-
-    // `icon`, `preloadWindow`, `showDockIcon`, `showOnAllWorkspaces`,`showOnRightClick` 不需要特殊处理
-
-    if (!options.browserWindow) {
-      options.browserWindow = {}
-    }
-
-    options.browserWindow.width =
-      options.browserWindow.width !== undefined
-        ? options.browserWindow.width
-        : this._DEFAULT_WINDOW_WIDTH
-
-    options.browserWindow.height =
-      options.browserWindow.height !== undefined
-        ? options.browserWindow.height
-        : this._DEFAULT_WINDOW_HEIGHT
-
-    return options as ElectronMenubarOptions
+  private shouldHideOnModifierClick(
+    event?: Electron.KeyboardEvent
+  ): boolean {
+    if (!event) return false
+    return event.shiftKey || event.ctrlKey || event.metaKey
   }
 
   /**
-   * 依据托盘所在屏幕返回屏幕的全尺寸和可用工作区
-   * @param {Tray} tray - 托盘实例
-   * @returns {[Rectangle, Rectangle]} 返回包含屏幕边界和工作区边界的元组
+   * @description 清除待执行的 blur 定时器
    */
-  private trayToScreenRects(
-    tray: Tray
-  ): [Rectangle, Rectangle] {
-    // 可能有多个屏幕，因此我们需要弄清楚托盘图标位于哪个屏幕上。
-    const { workArea, bounds: screenBounds } =
-      electronScreen.getDisplayMatching(tray.getBounds())
-    workArea.x -= screenBounds.x
-    workArea.y -= screenBounds.y
-    return [screenBounds, workArea]
+  private clearPendingBlurTimeout() {
+    if (this._blurTimeout) {
+      clearTimeout(this._blurTimeout)
+      this._blurTimeout = null
+    }
   }
 
   /**
-   * 计算托盘所在任务栏的位置（顶部/底部/左右）
-   * @param {Tray} tray - 托盘实例
-   * @returns {TaskbarLocation} 任务栏方位字符串
+   * @description 处理窗口可见时的点击逻辑
    */
-  private taskbarLocation(tray: Tray): TaskbarLocation {
-    const [screenBounds, workArea] =
-      this.trayToScreenRects(tray)
-    if (workArea.x > 0) {
-      if (this._isLinux && workArea.y > 0) return 'top'
-      return 'left'
+  private async handleVisibleWindowClick(): Promise<void> {
+    if (!this._browserWindow) {
+      return
     }
 
-    // TASKBAR TOP
-    if (workArea.y > 0) {
-      return 'top'
-    }
-
-    if (workArea.width < screenBounds.width) {
-      return 'right'
-    }
-    return 'bottom'
-  }
-
-  /**
-   * 获取窗口位置
-   * @param {Tray} tray - 托盘实例
-   * @returns {Positioner.Position} 窗口位置字符串
-   */
-  private getWindowPosition(
-    tray: Tray
-  ): Positioner.Position {
-    switch (process.platform) {
-      // macOS
-      // 支持顶部任务栏
-      case 'darwin':
-        return 'trayCenter'
-      // Linux
-      // Windows
-      // 支持 top/bottom/left/right 任务栏
-      case 'linux':
-      case 'win32': {
-        const traySide = this.taskbarLocation(tray)
-        // Assign position for menubar
-        if (traySide === 'top') {
-          return this._isLinux ? 'topRight' : 'trayCenter'
-        }
-        if (traySide === 'bottom') {
-          return this._isLinux
-            ? 'bottomRight'
-            : 'trayBottomCenter'
-        }
-        if (traySide === 'left') {
-          return 'bottomLeft'
-        }
-        if (traySide === 'right') {
-          return 'bottomRight'
-        }
-        break
+    if (this._isWindows) {
+      if (this._browserWindow.isMinimized()) {
+        this._browserWindow.restore()
       }
-      default:
-        return 'topRight'
+      this._browserWindow.show()
+      this._browserWindow.focus()
+      return
     }
+
+    if (
+      this.isWindowLocked() &&
+      !this._browserWindow.isFocused()
+    ) {
+      await this.bringWindowToFront()
+      return
+    }
+
+    this.hideWindow()
   }
 
   /**
@@ -725,29 +804,27 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   private async createWindow(): Promise<void> {
     this.emit('create-browserWindow', this)
 
-    // 为菜单栏的 browserWindow 添加一些默认行为，使其看起来像一个菜单栏
-    const defaultBrowserWindow = this._isWindows
-      ? {
-          show: false, // 仍由 showWindow 控制展示时机
-          frame: true, // Windows 使用常规窗口
-          transparent: false
-        }
-      : {
-          show: false, // 一开始不要展示窗口
-          frame: false // 删除浏览器窗口 frame
-        }
+    const baseBrowserWindowOptions: Electron.BrowserWindowConstructorOptions =
+      {
+        show: false,
+        frame: this._isWindows ? true : false,
+        transparent: this._isWindows ? false : true,
+        ...this._options.browserWindow
+      }
 
-    this._browserWindow = new BrowserWindow({
-      ...defaultBrowserWindow,
-      ...this._options.browserWindow,
-      ...(this._isWindows
-        ? {
-            frame: true,
-            transparent: false,
-            skipTaskbar: false
-          }
-        : {})
-    })
+    if (this._isWindows) {
+      baseBrowserWindowOptions.skipTaskbar = false
+      baseBrowserWindowOptions.transparent = false
+      baseBrowserWindowOptions.frame = true
+    } else if (
+      typeof baseBrowserWindowOptions.frame === 'undefined'
+    ) {
+      baseBrowserWindowOptions.frame = false
+    }
+
+    this._browserWindow = new BrowserWindow(
+      baseBrowserWindowOptions
+    )
 
     this._positioner = new Positioner(this._browserWindow)
 
@@ -758,7 +835,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 
     // 给窗口添加失去焦点事件，所有平台保持一致
     this._browserWindow.on('blur', () => {
-      globalShortcut.unregister('esc')
+      this.unregisterEscapeShortcut()
       if (!this._browserWindow) return
       // 锁定状态下允许窗口失焦但保持可见
       if (this._lockWindow) {
@@ -777,13 +854,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 
     this._browserWindow.on('focus', () => {
       // 注册esc快捷键 快捷关闭窗口
-      globalShortcut.register('esc', () => {
-        const menubarVisible =
-          this._browserWindow.isVisible()
-        if (menubarVisible) {
-          this.hideWindow()
-        }
-      })
+      this.registerEscapeShortcut()
     })
 
     if (this._options.showOnAllWorkspaces !== false) {
@@ -812,30 +883,11 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @description 将当前窗口行为应用到 BrowserWindow
-   */
-  private applyWindowBehaviorToWindow(): void {
-    if (
-      !this._browserWindow ||
-      this._browserWindow.isDestroyed()
-    ) {
-      return
-    }
-    const shouldAlwaysOnTop =
-      this._windowBehavior === WindowBehavior.AlwaysOnTop
-    if (shouldAlwaysOnTop) {
-      // Use 'floating' so system context menus can still appear above us
-      this._browserWindow.setAlwaysOnTop(true, 'floating')
-    } else {
-      this._browserWindow.setAlwaysOnTop(false)
-    }
-  }
-
-  /**
    * @description 清除窗口
    * @return {void}
    */
   private windowClear(): void {
+    this.unregisterEscapeShortcut()
     this._browserWindow = undefined
     this.stopTrayPositionWatcher()
     this.emit('after-close', this)

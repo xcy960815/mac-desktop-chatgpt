@@ -28,6 +28,15 @@ interface ElectronAPI {
     callback: (errorMessage: string) => void
   ) => void
   /**
+   * 箭头位置更新回调
+   * @param {function} callback - 回调函数，接收箭头偏移量
+   * @param {number} callback.offset - 偏移量（像素）
+   * @returns {void}
+   */
+  onArrowPositionUpdate: (
+    callback: (offset: number) => void
+  ) => void
+  /**
    * 发送模型改变事件
    * @param {string} model - 模型名称
    * @returns {void}
@@ -83,6 +92,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('load-error', (_event, errorMessage) => {
       callback(errorMessage)
     })
+  },
+  onArrowPositionUpdate: (
+    callback: (offset: number) => void
+  ) => {
+    ipcRenderer.on(
+      'update-arrow-position',
+      (_event, offset: number) => {
+        callback(offset)
+      }
+    )
   },
   sendModelChanged: (model: string) => {
     ipcRenderer.send('model-changed', model)
