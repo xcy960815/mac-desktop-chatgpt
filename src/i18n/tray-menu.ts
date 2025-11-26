@@ -1,5 +1,9 @@
 import { MenuLanguage } from '../constants'
 
+/**
+ * 托盘菜单消息键类型
+ * @typedef {string} TrayMenuMessageKey
+ */
 export type TrayMenuMessageKey =
   | 'quit'
   | 'reload'
@@ -51,6 +55,12 @@ const MENU_MESSAGES: Record<
   }
 }
 
+/**
+ * 获取托盘菜单文本
+ * @param {TrayMenuMessageKey} key - 菜单消息键
+ * @param {MenuLanguage} language - 菜单语言
+ * @returns {string} 对应语言的菜单文本，如果找不到则返回英文文本
+ */
 export const getTrayMenuText = (
   key: TrayMenuMessageKey,
   language: MenuLanguage

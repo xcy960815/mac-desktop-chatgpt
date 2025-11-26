@@ -224,10 +224,10 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @description 获取配置项
-   * @see ElectronMenubarOptions
-   * @param key { K extends keyof ElectronMenubarOptions }
-   * @returns { ElectronMenubarOptions[keyof ElectronMenubarOptions]}
+   * 获取配置项
+   * @param {K} key - 配置项的键名
+   * @returns {ElectronMenubarOptions[K]} 配置项的值
+   * @template K
    */
   public getOption<K extends keyof ElectronMenubarOptions>(
     key: K
@@ -236,11 +236,11 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @description 修改配置项
-   * @see ElectronMenubarOptions
-   * @param key {K extends keyof ElectronMenubarOptions}
-   * @param value {ElectronMenubarOptions[K]}
-   * @return {void}
+   * 修改配置项
+   * @param {K} key - 配置项的键名
+   * @param {ElectronMenubarOptions[K]} value - 配置项的新值
+   * @returns {void}
+   * @template K
    */
   public setOption<K extends keyof ElectronMenubarOptions>(
     key: K,
@@ -250,8 +250,9 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @description 设置窗口行为（自动隐藏、锁定、置顶）
-   * @param behavior {WindowBehavior}
+   * 设置窗口行为（自动隐藏、锁定、置顶）
+   * @param {WindowBehavior} behavior - 窗口行为模式
+   * @returns {void}
    */
   public setWindowBehavior(behavior: WindowBehavior): void {
     this._windowBehavior = behavior
@@ -263,14 +264,16 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @description 当前窗口是否处于锁定状态
+   * 当前窗口是否处于锁定状态
+   * @returns {boolean} 如果窗口已锁定则返回 true，否则返回 false
    */
   public isWindowLocked(): boolean {
     return this._lockWindow
   }
 
   /**
-   * @description 在锁定模式下，将窗口提升至最前但不设置置顶
+   * 在锁定模式下，将窗口提升至最前但不设置置顶
+   * @returns {Promise<void>}
    */
   public async bringWindowToFront(): Promise<void> {
     if (
@@ -353,8 +356,8 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @description 显示菜单栏窗口
-   * @param trayPosition {Electron.Rectangle}
+   * 显示菜单栏窗口
+   * @param {Electron.Rectangle} [trayPosition] - 托盘位置信息（可选）
    * @returns {Promise<void>}
    */
   public async showWindow(
@@ -538,10 +541,10 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @description 点击菜单栏图标
-   * @param e {Electron.KeyboardEvent}
-   * @param bounds {Electron.Rectangle}
-   * @return {Promise<void>}
+   * 点击菜单栏图标
+   * @param {Electron.KeyboardEvent} [event] - 键盘事件（可选）
+   * @param {Electron.Rectangle} [bounds] - 托盘边界信息（可选）
+   * @returns {Promise<void>}
    */
   private async clicked(
     event?: Electron.KeyboardEvent,
@@ -586,9 +589,9 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @description 初始化配置项
-   * @param opts {Partial<ElectronMenubarOptions>}
-   * @returns {ElectronMenubarOptions}
+   * 初始化配置项
+   * @param {Partial<ElectronMenubarOptions>} [opts] - 部分配置选项（可选）
+   * @returns {ElectronMenubarOptions} 完整的配置选项对象
    */
   private cleanOptions(
     opts?: Partial<ElectronMenubarOptions>
@@ -635,9 +638,9 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @description 依据托盘所在屏幕返回屏幕的全尺寸和可用工作区。
-   * @param tray 托盘实例
-   * @returns [屏幕边界, 工作区边界]
+   * 依据托盘所在屏幕返回屏幕的全尺寸和可用工作区
+   * @param {Tray} tray - 托盘实例
+   * @returns {[Rectangle, Rectangle]} 返回包含屏幕边界和工作区边界的元组
    */
   private trayToScreenRects(
     tray: Tray
@@ -651,9 +654,9 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @description 计算托盘所在任务栏的位置（顶部/底部/左右）。
-   * @param tray 托盘实例
-   * @returns 任务栏方位
+   * 计算托盘所在任务栏的位置（顶部/底部/左右）
+   * @param {Tray} tray - 托盘实例
+   * @returns {TaskbarLocation} 任务栏方位字符串
    */
   private taskbarLocation(tray: Tray): TaskbarLocation {
     const [screenBounds, workArea] =
@@ -675,9 +678,9 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @description 获取窗口位置
-   * @param tray {Tray}
-   * @returns {Positioner.Position}
+   * 获取窗口位置
+   * @param {Tray} tray - 托盘实例
+   * @returns {Positioner.Position} 窗口位置字符串
    */
   private getWindowPosition(
     tray: Tray
