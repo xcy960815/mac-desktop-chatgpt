@@ -34,6 +34,11 @@ declare global {
        * @returns {string}
        */
       platform: string
+      /**
+       * Webview Preload 脚本路径
+       * @returns {string}
+       */
+      webviewPreloadPath: string
     }
   }
 }
@@ -50,11 +55,27 @@ function setWebviewSrc(
 ) {
   const webview = document.getElementById(
     'webview-container'
-  ) as HTMLIFrameElement
+  ) as HTMLIFrameElement & {
+    preload: string
+    useragent: string
+    openDevTools: () => void
+  }
   const webviewLoading = document.getElementById(
     'webview-loading'
   ) as HTMLDivElement
   const originWebviewUrl = webview?.src
+
+  // 设置 preload 脚本
+  if (window.electronAPI.webviewPreloadPath) {
+    webview.preload = `file://${window.electronAPI.webviewPreloadPath}`
+  }
+
+  // 动态设置 User-Agent，移除 Electron 标识，保持 Chrome 版本一致
+  const userAgent = navigator.userAgent
+    .replace(/Electron\/[0-9.]+\s/, '')
+    .replace(/desktop-chatgpt\/[0-9.]+\s/, '')
+  console.log('Setting webview useragent:', userAgent)
+  webview.useragent = userAgent
 
   // 如果有保存的 URL，优先使用保存的 URL
   let webviewUrl: string
@@ -83,6 +104,11 @@ function setWebviewSrc(
   // 监听 webview 加载完成
   webview.addEventListener('did-stop-loading', () => {
     webviewLoading.classList.remove('active')
+  })
+
+  // 调试：自动打开 Webview 开发者工具以便查看日志
+  webview.addEventListener('dom-ready', () => {
+    webview.openDevTools()
   })
 }
 

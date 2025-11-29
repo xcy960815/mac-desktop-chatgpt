@@ -2,6 +2,7 @@
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 
 import { contextBridge, ipcRenderer } from 'electron'
+import path from 'path'
 
 /**
  * Electron API 接口定义
@@ -72,10 +73,19 @@ interface ElectronAPI {
    * @type {string}
    */
   platform: string
+  /**
+   * Webview Preload 脚本路径
+   * @type {string}
+   */
+  webviewPreloadPath: string
 }
 
 // 暴露安全的 API 到渲染进程
 contextBridge.exposeInMainWorld('electronAPI', {
+  webviewPreloadPath: path.join(
+    __dirname,
+    'webview-preload.js'
+  ),
   onModelChanged: (
     callback: (modelName: string, url?: string) => void
   ) => {

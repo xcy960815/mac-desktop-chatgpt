@@ -27,6 +27,11 @@ import {
 import { readUserSetting } from './utils/user-setting'
 
 app.commandLine.appendSwitch('ignore-certificate-errors')
+app.commandLine.appendSwitch(
+  'disable-blink-features',
+  'AutomationControlled'
+)
+app.commandLine.appendSwitch('disable-features', 'WebGPU')
 
 // 标记 ready 事件是否已触发
 let isMenubarReady = false
