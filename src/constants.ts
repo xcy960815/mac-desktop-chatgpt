@@ -31,8 +31,17 @@ export enum ModelUrl {
  * @enum {string}
  */
 export enum WindowBehavior {
+  /**
+   * 自动隐藏
+   */
   AutoHide = 'auto-hide',
+  /**
+   * 锁定在桌面上
+   */
   LockOnDesktop = 'lock-on-desktop',
+  /**
+   * 始终置顶
+   */
   AlwaysOnTop = 'always-on-top'
 }
 
@@ -41,7 +50,13 @@ export enum WindowBehavior {
  * @enum {string}
  */
 export enum MenuLanguage {
+  /**
+   * 英语
+   */
   English = 'en',
+  /**
+   * 中文
+   */
   Chinese = 'zh'
 }
 
