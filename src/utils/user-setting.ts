@@ -9,12 +9,14 @@ import {
 } from '../constants'
 
 /**
- * @description Electron userData 目录下用于保存设置的子目录
+ * Electron userData 目录下用于保存设置的子目录
+ * @constant {string}
  */
 const SUBPATH = 'config'
 
 /**
- * @description 首次启动或读取失败时写入磁盘的默认配置
+ * 首次启动或读取失败时写入磁盘的默认配置
+ * @constant {UserSetting}
  */
 const DEFAULTSETTING: UserSetting = {
   model: Model.ChatGPT,
@@ -31,12 +33,14 @@ const DEFAULTSETTING: UserSetting = {
   menuLanguage: MenuLanguage.Chinese
 }
 /**
- * @description 位于 SUBPATH 目录中的配置文件名称
+ * 位于 SUBPATH 目录中的配置文件名称
+ * @constant {string}
  */
 const FILENAME = 'settings.json'
 
 /**
- * @description 用户配置文件的数据结构定义
+ * 用户配置文件的数据结构定义
+ * @interface UserSetting
  */
 export interface UserSetting {
   model: Model
@@ -54,6 +58,11 @@ export interface UserSetting {
   menuLanguage?: MenuLanguage // 托盘菜单语言
 }
 
+/**
+ * 规范化窗口行为设置，如果未设置则根据 lockWindowOnBlur 推导
+ * @param {UserSetting} setting - 用户设置对象
+ * @returns {UserSetting} 规范化后的用户设置对象
+ */
 function normalizeWindowBehavior(
   setting: UserSetting
 ): UserSetting {
@@ -104,15 +113,15 @@ function readUserSetting(): UserSetting {
     const data = fsSync.readFileSync(filePath, 'utf-8')
     return normalizeWindowBehavior(JSON.parse(data))
   } catch (err) {
-    console.error('读取用户设置失败，返回默认值:', err)
     return DEFAULTSETTING
   }
 }
 
 /**
  * 写入用户设置
- * @param {US} data 数据对象
- * @returns {US}
+ * @param {US} data - 要写入的数据对象
+ * @returns {US} 写入的数据对象
+ * @template US
  */
 function writeUserSetting<US = UserSetting>(data: US): US {
   const filePath = getUserSettingPath()
@@ -129,14 +138,16 @@ function writeUserSetting<US = UserSetting>(data: US): US {
  */
 function resetUserUrls(): UserSetting {
   const currentSetting = readUserSetting()
+  // 使用 Model 枚举和 ModelUrl 枚举动态生成默认 URLs
+  const defaultUrls = {
+    [Model.ChatGPT]: ModelUrl.ChatGPT,
+    [Model.DeepSeek]: ModelUrl.DeepSeek,
+    [Model.Grok]: ModelUrl.Grok,
+    [Model.Gemini]: ModelUrl.Gemini
+  } as const
   const resetSetting: UserSetting = {
     ...currentSetting,
-    urls: {
-      ChatGPT: ModelUrl.ChatGPT,
-      DeepSeek: ModelUrl.DeepSeek,
-      Grok: ModelUrl.Grok,
-      Gemini: ModelUrl.Gemini
-    },
+    urls: defaultUrls,
     lastVisitedUrl: undefined
   }
   return writeUserSetting(resetSetting)

@@ -26,8 +26,9 @@
             <button class="retry-button" id="retry-button">重试</button>
         </div>
         <!--  src="https://chat.openai.com/chat" -->
-        <webview class="webview" id="webview-container" disablewebsecurity
-            autosize="on" allowpopups></webview>
+        <webview class="webview" id="webview-container"
+            autosize="on" allowpopups
+            webpreferences="contextIsolation=yes, nodeIntegration=no, disableBlinkFeatures=AutomationControlled"></webview>
     </div>
     <script type="module" src="src/renderer.ts"></script>
 </body>

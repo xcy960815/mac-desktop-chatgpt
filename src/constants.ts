@@ -1,10 +1,12 @@
 /**
- * @description 工具提示文本，用于托盘等位置
+ * 工具提示文本，用于托盘等位置
+ * @constant {string}
  */
 export const TOOLTIP = 'desktop-chatgpt'
 
 /**
- * @description 支持的模型枚举
+ * 支持的模型枚举
+ * @enum {string}
  */
 export enum Model {
   ChatGPT = 'ChatGPT',
@@ -14,7 +16,8 @@ export enum Model {
 }
 
 /**
- * @description 各模型默认访问 URL
+ * 各模型默认访问 URL
+ * @enum {string}
  */
 export enum ModelUrl {
   ChatGPT = 'https://chatgpt.com',
@@ -24,28 +27,47 @@ export enum ModelUrl {
 }
 
 /**
- * @description 窗口行为模式
+ * 窗口行为模式
+ * @enum {string}
  */
 export enum WindowBehavior {
+  /**
+   * 自动隐藏
+   */
   AutoHide = 'auto-hide',
+  /**
+   * 锁定在桌面上
+   */
   LockOnDesktop = 'lock-on-desktop',
+  /**
+   * 始终置顶
+   */
   AlwaysOnTop = 'always-on-top'
 }
 
 /**
- * @description 托盘菜单支持的语言
+ * 托盘菜单支持的语言
+ * @enum {string}
  */
 export enum MenuLanguage {
+  /**
+   * 英语
+   */
   English = 'en',
+  /**
+   * 中文
+   */
   Chinese = 'zh'
 }
 
 /**
- * @description 主窗口默认宽度
+ * 主窗口默认宽度
+ * @constant {number}
  */
 export const MAIN_WINDOW_WIDTH = 1024
 
 /**
- * @description 主窗口默认高度
+ * 主窗口默认高度
+ * @constant {number}
  */
 export const MAIN_WINDOW_HEIGHT = 768
