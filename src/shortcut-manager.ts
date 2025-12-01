@@ -32,7 +32,7 @@ export interface ShortcutManager {
   getCurrentShortcut(): string | null
   /**
    * 设置当前的快捷键
-   * @param {string | null} shortcut
+   * @param {string | null} shortcut - 快捷键字符串，如果为 null 则清除当前快捷键
    * @returns {void}
    */
   setCurrentShortcut(shortcut: string | null): void
@@ -43,14 +43,18 @@ export interface ShortcutManager {
  * @interface ShortcutManagerOptions
  */
 interface ShortcutManagerOptions {
+  /** 浏览器窗口实例 */
   browserWindow: BrowserWindow
+  /** Electron 菜单栏实例 */
   electronMenubar: ElectronMenubar
 }
 
 /**
  * 创建快捷键管理器
- * @param {ShortcutManagerOptions} options
- * @returns {ShortcutManager}
+ * @param {ShortcutManagerOptions} options - 快捷键管理器配置选项
+ * @param {BrowserWindow} options.browserWindow - 浏览器窗口实例
+ * @param {ElectronMenubar} options.electronMenubar - Electron 菜单栏实例
+ * @returns {ShortcutManager} 快捷键管理器实例
  */
 export const createShortcutManager = ({
   browserWindow,
@@ -85,8 +89,8 @@ export const createShortcutManager = ({
 
   /**
    * 注册快捷键
-   * @param {string} shortcut
-   * @returns {boolean}
+   * @param {string} shortcut - 快捷键字符串
+   * @returns {boolean} 注册是否成功
    */
   const registerShortcut = (shortcut: string): boolean =>
     globalShortcut.register(shortcut, toggleWindow)
@@ -107,11 +111,8 @@ export const createShortcutManager = ({
     const registered = registerShortcut(shortcut)
     if (registered) {
       currentShortcut = shortcut
-      console.log(`✅ 快捷键注册成功: ${shortcut}`)
       return
     }
-
-    console.error(`❌ 快捷键注册失败: ${shortcut}`)
 
     if (shortcut === 'CommandOrControl+g') {
       return
@@ -122,7 +123,6 @@ export const createShortcutManager = ({
     )
     if (defaultRegistered) {
       currentShortcut = 'CommandOrControl+g'
-      console.log(`✅ 使用默认快捷键: CommandOrControl+g`)
     }
   }
 

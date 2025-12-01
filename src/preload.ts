@@ -2,65 +2,90 @@
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 
 import { contextBridge, ipcRenderer } from 'electron'
+import path from 'path'
 
-// 定义 API 类型
+/**
+ * Electron API 接口定义
+ * @interface ElectronAPI
+ */
 interface ElectronAPI {
   /**
    * 模型改变回调
-   * @param callback (modelName: string, url?: string) => void
-   * @returns void
+   * @param {function} callback - 回调函数，接收模型名称和可选的 URL
+   * @param {string} callback.modelName - 模型名称
+   * @param {string} [callback.url] - 模型 URL（可选）
+   * @returns {void}
    */
   onModelChanged: (
     callback: (modelName: string, url?: string) => void
   ) => void
   /**
    * 加载错误回调
-   * @param callback (errorMessage: string) => void
-   * @returns void
+   * @param {function} callback - 回调函数，接收错误消息
+   * @param {string} callback.errorMessage - 错误消息文本
+   * @returns {void}
    */
   onLoadError: (
     callback: (errorMessage: string) => void
   ) => void
   /**
-   * 发送模型改变
-   * @param model string
-   * @returns void
+   * 箭头位置更新回调
+   * @param {function} callback - 回调函数，接收箭头偏移量
+   * @param {number} callback.offset - 偏移量（像素）
+   * @returns {void}
+   */
+  onArrowPositionUpdate: (
+    callback: (offset: number) => void
+  ) => void
+  /**
+   * 发送模型改变事件
+   * @param {string} model - 模型名称
+   * @returns {void}
    */
   sendModelChanged: (model: string) => void
   /**
    * 更新背景颜色
-   * @param color string
-   * @returns void
+   * @param {string} color - 颜色值（CSS 颜色字符串）
+   * @returns {void}
    */
   updateBackgroundColor: (color: string) => void
   /**
    * 设置快捷键
-   * @param shortcut string
-   * @returns Promise<{ success: boolean; message: string }>
+   * @param {string} shortcut - 快捷键字符串
+   * @returns {Promise<{ success: boolean; message: string }>} 设置结果
    */
   setToggleShortcut: (
     shortcut: string
   ) => Promise<{ success: boolean; message: string }>
   /**
    * 获取快捷键
-   * @returns Promise<string>
+   * @returns {Promise<string>} 当前快捷键字符串
    */
   getToggleShortcut: () => Promise<string>
   /**
    * 发送快捷键输入
-   * @param value string | null
-   * @returns void
+   * @param {string | null} value - 快捷键字符串，如果为 null 表示取消
+   * @returns {void}
    */
   sendShortcutInput: (value: string | null) => void
   /**
-   * 平台
-   * @returns string
+   * 当前运行平台
+   * @type {string}
    */
   platform: string
+  /**
+   * Webview Preload 脚本路径
+   * @type {string}
+   */
+  webviewPreloadPath: string
 }
 
 // 暴露安全的 API 到渲染进程
 contextBridge.exposeInMainWorld('electronAPI', {
+  webviewPreloadPath: path.join(
+    __dirname,
+    'webview-preload.js'
+  ),
   onModelChanged: (
     callback: (modelName: string, url?: string) => void
   ) => {
@@ -77,6 +102,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('load-error', (_event, errorMessage) => {
       callback(errorMessage)
     })
+  },
+  onArrowPositionUpdate: (
+    callback: (offset: number) => void
+  ) => {
+    ipcRenderer.on(
+      'update-arrow-position',
+      (_event, offset: number) => {
+        callback(offset)
+      }
+    )
   },
   sendModelChanged: (model: string) => {
     ipcRenderer.send('model-changed', model)

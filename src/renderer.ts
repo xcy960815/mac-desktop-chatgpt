@@ -7,7 +7,7 @@ declare global {
     electronAPI: {
       /**
        * 模型改变回调
-       * @param {(modelName: string, url?: string) => void} callback 
+       * @param {(modelName: string, url?: string) => void} callback
        * @returns {void}
        */
       onModelChanged: (
@@ -15,25 +15,38 @@ declare global {
       ) => void
       /**
        * 加载错误回调
-       * @param {(errorMessage: string) => void} callback 
+       * @param {(errorMessage: string) => void} callback
        * @returns {void}
        */
       onLoadError: (
         callback: (errorMessage: string) => void
       ) => void
       /**
+       * 箭头位置更新回调
+       * @param {(offset: number) => void} callback
+       * @returns {void}
+       */
+      onArrowPositionUpdate: (
+        callback: (offset: number) => void
+      ) => void
+      /**
        * 平台
        * @returns {string}
        */
       platform: string
+      /**
+       * Webview Preload 脚本路径
+       * @returns {string}
+       */
+      webviewPreloadPath: string
     }
   }
 }
 
 /**
  * 设置 webview 地址
- * @param {string} modelName
- * @param {string} savedUrl
+ * @param {string} modelName - 模型名称
+ * @param {string} [savedUrl] - 保存的 URL（可选）
  * @returns {void}
  */
 function setWebviewSrc(
@@ -42,11 +55,27 @@ function setWebviewSrc(
 ) {
   const webview = document.getElementById(
     'webview-container'
-  ) as HTMLIFrameElement
+  ) as HTMLIFrameElement & {
+    preload: string
+    useragent: string
+    openDevTools: () => void
+  }
   const webviewLoading = document.getElementById(
     'webview-loading'
   ) as HTMLDivElement
   const originWebviewUrl = webview?.src
+
+  // 设置 preload 脚本
+  if (window.electronAPI.webviewPreloadPath) {
+    webview.preload = `file://${window.electronAPI.webviewPreloadPath}`
+  }
+
+  // 动态设置 User-Agent，移除 Electron 标识，保持 Chrome 版本一致
+  const userAgent = navigator.userAgent
+    .replace(/Electron\/[0-9.]+\s/, '')
+    .replace(/desktop-chatgpt\/[0-9.]+\s/, '')
+  console.log('Setting webview useragent:', userAgent)
+  webview.useragent = userAgent
 
   // 如果有保存的 URL，优先使用保存的 URL
   let webviewUrl: string
@@ -76,11 +105,16 @@ function setWebviewSrc(
   webview.addEventListener('did-stop-loading', () => {
     webviewLoading.classList.remove('active')
   })
+
+  // 调试：自动打开 Webview 开发者工具以便查看日志
+  // webview.addEventListener('dom-ready', () => {
+  //   webview.openDevTools()
+  // })
 }
 
 /**
  * 显示错误提示
- * @param {string} errorMessage 
+ * @param {string} errorMessage - 错误消息文本
  * @returns {void}
  */
 function showError(errorMessage: string) {
@@ -101,7 +135,6 @@ function showError(errorMessage: string) {
   webviewError.classList.add('active')
 }
 
-
 /**
  * 隐藏错误提示
  * @returns {void}
@@ -117,12 +150,16 @@ function hideError() {
  * 重试按钮点击事件
  * @returns {void}
  */
+type WebviewElementWithReload = HTMLIFrameElement & {
+  reload: () => void
+}
+
 const retryButton = document.getElementById('retry-button')
 retryButton?.addEventListener('click', () => {
   hideError()
   const webview = document.getElementById(
     'webview-container'
-  ) as any // webview 是 Electron 的特殊标签
+  ) as WebviewElementWithReload | null
   if (webview && webview.src) {
     const webviewLoading = document.getElementById(
       'webview-loading'
@@ -134,6 +171,16 @@ retryButton?.addEventListener('click', () => {
 
 window.electronAPI.onModelChanged(setWebviewSrc)
 window.electronAPI.onLoadError(showError)
+window.electronAPI.onArrowPositionUpdate((offset) => {
+  const triangle = document.querySelector(
+    '.triangle'
+  ) as HTMLDivElement | null
+  if (!triangle) {
+    return
+  }
+  const clampedOffset = Math.max(0, offset)
+  triangle.style.left = `${clampedOffset}px`
+})
 
 /**
  * 根据平台为 body 添加 class
