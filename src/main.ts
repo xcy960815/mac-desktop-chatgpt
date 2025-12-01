@@ -141,7 +141,7 @@ app.on('ready', () => {
     Menu.setApplicationMenu(menu)
 
     // 打开开发工具
-    // browserWindow.webContents.openDevTools();
+    // browserWindow.webContents.openDevTools()
   })
 
   registerWebContentsHandlers(electronMenubar)
