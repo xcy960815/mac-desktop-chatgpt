@@ -107,9 +107,9 @@ function setWebviewSrc(
   })
 
   // 调试：自动打开 Webview 开发者工具以便查看日志
-  webview.addEventListener('dom-ready', () => {
-    webview.openDevTools()
-  })
+  // webview.addEventListener('dom-ready', () => {
+  //   webview.openDevTools()
+  // })
 }
 
 /**
