@@ -16,6 +16,8 @@ export const external = [...builtins, ...Object.keys('dependencies' in pkg ? (pk
  */
 export function getBuildConfig(env: ConfigEnv<'build'>): UserConfig {
   const { root, mode, command } = env;
+  const isProduction = command === 'build';
+  
   return {
     root,
     mode,
@@ -31,7 +33,11 @@ export function getBuildConfig(env: ConfigEnv<'build'>): UserConfig {
       // 🚧 Multiple builds may conflict.
       outDir: '.vite/build',
       watch: command === 'serve' ? {} : null,
-      minify: command === 'build',
+      // 生产环境启用压缩
+      minify: isProduction ? 'terser' : false,
+      sourcemap: false,
+      // 报告压缩后的大小
+      reportCompressedSize: false,
     },
     clearScreen: false,
   };
