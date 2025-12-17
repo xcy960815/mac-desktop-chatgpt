@@ -92,3 +92,7 @@ typings/
 out/
 
 .idea/
+.claude/
+.pnpm-store/
+dist/
+dist-electron-builder/
