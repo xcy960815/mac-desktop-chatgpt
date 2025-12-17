@@ -1,0 +1,171 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # 匹配 v 开头的 tag，如 v1.0.0, v1.1.0
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS builds
+          - os: macos-latest
+            platform: darwin
+            arch: x64
+            build-command: make:mac:x64
+          - os: macos-latest
+            platform: darwin
+            arch: arm64
+            build-command: make:mac:arm64
+          # Windows builds
+          - os: windows-latest
+            platform: win32
+            arch: x64
+            build-command: make:win
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.0'
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build application
+        run: pnpm run ${{ matrix.build-command }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Tag version: $VERSION"
+
+      - name: Prepare artifacts
+        id: prepare_artifacts
+        shell: bash
+        run: |
+          # 查找构建产物，根据 forge.config.ts 的 normalizeZipOutputs，文件应该在 out/make/zip/ 根目录
+          if [ "${{ matrix.platform }}" == "darwin" ]; then
+            # macOS: 查找包含 darwin 和对应架构的 zip 文件
+            ARTIFACT=$(find out/make/zip -name "*darwin-${{ matrix.arch }}*.zip" -type f 2>/dev/null | head -1)
+            if [ -z "$ARTIFACT" ]; then
+              # 如果没找到，尝试查找所有 darwin zip
+              ARTIFACT=$(find out/make/zip -name "*darwin*.zip" -type f 2>/dev/null | head -1)
+            fi
+            if [ -z "$ARTIFACT" ]; then
+              # 最后尝试查找所有 zip
+              ARTIFACT=$(find out/make/zip -name "*.zip" -type f 2>/dev/null | head -1)
+            fi
+          else
+            # Windows: 查找包含 windows 或 win32 的 zip 文件
+            ARTIFACT=$(find out/make/zip -name "*windows*.zip" -o -name "*win32*.zip" 2>/dev/null | head -1)
+            if [ -z "$ARTIFACT" ]; then
+              # 如果没找到，尝试查找所有 zip
+              ARTIFACT=$(find out/make/zip -name "*.zip" -type f 2>/dev/null | head -1)
+            fi
+          fi
+          
+          if [ -z "$ARTIFACT" ]; then
+            echo "❌ 未找到构建产物！"
+            echo "当前目录结构："
+            ls -la out/make/zip/ 2>/dev/null || echo "out/make/zip 目录不存在"
+            find out -name "*.zip" -type f 2>/dev/null || echo "未找到任何 zip 文件"
+            exit 1
+          fi
+          
+          echo "✅ 找到构建产物: $ARTIFACT"
+          echo "artifact_path=$ARTIFACT" >> $GITHUB_OUTPUT
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}-${{ matrix.arch }}
+          path: ${{ steps.prepare_artifacts.outputs.artifact_path }}
+          retention-days: 30
+          if-no-files-found: error
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Tag version: $VERSION"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: |
+          echo "📦 构建产物列表："
+          find artifacts -name "*.zip" -type f || true
+          echo ""
+          echo "文件详情："
+          ls -lh artifacts/*/*.zip 2>/dev/null || ls -lh artifacts/*.zip 2>/dev/null || true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref }}
+          name: Release ${{ steps.get_version.outputs.version }}
+          body: |
+            ## Desktop ChatGPT ${{ steps.get_version.outputs.version }}
+            
+            ### 📥 下载
+            
+            - **macOS (Intel)**: desktop-chatgpt-darwin-x64-${{ steps.get_version.outputs.version }}.zip
+            - **macOS (Apple Silicon)**: desktop-chatgpt-darwin-arm64-${{ steps.get_version.outputs.version }}.zip
+            - **Windows (x64)**: desktop-chatgpt-windows-x64-${{ steps.get_version.outputs.version }}.zip
+            
+            ### 📋 安装说明
+            
+            #### macOS
+            1. 下载对应架构的 ZIP 文件
+            2. 解压并将 `Desktop ChatGPT.app` 拖入「应用程序」文件夹
+            3. 首次打开可能需要右键点击 → 打开（绕过安全检查）
+            
+            #### Windows
+            1. 下载 ZIP 文件并解压
+            2. 运行 `Desktop ChatGPT.exe`
+            3. 首次运行可能需要允许通过 Windows Defender 防火墙
+            
+            ---
+            
+            **构建信息：**
+            - 构建时间: ${{ github.event.head_commit.timestamp || github.run_started_at }}
+            - 提交: ${{ github.sha }}
+          files: |
+            artifacts/**/*.zip
+          draft: false
+          prerelease: ${{ contains(github.ref, '-') || contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+
