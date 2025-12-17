@@ -168,6 +168,9 @@ const config: ForgeConfig = {
     name: pkg.name,
     // 产品的版本
     appVersion: pkg.version,
+    // 忽略不必要的文件
+    // 注意：electron-forge 使用 minimatch，但某些复杂模式可能导致问题
+    // 这里只保留最关键的排除项，避免构建错误
     ignore: [
       '.git',
       '.gitignore',
@@ -185,6 +188,7 @@ const config: ForgeConfig = {
       'commitlint.config.js',
       'node_modules/.cache',
       'node_modules/.vite',
+      'node_modules/.bin',
       'readme.md',
       'CHANGELOG.md',
       'scripts',
