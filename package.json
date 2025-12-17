@@ -21,7 +21,14 @@
     "lint": "eslint --ext .ts,.tsx .",
     "prepare": "husky install",
     "lint-staged": "lint-staged",
-    "release": "node scripts/release.js"
+    "release": "node scripts/release.js",
+    "build:builder": "npm run build && electron-builder",
+    "build:builder:mac": "npm run build && electron-builder --mac",
+    "build:builder:mac:arm64": "npm run build && electron-builder --mac --arm64",
+    "build:builder:mac:x64": "npm run build && electron-builder --mac --x64",
+    "build:builder:win": "npm run build && electron-builder --win",
+    "build:builder:win:x64": "npm run build && electron-builder --win --x64",
+    "build:builder:all": "npm run build && electron-builder --mac --win"
   },
   "devDependencies": {
     "@commitlint/cli": "^18.4.4",
@@ -39,6 +46,7 @@
     "@typescript-eslint/parser": "^5.62.0",
     "conventional-changelog-cli": "^5.0.0",
     "electron": "^36.2.0",
+    "electron-builder": "^26.0.12",
     "eslint": "^8.57.0",
     "eslint-plugin-import": "^2.29.1",
     "husky": "^8.0.3",
