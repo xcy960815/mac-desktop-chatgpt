@@ -168,11 +168,36 @@ const config: ForgeConfig = {
     name: pkg.name,
     // 产品的版本
     appVersion: pkg.version,
+    // 忽略不必要的文件
+    // 注意：electron-forge 使用 minimatch，但某些复杂模式可能导致问题
+    // 这里只保留最关键的排除项，避免构建错误
     ignore: [
       '.git',
+      '.gitignore',
+      '.gitattributes',
       '.vscode',
+      '.idea',
+      'src',
+      'tsconfig.json',
+      'vite.main.config.ts',
+      'vite.preload.config.ts',
+      'vite.renderer.config.ts',
+      'vite.base.config.ts',
+      'forge.config.ts',
+      'forge.env.d.ts',
+      'commitlint.config.js',
       'node_modules/.cache',
-      'src'
+      'node_modules/.vite',
+      'node_modules/.bin',
+      'readme.md',
+      'CHANGELOG.md',
+      'scripts',
+      'find-errors.log',
+      'foge.config-backup.ts',
+      'config/settings.json',
+      'dist',
+      '.DS_Store',
+      'Thumbs.db'
     ],
     // 是否覆盖已存在的打包文件
     overwrite: true
