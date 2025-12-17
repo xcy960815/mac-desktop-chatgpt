@@ -169,61 +169,34 @@ const config: ForgeConfig = {
     // 产品的版本
     appVersion: pkg.version,
     ignore: [
-      // 版本控制
       '.git',
       '.gitignore',
       '.gitattributes',
-      // IDE 配置
       '.vscode',
       '.idea',
-      '*.swp',
-      '*.swo',
-      '*~',
-      // 源代码（已编译）
       'src',
-      'src/**/*',
-      // 构建工具和配置
       'tsconfig.json',
-      'vite.*.config.ts',
+      'vite.main.config.ts',
+      'vite.preload.config.ts',
+      'vite.renderer.config.ts',
       'vite.base.config.ts',
       'forge.config.ts',
       'forge.env.d.ts',
       'commitlint.config.js',
-      // 开发依赖
       'node_modules/.cache',
       'node_modules/.vite',
-      // 文档和说明
       'readme.md',
       'CHANGELOG.md',
-      '*.md',
-      // 测试文件
-      '**/*.test.ts',
-      '**/*.test.js',
-      '**/*.spec.ts',
-      '**/*.spec.js',
-      // 开发脚本
       'scripts',
-      // 临时文件
-      '*.log',
-      '*.tmp',
-      '*.temp',
       'find-errors.log',
-      // 备份文件
-      '*.backup',
-      '*.bak',
       'foge.config-backup.ts',
-      // 配置文件（开发用）
       'config/settings.json',
-      // 构建输出（旧版本）
       'dist',
-      '.vite',
-      // 其他
       '.DS_Store',
-      'Thumbs.db',
-      'desktop-chatgpt-*.json',
+      'Thumbs.db'
     ],
     // 是否覆盖已存在的打包文件
-    overwrite: true,
+    overwrite: true
   },
   rebuildConfig: {},
   makers: [
