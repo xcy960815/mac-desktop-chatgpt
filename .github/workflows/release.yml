@@ -53,6 +53,7 @@ jobs:
 
       - name: Get version from tag
         id: get_version
+        shell: bash
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
@@ -115,6 +116,7 @@ jobs:
 
       - name: Get version from tag
         id: get_version
+        shell: bash
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
