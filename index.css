@@ -1,10 +1,15 @@
+html,
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   padding: 0;
   margin: 0;
   overflow: hidden;
+  background: transparent;
 }
 
+/* 
+ * 实际高度 = 窗口高度 - 三角箭头高度
+ */
 :root {
   --actual-height: calc(100vh - 12px);
 }
@@ -13,31 +18,37 @@ body {
   position: relative;
   padding: 12px 0 0 0;
 }
-
+/* 
+ * 三角箭头
+ */
 .triangle {
   height: 0;
   width: 0;
   border-width: 0 8px 12px 8px;
   border-style: solid;
-  border-color: transparent transparent white transparent;
+  border-color: transparent transparent #eeeeee transparent;
   position: absolute;
   top: 0;
   left: 50%;
   transform: translateX(-50%);
-  transition: left 0.3s ease-out;
+  transition: left 0.3s ease-out, border-color 0.3s ease-out;
 }
 
 @media (prefers-color-scheme: dark) {
   .triangle {
-    border-color: transparent transparent #343541 transparent;
+    border-color: transparent transparent #1a1a1a transparent;
   }
 }
 
-/* Windows 平台样式 */
+/* 
+ * Windows 平台样式，隐藏三角箭头
+ */
 .platform-win32 .triangle {
   display: none;
 }
-
+/* 
+ * Windows 平台样式，隐藏容器顶部边距
+ */
 .platform-win32 .container {
   padding: 0;
 }
@@ -58,7 +69,7 @@ body {
   top: 0;
   left: 0;
   width: 100%;
-  height: calc(100vh - 12px);
+  height: var(--actual-height);
   display: inline-flex !important;
 }
 
