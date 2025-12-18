@@ -73,6 +73,8 @@ export interface TrayContextMenuOptions {
     task: (win: BrowserWindow) => T | Promise<T>,
     options?: WithBrowserWindowOptions
   ): Promise<T | null>
+  /** 检查更新 */
+  checkForUpdates(): Promise<void>
 }
 
 /**
@@ -446,6 +448,12 @@ export const setupTrayContextMenu = (
           ]
         },
         { type: 'separator' },
+        {
+          label: t('checkForUpdates'),
+          click: async () => {
+            await options.checkForUpdates()
+          }
+        },
         {
           label: t('setShortcut'),
           click: async () => {
