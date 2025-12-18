@@ -199,7 +199,7 @@ jobs:
           git pull origin $TARGET_BRANCH --rebase
 
           # 更新版本号 (不产生新 tag)
-          npm version $VERSION --no-git-tag-version
+          npm version $VERSION --no-git-tag-version || true
 
           # 检查是否有变化需要提交
           if git diff --quiet package.json; then
