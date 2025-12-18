@@ -141,7 +141,15 @@ app.on('ready', () => {
     Menu.setApplicationMenu(menu)
 
     // 打开开发工具
-    // browserWindow.webContents.openDevTools()
+    browserWindow.webContents.openDevTools()
+
+    // 应用启动后默认显示窗口
+    await electronMenubar.showWindow()
+    if (process.platform === 'darwin') {
+      electronMenubar.app.show()
+    }
+    // 确保应用获得焦点（所有平台）
+    electronMenubar.app.focus()
   })
 
   registerWebContentsHandlers(electronMenubar)
