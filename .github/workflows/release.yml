@@ -46,11 +46,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build application
-        run: pnpm run ${{ matrix.build-command }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Get version from tag
         id: get_version
         shell: bash
@@ -58,6 +53,13 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/v}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Tag version: $VERSION"
+
+      - name: Build application
+        run: pnpm run ${{ matrix.build-command }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 传递 tag 版本号给打包脚本，用于覆盖 appVersion
+          APP_VERSION: ${{ steps.get_version.outputs.version }}
 
       - name: Prepare artifacts
         id: prepare_artifacts
@@ -135,6 +137,12 @@ jobs:
           echo "文件详情："
           ls -lh artifacts/*/*.zip 2>/dev/null || ls -lh artifacts/*.zip 2>/dev/null || true
 
+      - name: Get current date
+        id: date
+        shell: bash
+        run: |
+          echo "date=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_OUTPUT
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -164,10 +172,39 @@ jobs:
             ---
             
             **构建信息：**
-            - 构建时间: ${{ github.event.head_commit.timestamp || github.run_started_at }}
+            - 构建时间: ${{ steps.date.outputs.date }}
             - 提交: ${{ github.sha }}
           files: |
             artifacts/**/*.zip
           draft: false
           prerelease: ${{ contains(github.ref, '-') || contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+
+      - name: Sync version back to package.json
+        run: |
+          VERSION=${{ steps.get_version.outputs.version }}
+          TARGET_BRANCH=${{ github.event.repository.default_branch }}
+          echo "Updating package.json to $VERSION on branch $TARGET_BRANCH"
+          
+          # 配置 git 机器人
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # 确保切换到目标分支并拉取最新
+          git fetch origin $TARGET_BRANCH
+          git checkout $TARGET_BRANCH
+          git pull origin $TARGET_BRANCH --rebase
+          
+          # 更新版本号 (不产生新 tag)
+          npm version $VERSION --no-git-tag-version
+          
+          # 检查是否有变化需要提交
+          if git diff --quiet package.json; then
+            echo "Version already in sync, skipping commit."
+          else
+            git add package.json
+            git add package-lock.json pnpm-lock.yaml 2>/dev/null || true
+            
+            git commit -m "chore: bump version to $VERSION [skip ci]"
+            git push origin $TARGET_BRANCH
+          fi
 
