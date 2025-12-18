@@ -75,6 +75,7 @@
   },
   "license": "MIT",
   "dependencies": {
+    "debug": "^4.4.3",
     "electron-context-menu": "^3.6.1",
     "electron-positioner": "^4.1.0",
     "electron-squirrel-startup": "^1.0.1",
