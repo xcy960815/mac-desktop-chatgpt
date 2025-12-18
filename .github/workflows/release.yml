@@ -182,11 +182,17 @@ jobs:
       - name: Sync version back to package.json
         run: |
           VERSION=${{ steps.get_version.outputs.version }}
-          echo "Updating package.json to $VERSION"
+          TARGET_BRANCH=${{ github.event.repository.default_branch }}
+          echo "Updating package.json to $VERSION on branch $TARGET_BRANCH"
           
           # 配置 git 机器人
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # 确保切换到目标分支并拉取最新
+          git fetch origin $TARGET_BRANCH
+          git checkout $TARGET_BRANCH
+          git pull origin $TARGET_BRANCH --rebase
           
           # 更新版本号 (不产生新 tag)
           npm version $VERSION --no-git-tag-version
@@ -196,12 +202,9 @@ jobs:
             echo "Version already in sync, skipping commit."
           else
             git add package.json
-            # 如果存在 package-lock.json 或 pnpm-lock.yaml 也可以一起提交
             git add package-lock.json pnpm-lock.yaml 2>/dev/null || true
             
             git commit -m "chore: bump version to $VERSION [skip ci]"
-            # 这里的 HEAD:main 建议改为你当前的主分支名，或者推送回触发 tag 的分支
-            # 也可以尝试直接 git push
-            git push origin HEAD:${{ github.event.repository.default_branch }}
+            git push origin $TARGET_BRANCH
           fi
 
