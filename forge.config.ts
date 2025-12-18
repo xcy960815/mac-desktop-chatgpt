@@ -160,14 +160,20 @@ const normalizeZipOutputs = async () => {
   await movePlatformArtifactsToRoot(darwinDir)
 }
 
+// 优先使用环境变量中的版本号（例如 CI 中从 Git tag 传入），否则回退到 package.json
+const appVersionFromEnv =
+  process.env.APP_VERSION && process.env.APP_VERSION.trim()
+    ? process.env.APP_VERSION.trim()
+    : pkg.version
+
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     icon: 'images/icon',
     // 应用程序的名称
     name: pkg.name,
-    // 产品的版本
-    appVersion: pkg.version,
+    // 产品的版本（优先使用 APP_VERSION 环境变量）
+    appVersion: appVersionFromEnv,
     // 配置自动更新（electron-updater 会从 GitHub Releases 获取更新）
     // 注意：需要在 package.json 中配置 repository 字段
     // 忽略不必要的文件
