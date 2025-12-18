@@ -185,7 +185,7 @@ const config: ForgeConfig = {
       '.gitattributes',
       '.vscode',
       '.idea',
-      'src',
+      '/src$',
       'tsconfig.json',
       'vite.main.config.ts',
       'vite.preload.config.ts',
