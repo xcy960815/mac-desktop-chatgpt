@@ -76,14 +76,22 @@ export const createWindowManager = (
       try {
         await electronMenubar.showWindow()
         await delay(150)
+        // 优先从 electronMenubar 获取窗口，因为它可能是新创建的
         const refreshedWindow =
           electronMenubar.browserWindow || mainBrowserWindow
         if (
           refreshedWindow &&
           !refreshedWindow.isDestroyed()
         ) {
+          // 确保 mainBrowserWindow 与 electronMenubar.browserWindow 同步
           mainBrowserWindow = refreshedWindow
           return refreshedWindow
+        }
+        // 如果仍然无法获取窗口，再次尝试从 electronMenubar 获取
+        const finalWindow = electronMenubar.browserWindow
+        if (finalWindow && !finalWindow.isDestroyed()) {
+          mainBrowserWindow = finalWindow
+          return finalWindow
         }
       } catch {
         // 忽略拉起窗口时的异常，继续重试

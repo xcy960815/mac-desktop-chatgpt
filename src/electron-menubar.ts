@@ -395,9 +395,23 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
    */
   public setWindowBehavior(behavior: WindowBehavior): void {
     this._windowBehavior = behavior
+    const wasLocked = this._lockWindow
     this._lockWindow = behavior !== WindowBehavior.AutoHide
-    if (!this._lockWindow) {
+    // 如果从锁定模式切换到自动隐藏模式，且当前没有禁用自动隐藏，则启用自动隐藏
+    // 注意：如果 _autoHideDisabled 为 true（例如对话框正在显示），则不清除它
+    if (
+      !this._lockWindow &&
+      wasLocked &&
+      !this._autoHideDisabled
+    ) {
       this.enableAutoHide()
+    }
+    // 如果切换到锁定模式，清除可能存在的隐藏定时器
+    if (this._lockWindow) {
+      if (this._blurTimeout) {
+        clearTimeout(this._blurTimeout)
+        this._blurTimeout = null
+      }
     }
     this.applyWindowBehaviorToWindow()
   }
@@ -577,6 +591,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
       this._browserWindow.restore()
       this._browserWindow.focus()
       this._browserWindow.show()
+      // 在窗口显示后立即设置可见状态，确保状态一致性
       this._isVisible = true
       this.emit('after-show', this)
       return
@@ -633,11 +648,11 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     this._browserWindow.setPosition(x, y)
 
     this._browserWindow.show()
+    // 在窗口显示后立即设置可见状态，确保状态一致性
+    this._isVisible = true
 
     // 调整箭头位置
     this.correctArrowPosition()
-
-    this._isVisible = true
 
     this.emit('after-show', this)
 
@@ -835,8 +850,14 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 
     // 给窗口添加失去焦点事件，所有平台保持一致
     this._browserWindow.on('blur', () => {
+      // 注销 ESC 快捷键
       this.unregisterEscapeShortcut()
       if (!this._browserWindow) return
+      // 清除可能存在的隐藏定时器
+      if (this._blurTimeout) {
+        clearTimeout(this._blurTimeout)
+        this._blurTimeout = null
+      }
       // 锁定状态下允许窗口失焦但保持可见
       if (this._lockWindow) {
         this.emit('focus-lost', this)
