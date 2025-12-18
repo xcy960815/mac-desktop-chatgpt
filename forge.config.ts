@@ -168,9 +168,7 @@ const appVersionFromEnv =
 
 const config: ForgeConfig = {
   packagerConfig: {
-    asar: {
-      unpack: '**/node_modules/debug/**'
-    },
+    asar: true,
     icon: 'images/icon',
     // 应用程序的名称
     name: pkg.name,
