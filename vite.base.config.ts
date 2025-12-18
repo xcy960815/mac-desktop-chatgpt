@@ -12,7 +12,6 @@ export const builtins = [
 // 外部依赖
 export const external = [
   ...builtins,
-  'debug',
   ...Object.keys(
     'dependencies' in pkg
       ? (pkg.dependencies as Record<string, string>)
