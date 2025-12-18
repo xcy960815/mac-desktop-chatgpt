@@ -168,6 +168,8 @@ const config: ForgeConfig = {
     name: pkg.name,
     // 产品的版本
     appVersion: pkg.version,
+    // 配置自动更新（electron-updater 会从 GitHub Releases 获取更新）
+    // 注意：需要在 package.json 中配置 repository 字段
     // 忽略不必要的文件
     // 注意：electron-forge 使用 minimatch，但某些复杂模式可能导致问题
     // 这里只保留最关键的排除项，避免构建错误
