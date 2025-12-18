@@ -3,7 +3,7 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*'  # 匹配 v 开头的 tag，如 v1.0.0, v1.1.0
+      - 'v*' # 匹配 v 开头的 tag，如 v1.0.0, v1.1.0
 
 jobs:
   build:
@@ -54,6 +54,10 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Tag version: $VERSION"
 
+      - name: Update package.json version
+        run: |
+          npm version ${{ steps.get_version.outputs.version }} --no-git-tag-version
+
       - name: Build application
         run: pnpm run ${{ matrix.build-command }}
         env:
@@ -85,7 +89,7 @@ jobs:
               ARTIFACT=$(find out/make/zip -name "*.zip" -type f 2>/dev/null | head -1)
             fi
           fi
-          
+
           if [ -z "$ARTIFACT" ]; then
             echo "❌ 未找到构建产物！"
             echo "当前目录结构："
@@ -93,7 +97,7 @@ jobs:
             find out -name "*.zip" -type f 2>/dev/null || echo "未找到任何 zip 文件"
             exit 1
           fi
-          
+
           echo "✅ 找到构建产物: $ARTIFACT"
           echo "artifact_path=$ARTIFACT" >> $GITHUB_OUTPUT
 
@@ -150,27 +154,27 @@ jobs:
           name: Release ${{ steps.get_version.outputs.version }}
           body: |
             ## Desktop ChatGPT ${{ steps.get_version.outputs.version }}
-            
+
             ### 📥 下载
-            
+
             - **macOS (Intel)**: desktop-chatgpt-darwin-x64-${{ steps.get_version.outputs.version }}.zip
             - **macOS (Apple Silicon)**: desktop-chatgpt-darwin-arm64-${{ steps.get_version.outputs.version }}.zip
             - **Windows (x64)**: desktop-chatgpt-windows-x64-${{ steps.get_version.outputs.version }}.zip
-            
+
             ### 📋 安装说明
-            
+
             #### macOS
             1. 下载对应架构的 ZIP 文件
             2. 解压并将 `Desktop ChatGPT.app` 拖入「应用程序」文件夹
             3. 首次打开可能需要右键点击 → 打开（绕过安全检查）
-            
+
             #### Windows
             1. 下载 ZIP 文件并解压
             2. 运行 `Desktop ChatGPT.exe`
             3. 首次运行可能需要允许通过 Windows Defender 防火墙
-            
+
             ---
-            
+
             **构建信息：**
             - 构建时间: ${{ steps.date.outputs.date }}
             - 提交: ${{ github.sha }}
@@ -184,19 +188,19 @@ jobs:
           VERSION=${{ steps.get_version.outputs.version }}
           TARGET_BRANCH=${{ github.event.repository.default_branch }}
           echo "Updating package.json to $VERSION on branch $TARGET_BRANCH"
-          
+
           # 配置 git 机器人
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
+
           # 确保切换到目标分支并拉取最新
           git fetch origin $TARGET_BRANCH
           git checkout $TARGET_BRANCH
           git pull origin $TARGET_BRANCH --rebase
-          
+
           # 更新版本号 (不产生新 tag)
           npm version $VERSION --no-git-tag-version
-          
+
           # 检查是否有变化需要提交
           if git diff --quiet package.json; then
             echo "Version already in sync, skipping commit."
@@ -207,4 +211,3 @@ jobs:
             git commit -m "chore: bump version to $VERSION [skip ci]"
             git push origin $TARGET_BRANCH
           fi
-
