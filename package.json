@@ -73,16 +73,10 @@
     "url": "https://github.com/xcy960815/mac-desktop-chatgpt.git"
   },
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/xcy960815/mac-desktop-chatgpt.git"
-  },
   "dependencies": {
-    "debug": "^4.4.3",
     "electron-context-menu": "^3.6.1",
     "electron-positioner": "^4.1.0",
-    "electron-squirrel-startup": "^1.0.1",
-    "electron-updater": "^6.6.2"
+    "electron-squirrel-startup": "^1.0.1"
   },
   "volta": {
     "node": "20.19.0"
