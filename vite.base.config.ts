@@ -1,30 +1,44 @@
-import { builtinModules } from 'node:module';
-import type { AddressInfo } from 'node:net';
-import type { ConfigEnv, Plugin, UserConfig } from 'vite' with { "resolution-mode": "import" };
-import pkg from './package.json';
-import { resolve } from "path"
+import { builtinModules } from 'node:module'
+import type { AddressInfo } from 'node:net'
+import type { ConfigEnv, Plugin, UserConfig } from 'vite'
+import pkg from './package.json'
+import { resolve } from 'path'
 
-export const builtins = ['electron', ...builtinModules.map((m) => [m, `node:${m}`]).flat()];
+export const builtins = [
+  'electron',
+  ...builtinModules.map((m) => [m, `node:${m}`]).flat()
+]
 
 // 外部依赖
-export const external = [...builtins, ...Object.keys('dependencies' in pkg ? (pkg.dependencies as Record<string, string>) : {})];
+export const external = [
+  ...builtins,
+  ...Object.keys(
+    'dependencies' in pkg
+      ? (pkg.dependencies as Record<string, string>)
+      : {}
+  )
+]
 
 /**
  * @desc 获取打包配置
  * @param env {ConfigEnv<'build'>}
  * @returns {UserConfig}
  */
-export function getBuildConfig(env: ConfigEnv<'build'>): UserConfig {
-  const { root, mode, command } = env;
-  const isProduction = command === 'build';
-  
+export function getBuildConfig(
+  env: ConfigEnv<'build'>
+): UserConfig {
+  const { root, mode, command } = env
+  const isProduction = command === 'build'
+
   return {
     root,
     mode,
     resolve: {
       alias: {
         // 只是想在项目中 像使用node_modules 那样使用 electron-menubar
-        'electron-menubar':resolve("./src/electron-menubar")
+        'electron-menubar': resolve(
+          './src/electron-menubar'
+        )
       }
     },
     build: {
@@ -37,74 +51,94 @@ export function getBuildConfig(env: ConfigEnv<'build'>): UserConfig {
       minify: isProduction ? 'terser' : false,
       sourcemap: false,
       // 报告压缩后的大小
-      reportCompressedSize: false,
+      reportCompressedSize: false
     },
-    clearScreen: false,
-  };
+    clearScreen: false
+  }
 }
 
 export function getDefineKeys(names: string[]) {
-  const define: { [name: string]: VitePluginRuntimeKeys } = {};
+  const define: { [name: string]: VitePluginRuntimeKeys } =
+    {}
   return names.reduce((acc, name) => {
-    const NAME = name.toUpperCase();
+    const NAME = name.toUpperCase()
     const keys: VitePluginRuntimeKeys = {
       VITE_DEV_SERVER_URL: `${NAME}_VITE_DEV_SERVER_URL`,
-      VITE_NAME: `${NAME}_VITE_NAME`,
-    };
+      VITE_NAME: `${NAME}_VITE_NAME`
+    }
 
-    return { ...acc, [name]: keys };
-  }, define);
+    return { ...acc, [name]: keys }
+  }, define)
 }
 
 export function getBuildDefine(env: ConfigEnv<'build'>) {
-  const { command, forgeConfig } = env;
-  const names = forgeConfig.renderer.filter(({ name }) => name != null).map(({ name }) => name!);
-  const defineKeys = getDefineKeys(names);
-  const define = Object.entries(defineKeys).reduce((acc, [name, keys]) => {
-    const { VITE_DEV_SERVER_URL, VITE_NAME } = keys;
-    const def = {
-      [VITE_DEV_SERVER_URL]: command === 'serve' ? JSON.stringify(process.env[VITE_DEV_SERVER_URL]) : undefined,
-      [VITE_NAME]: JSON.stringify(name),
-    };
-    return { ...acc, ...def };
-  }, {} as Record<string, string>);
+  const { command, forgeConfig } = env
+  const names = forgeConfig.renderer
+    .filter(({ name }) => name != null)
+    .map(({ name }) => name!)
+  const defineKeys = getDefineKeys(names)
+  const define = Object.entries(defineKeys).reduce(
+    (acc, [name, keys]) => {
+      const { VITE_DEV_SERVER_URL, VITE_NAME } = keys
+      const def = {
+        [VITE_DEV_SERVER_URL]:
+          command === 'serve'
+            ? JSON.stringify(
+                process.env[VITE_DEV_SERVER_URL]
+              )
+            : undefined,
+        [VITE_NAME]: JSON.stringify(name)
+      }
+      return { ...acc, ...def }
+    },
+    {} as Record<string, string>
+  )
 
-  return define;
+  return define
 }
 
 export function pluginExposeRenderer(name: string): Plugin {
-  const { VITE_DEV_SERVER_URL } = getDefineKeys([name])[name];
+  const { VITE_DEV_SERVER_URL } = getDefineKeys([name])[
+    name
+  ]
 
   return {
     name: '@electron-forge/plugin-vite:expose-renderer',
     configureServer(server) {
-      process.viteDevServers ??= {};
+      process.viteDevServers ??= {}
       // Expose server for preload scripts hot reload.
-      process.viteDevServers[name] = server;
+      process.viteDevServers[name] = server
 
       server.httpServer?.once('listening', () => {
-        const addressInfo = server.httpServer!.address() as AddressInfo;
+        const addressInfo =
+          server.httpServer!.address() as AddressInfo
         // Expose env constant for main process use.
-        process.env[VITE_DEV_SERVER_URL] = `http://localhost:${addressInfo?.port}`;
-      });
-    },
-  };
+        process.env[
+          VITE_DEV_SERVER_URL
+        ] = `http://localhost:${addressInfo?.port}`
+      })
+    }
+  }
 }
 
-export function pluginHotRestart(command: 'reload' | 'restart'): Plugin {
+export function pluginHotRestart(
+  command: 'reload' | 'restart'
+): Plugin {
   return {
     name: '@electron-forge/plugin-vite:hot-restart',
     closeBundle() {
       if (command === 'reload') {
-        for (const server of Object.values(process.viteDevServers)) {
+        for (const server of Object.values(
+          process.viteDevServers
+        )) {
           // Preload scripts hot reload.
-          server.ws.send({ type: 'full-reload' });
+          server.ws.send({ type: 'full-reload' })
         }
       } else {
         // Main process hot restart.
         // https://github.com/electron/forge/blob/v7.2.0/packages/api/core/src/api/start.ts#L216-L223
-        process.stdin.emit('data', 'rs');
+        process.stdin.emit('data', 'rs')
       }
-    },
-  };
+    }
+  }
 }
