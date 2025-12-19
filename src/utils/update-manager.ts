@@ -14,8 +14,12 @@ export class UpdateManager {
     autoUpdater.autoInstallOnAppQuit = true // 应用退出时自动安装更新
 
     // 配置更新服务器（GitHub Releases）
-    // electron-updater 会自动从 package.json 的 repository 字段获取仓库信息
-    // 如果需要自定义，可以设置 autoUpdater.setFeedURL()
+    // 显式设置 provider 为 github，避免依赖 app-update.yml
+    autoUpdater.setFeedURL({
+      provider: 'github',
+      owner: 'xcy960815',
+      repo: 'mac-desktop-chatgpt'
+    })
 
     // 监听更新检查事件
     autoUpdater.on('checking-for-update', () => {
