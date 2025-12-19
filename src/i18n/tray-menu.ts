@@ -19,7 +19,6 @@ export type TrayMenuMessageKey =
   | 'language'
   | 'languageEnglish'
   | 'languageChinese'
-  | 'checkForUpdates'
 
 const MENU_MESSAGES: Record<
   MenuLanguage,
@@ -39,8 +38,7 @@ const MENU_MESSAGES: Record<
     checkForUpdates: 'Check for updates',
     language: 'Language',
     languageEnglish: 'English',
-    languageChinese: 'Chinese',
-    checkForUpdates: 'Check for updates'
+    languageChinese: 'Chinese'
   },
   [MenuLanguage.Chinese]: {
     quit: '退出',
@@ -56,8 +54,7 @@ const MENU_MESSAGES: Record<
     checkForUpdates: '检测更新',
     language: '语言',
     languageEnglish: '英语',
-    languageChinese: '中文',
-    checkForUpdates: '检查更新'
+    languageChinese: '中文'
   }
 }
 
