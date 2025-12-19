@@ -336,6 +336,13 @@ export class UpdateManager {
         }
       })
 
+      // 再次显式设置 provider，防止配置丢失导致 downloadUpdate 失败
+      autoUpdater.setFeedURL({
+        provider: 'github',
+        owner: 'xcy960815',
+        repo: 'mac-desktop-chatgpt'
+      })
+
       // 开始下载更新
       await autoUpdater.downloadUpdate()
     } catch (error) {
