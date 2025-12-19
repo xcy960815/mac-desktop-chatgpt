@@ -15,6 +15,7 @@ import { createWindowManager } from './window-manager'
 import { createShortcutManager } from './shortcut-manager'
 import { initializeLastVisitedUrlTracking } from './url-tracker'
 import { registerWebContentsHandlers } from './webview-handlers'
+import { createUpdateManager } from './utils/update-manager'
 
 import {
   app,
@@ -111,6 +112,8 @@ app.on('ready', () => {
       electronMenubar
     })
 
+    const updateManager = createUpdateManager()
+
     setupTrayContextMenu({
       tray,
       electronMenubar,
@@ -132,7 +135,8 @@ app.on('ready', () => {
       setCurrentShortcut: (shortcut) => {
         shortcutManager.setCurrentShortcut(shortcut)
       },
-      withBrowserWindow: windowManager.withBrowserWindow
+      withBrowserWindow: windowManager.withBrowserWindow,
+      updateManager
     })
 
     shortcutManager.registerToggleShortcut()

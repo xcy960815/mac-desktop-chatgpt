@@ -18,6 +18,7 @@ export type TrayMenuMessageKey =
   | 'language'
   | 'languageEnglish'
   | 'languageChinese'
+  | 'checkForUpdates'
 
 const MENU_MESSAGES: Record<
   MenuLanguage,
@@ -36,7 +37,8 @@ const MENU_MESSAGES: Record<
     setShortcut: 'Set shortcut',
     language: 'Language',
     languageEnglish: 'English',
-    languageChinese: 'Chinese'
+    languageChinese: 'Chinese',
+    checkForUpdates: 'Check for updates'
   },
   [MenuLanguage.Chinese]: {
     quit: '退出',
@@ -51,7 +53,8 @@ const MENU_MESSAGES: Record<
     setShortcut: '设置快捷键',
     language: '语言',
     languageEnglish: '英语',
-    languageChinese: '中文'
+    languageChinese: '中文',
+    checkForUpdates: '检查更新'
   }
 }
 
