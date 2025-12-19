@@ -1,7 +1,7 @@
 {
   "name": "desktop-chatgpt",
   "productName": "desktop-chatgpt",
-  "version": "1.0.0",
+  "version": "0.0.2",
   "description": "一款基于 electron + vite + typescript 开发的跨平台桌面级应用，统一承载 ChatGPT、DeepSeek、Grok 与 Gemini 等模型网页端，免去来回切换。",
   "main": ".vite/build/main.js",
   "scripts": {
@@ -73,10 +73,6 @@
     "url": "https://github.com/xcy960815/mac-desktop-chatgpt.git"
   },
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/xcy960815/mac-desktop-chatgpt.git"
-  },
   "dependencies": {
     "debug": "^4.4.3",
     "electron-context-menu": "^3.6.1",
