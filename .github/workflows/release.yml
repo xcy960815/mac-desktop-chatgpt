@@ -138,6 +138,20 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Tag version: $VERSION"
 
+      - name: Format build time
+        id: format_time
+        shell: bash
+        run: |
+          # 获取构建时间，优先使用 head_commit.timestamp，否则使用 run_started_at
+          BUILD_TIME="${{ github.event.head_commit.timestamp || github.run_started_at }}"
+          # 转换为 yyyy-MM-dd HH:mm:ss 格式
+          # 移除时区信息，只保留日期和时间部分
+          TIME_STRIPPED=$(echo "$BUILD_TIME" | sed 's/[+-][0-9][0-9]:[0-9][0-9]$//' | sed 's/Z$//')
+          # 使用 date 命令转换为 yyyy-MM-dd HH:mm:ss 格式
+          FORMATTED_TIME=$(date -u -d "$TIME_STRIPPED" +"%Y-%m-%d %H:%M:%S" 2>/dev/null || date -u +"%Y-%m-%d %H:%M:%S")
+          echo "build_time=$FORMATTED_TIME" >> $GITHUB_OUTPUT
+          echo "构建时间: $FORMATTED_TIME"
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -180,7 +194,7 @@ jobs:
             ---
             
             **构建信息：**
-            - 构建时间: ${{ github.event.head_commit.timestamp || github.run_started_at }}
+            - 构建时间: ${{ steps.format_time.outputs.build_time }}
             - 提交: ${{ github.sha }}
           files: |
             artifacts/**/*.zip
