@@ -160,11 +160,61 @@ const normalizeZipOutputs = async () => {
   await movePlatformArtifactsToRoot(darwinDir)
 }
 
-// 优先使用环境变量中的版本号（例如 CI 中从 Git tag 传入），否则回退到 package.json
-const appVersionFromEnv =
-  process.env.APP_VERSION && process.env.APP_VERSION.trim()
-    ? process.env.APP_VERSION.trim()
-    : pkg.version
+/**
+ * 移除本地构建文件中的版本号
+ * 只有通过 GitHub Actions 构建的才保留版本号
+ */
+const removeVersionFromLocalBuilds = async () => {
+  // 检查是否是 CI 环境
+  const isCI =
+    process.env.CI === 'true' ||
+    process.env.GITHUB_ACTIONS === 'true'
+
+  // 如果是 CI 环境，保留版本号
+  if (isCI) {
+    return
+  }
+
+  const zipRoot = path.resolve(__dirname, 'out/make/zip')
+  if (!existsSync(zipRoot)) {
+    return
+  }
+
+  const entries = await readdir(zipRoot, {
+    withFileTypes: true
+  })
+
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith('.zip')) {
+      continue
+    }
+
+    // 匹配版本号模式：-1.1.1 或 -1.1.1-xxx
+    // 例如：desktop-chatgpt-darwin-arm64-1.1.1.zip -> desktop-chatgpt-darwin-arm64.zip
+    // 匹配格式：-版本号.zip 或 -版本号-其他.zip
+    const versionPattern =
+      /-(\d+\.\d+\.\d+)(?:-[^.]*)?\.zip$/
+    if (versionPattern.test(entry.name)) {
+      const oldPath = path.join(zipRoot, entry.name)
+      // 移除版本号部分，保留文件名和 .zip 扩展名
+      const newName = entry.name.replace(
+        versionPattern,
+        '.zip'
+      )
+      const newPath = path.join(zipRoot, newName)
+
+      // 如果新文件名已存在，先删除
+      if (existsSync(newPath)) {
+        await rm(newPath, { recursive: true, force: true })
+      }
+
+      await rename(oldPath, newPath)
+      console.log(
+        `📦 本地构建：已移除版本号 ${entry.name} -> ${newName}`
+      )
+    }
+  }
+}
 
 const config: ForgeConfig = {
   packagerConfig: {
@@ -185,7 +235,6 @@ const config: ForgeConfig = {
       '.gitattributes',
       '.vscode',
       '.idea',
-      '/src$',
       'tsconfig.json',
       'vite.main.config.ts',
       'vite.preload.config.ts',
@@ -199,11 +248,9 @@ const config: ForgeConfig = {
       'node_modules/.bin',
       'readme.md',
       'CHANGELOG.md',
-      'scripts',
       'find-errors.log',
       'foge.config-backup.ts',
       'config/settings.json',
-      'dist',
       '.DS_Store',
       'Thumbs.db'
     ],
@@ -224,6 +271,7 @@ const config: ForgeConfig = {
     postMake: async () => {
       await normalizeZipOutputs()
       await renameWin32PackageDirs()
+      await removeVersionFromLocalBuilds()
     }
   },
   plugins: [
@@ -256,11 +304,9 @@ const config: ForgeConfig = {
       version: FuseVersion.V1,
       [FuseV1Options.RunAsNode]: false,
       [FuseV1Options.EnableCookieEncryption]: true,
-      [FuseV1Options.EnableNodeOptionsEnvironmentVariable]:
-        false,
+      [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
       [FuseV1Options.EnableNodeCliInspectArguments]: false,
-      [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]:
-        true,
+      [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
       [FuseV1Options.OnlyLoadAppFromAsar]: true
     })
   ]

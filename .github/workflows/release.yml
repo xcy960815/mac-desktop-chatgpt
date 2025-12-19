@@ -55,38 +55,48 @@ jobs:
           echo "Tag version: $VERSION"
 
       - name: Update package.json version
+        shell: bash
         run: |
-          npm version ${{ steps.get_version.outputs.version }} --no-git-tag-version || true
+          VERSION=${{ steps.get_version.outputs.version }}
+          # 使用 Node.js 更新 package.json 版本号
+          node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); pkg.version = '$VERSION'; fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');"
+          echo "✅ 已更新 package.json 版本号为: $VERSION"
+          grep '"version"' package.json
 
       - name: Build application
         run: pnpm run ${{ matrix.build-command }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # 传递 tag 版本号给打包脚本，用于覆盖 appVersion
-          APP_VERSION: ${{ steps.get_version.outputs.version }}
 
       - name: Prepare artifacts
         id: prepare_artifacts
         shell: bash
         run: |
           # 查找构建产物，根据 forge.config.ts 的 normalizeZipOutputs，文件应该在 out/make/zip/ 根目录
+          # CI 环境会保留版本号，文件名格式：desktop-chatgpt-darwin-arm64-1.0.0.zip
+          VERSION=${{ steps.get_version.outputs.version }}
+          
           if [ "${{ matrix.platform }}" == "darwin" ]; then
-            # macOS: 查找包含 darwin 和对应架构的 zip 文件
-            ARTIFACT=$(find out/make/zip -name "*darwin-${{ matrix.arch }}*.zip" -type f 2>/dev/null | head -1)
+            # macOS: 优先查找包含版本号的完整文件名
+            ARTIFACT=$(find out/make/zip -name "*darwin-${{ matrix.arch }}-${VERSION}.zip" -type f 2>/dev/null | head -1)
             if [ -z "$ARTIFACT" ]; then
-              # 如果没找到，尝试查找所有 darwin zip
+              # 如果没找到，尝试查找包含 darwin 和对应架构的 zip 文件（带版本号）
+              ARTIFACT=$(find out/make/zip -name "*darwin-${{ matrix.arch }}*.zip" -type f 2>/dev/null | head -1)
+            fi
+            if [ -z "$ARTIFACT" ]; then
+              # 如果还没找到，尝试查找所有 darwin zip
               ARTIFACT=$(find out/make/zip -name "*darwin*.zip" -type f 2>/dev/null | head -1)
             fi
-            if [ -z "$ARTIFACT" ]; then
-              # 最后尝试查找所有 zip
-              ARTIFACT=$(find out/make/zip -name "*.zip" -type f 2>/dev/null | head -1)
-            fi
           else
-            # Windows: 查找包含 windows 或 win32 的 zip 文件
-            ARTIFACT=$(find out/make/zip -name "*windows*.zip" -o -name "*win32*.zip" 2>/dev/null | head -1)
+            # Windows: 优先查找包含版本号的完整文件名
+            ARTIFACT=$(find out/make/zip -name "*win32-x64-${VERSION}.zip" -type f 2>/dev/null | head -1)
             if [ -z "$ARTIFACT" ]; then
-              # 如果没找到，尝试查找所有 zip
-              ARTIFACT=$(find out/make/zip -name "*.zip" -type f 2>/dev/null | head -1)
+              # 如果没找到，尝试查找包含 win32 的 zip 文件
+              ARTIFACT=$(find out/make/zip -name "*win32*.zip" -type f 2>/dev/null | head -1)
+            fi
+            if [ -z "$ARTIFACT" ]; then
+              # 如果还没找到，尝试查找包含 windows 的 zip 文件
+              ARTIFACT=$(find out/make/zip -name "*windows*.zip" -type f 2>/dev/null | head -1)
             fi
           fi
 
@@ -128,6 +138,20 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Tag version: $VERSION"
 
+      - name: Format build time
+        id: format_time
+        shell: bash
+        run: |
+          # 获取构建时间，优先使用 head_commit.timestamp，否则使用 run_started_at
+          BUILD_TIME="${{ github.event.head_commit.timestamp || github.run_started_at }}"
+          # 转换为 yyyy-MM-dd HH:mm:ss 格式
+          # 移除时区信息，只保留日期和时间部分
+          TIME_STRIPPED=$(echo "$BUILD_TIME" | sed 's/[+-][0-9][0-9]:[0-9][0-9]$//' | sed 's/Z$//')
+          # 使用 date 命令转换为 yyyy-MM-dd HH:mm:ss 格式
+          FORMATTED_TIME=$(date -u -d "$TIME_STRIPPED" +"%Y-%m-%d %H:%M:%S" 2>/dev/null || date -u +"%Y-%m-%d %H:%M:%S")
+          echo "build_time=$FORMATTED_TIME" >> $GITHUB_OUTPUT
+          echo "构建时间: $FORMATTED_TIME"
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -159,8 +183,8 @@ jobs:
 
             - **macOS (Intel)**: desktop-chatgpt-darwin-x64-${{ steps.get_version.outputs.version }}.zip
             - **macOS (Apple Silicon)**: desktop-chatgpt-darwin-arm64-${{ steps.get_version.outputs.version }}.zip
-            - **Windows (x64)**: desktop-chatgpt-windows-x64-${{ steps.get_version.outputs.version }}.zip
-
+            - **Windows (x64)**: desktop-chatgpt-win32-x64-${{ steps.get_version.outputs.version }}.zip
+            
             ### 📋 安装说明
 
             #### macOS
@@ -176,7 +200,7 @@ jobs:
             ---
 
             **构建信息：**
-            - 构建时间: ${{ steps.date.outputs.date }}
+            - 构建时间: ${{ steps.format_time.outputs.build_time }}
             - 提交: ${{ github.sha }}
           files: |
             artifacts/**/*.zip
