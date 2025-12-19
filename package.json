@@ -20,8 +20,7 @@
     "publish": "electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
     "prepare": "husky install",
-    "lint-staged": "lint-staged",
-    "release": "node scripts/release.js"
+    "lint-staged": "lint-staged"
   },
   "devDependencies": {
     "@commitlint/cli": "^18.4.4",
