@@ -26,6 +26,7 @@ import {
   getTrayMenuText,
   TrayMenuMessageKey
 } from './i18n/tray-menu'
+import { UpdateManager } from './utils/update-manager'
 
 /**
  * 浏览器窗口操作选项
@@ -73,6 +74,8 @@ export interface TrayContextMenuOptions {
     task: (win: BrowserWindow) => T | Promise<T>,
     options?: WithBrowserWindowOptions
   ): Promise<T | null>
+  /** 更新管理器 */
+  updateManager: UpdateManager
 }
 
 /**
@@ -285,10 +288,10 @@ export const setupTrayContextMenu = (
                   (currentModel === Model.DeepSeek
                     ? ModelUrl.DeepSeek
                     : currentModel === Model.ChatGPT
-                    ? ModelUrl.ChatGPT
-                    : currentModel === Model.Gemini
-                    ? ModelUrl.Gemini
-                    : ModelUrl.Grok)
+                      ? ModelUrl.ChatGPT
+                      : currentModel === Model.Gemini
+                        ? ModelUrl.Gemini
+                        : ModelUrl.Grok)
 
                 win.webContents.send(
                   'model-changed',
@@ -319,6 +322,18 @@ export const setupTrayContextMenu = (
             if (isGemini) {
               shell.openExternal(urls.gemini)
             }
+          }
+        },
+        {
+          label: t('checkForUpdates'),
+          click: async () => {
+            const browserWindow = getAvailableBrowserWindow(
+              electronMenubar,
+              options.getMainBrowserWindow
+            )
+            await options.updateManager.checkForUpdates(
+              browserWindow
+            )
           }
         },
         {
