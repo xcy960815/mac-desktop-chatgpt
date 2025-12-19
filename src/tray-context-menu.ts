@@ -462,6 +462,12 @@ export const setupTrayContextMenu = (
         },
         { type: 'separator' },
         {
+          label: t('checkForUpdates'),
+          click: async () => {
+            await options.checkForUpdates()
+          }
+        },
+        {
           label: t('setShortcut'),
           click: async () => {
             try {

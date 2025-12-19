@@ -15,6 +15,7 @@ export type TrayMenuMessageKey =
   | 'windowAlwaysOnTop'
   | 'model'
   | 'setShortcut'
+  | 'checkForUpdates'
   | 'language'
   | 'languageEnglish'
   | 'languageChinese'
@@ -35,6 +36,7 @@ const MENU_MESSAGES: Record<
     windowAlwaysOnTop: 'Always on top',
     model: 'Model',
     setShortcut: 'Set shortcut',
+    checkForUpdates: 'Check for updates',
     language: 'Language',
     languageEnglish: 'English',
     languageChinese: 'Chinese',
@@ -51,6 +53,7 @@ const MENU_MESSAGES: Record<
     windowAlwaysOnTop: '置顶于所有应用',
     model: '模型',
     setShortcut: '设置快捷键',
+    checkForUpdates: '检测更新',
     language: '语言',
     languageEnglish: '英语',
     languageChinese: '中文',
