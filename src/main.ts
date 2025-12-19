@@ -26,7 +26,6 @@ import {
 } from 'electron'
 
 import { readUserSetting } from './utils/user-setting'
-import { createUpdater } from './updater'
 
 app.commandLine.appendSwitch('ignore-certificate-errors')
 app.commandLine.appendSwitch(
@@ -91,12 +90,6 @@ app.on('ready', () => {
   electronMenubar.setWindowBehavior(initialBehavior)
 
   const windowManager = createWindowManager(electronMenubar)
-
-  // 初始化更新检查器（不自动检查，仅手动检查）
-  const updater = createUpdater({
-    autoCheckOnStart: false,
-    checkInterval: 0 // 禁用定期检查，仅手动检查
-  })
 
   electronMenubar.on('ready', async (menubar) => {
     const browserWindow = menubar.browserWindow
