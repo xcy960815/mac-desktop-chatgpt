@@ -185,9 +185,14 @@ export class UpdateManager {
     currentVersion: string,
     releaseNotes?: string
   ): void {
+    // 移除 HTML 标签，只保留纯文本
+    const cleanReleaseNotes = releaseNotes
+      ? releaseNotes.replace(/<[^>]*>/g, '').trim()
+      : undefined
+
     const message = `发现新版本 ${newVersion}（当前版本：${currentVersion}）\n\n是否现在下载并安装？`
-    const detail = releaseNotes
-      ? `更新内容：\n${releaseNotes}`
+    const detail = cleanReleaseNotes
+      ? `更新内容：\n${cleanReleaseNotes}`
       : undefined
 
     if (!window || window.isDestroyed()) {
