@@ -165,6 +165,10 @@ jobs:
           echo "文件详情："
           ls -lh artifacts/*/*.zip 2>/dev/null || ls -lh artifacts/*.zip 2>/dev/null || true
 
+      - name: Generate latest-mac.yml
+        run: |
+          node scripts/generate-latest-yml.js ${{ steps.get_version.outputs.version }} artifacts
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -198,6 +202,7 @@ jobs:
             - 提交: ${{ github.sha }}
           files: |
             artifacts/**/*.zip
+            artifacts/latest-mac.yml
           draft: false
           prerelease: ${{ contains(github.ref, '-') || contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
 
