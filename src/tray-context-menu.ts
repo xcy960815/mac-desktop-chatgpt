@@ -118,46 +118,6 @@ const MODEL_TO_URL_KEY: Record<
 }
 
 /**
- * 创建模型切换处理函数
- * @param {Model} model - 要切换到的模型
- * @param {TrayContextMenuOptions} options - 托盘上下文菜单配置选项
- * @param {Tray} tray - 系统托盘实例
- * @param {ElectronMenubar} electronMenubar - Electron 菜单栏实例
- * @param {TrayContextMenuOptions['urls']} urls - 各模型的 URL 配置
- * @returns {() => void} 模型切换处理函数
- */
-const createModelSwitchHandler = (
-  model: Model,
-  options: TrayContextMenuOptions,
-  tray: Tray,
-  electronMenubar: ElectronMenubar,
-  urls: TrayContextMenuOptions['urls']
-) => {
-  return () => {
-    const userSetting = readUserSetting()
-    const newUserSetting = writeUserSetting({
-      ...userSetting,
-      model
-    })
-    tray.popUpContextMenu(options.menu)
-
-    // 根据模型获取对应的 URL
-    const urlKey = MODEL_TO_URL_KEY[model]
-    const savedUrl =
-      newUserSetting.urls?.[model] || urls[urlKey]
-
-    getAvailableBrowserWindow(
-      electronMenubar,
-      options.getMainBrowserWindow
-    )?.webContents.send(
-      'model-changed',
-      newUserSetting.model,
-      savedUrl
-    )
-  }
-}
-
-/**
  * 设置托盘上下文菜单
  * @param {TrayContextMenuOptions} options - 托盘上下文菜单配置选项
  * @returns {() => void} 返回构建上下文菜单的函数
@@ -165,6 +125,8 @@ const createModelSwitchHandler = (
 export const setupTrayContextMenu = (
   options: TrayContextMenuOptions
 ) => {
+  const { tray, electronMenubar, urls } = options
+
   const waitForWindowLoad = async (
     targetWindow: BrowserWindow
   ) => {
@@ -187,10 +149,9 @@ export const setupTrayContextMenu = (
   }
 
   /**
-   * 构建上下文菜单
-   * @returns {void}
+   * 构建并设置上下文菜单
    */
-  const buildContextMenu = () => {
+  const updateContextMenu = () => {
     const userSetting = readUserSetting()
     const isChatGPT = userSetting.model === Model.ChatGPT
     const isDeepSeek = userSetting.model === Model.DeepSeek
@@ -211,10 +172,6 @@ export const setupTrayContextMenu = (
     const t = (key: TrayMenuMessageKey) =>
       getTrayMenuText(key, menuLanguage)
 
-    const { tray, electronMenubar, urls } = options
-
-    electronMenubar.setWindowBehavior(windowBehavior)
-
     const handleAutoLaunchToggle = (enabled: boolean) => {
       try {
         app.setLoginItemSettings({
@@ -225,6 +182,7 @@ export const setupTrayContextMenu = (
           ...userSetting,
           autoLaunchOnStartup: enabled
         })
+        updateContextMenu()
       } catch (error) {
         dialog.showErrorBox(
           '开机启动设置失败',
@@ -244,7 +202,7 @@ export const setupTrayContextMenu = (
         windowBehavior: behavior
       })
       electronMenubar.setWindowBehavior(behavior)
-      tray.popUpContextMenu(options.menu)
+      updateContextMenu()
     }
 
     const handleMenuLanguageChange = (
@@ -258,304 +216,245 @@ export const setupTrayContextMenu = (
         ...latestSetting,
         menuLanguage: language
       })
-      tray.popUpContextMenu(options.menu)
+      updateContextMenu()
     }
 
-    tray.popUpContextMenu(
-      Menu.buildFromTemplate([
-        {
-          label: t('quit'),
-          accelerator: 'CommandOrControl+Q',
-          click: () => {
-            resetUserUrls()
-            app.quit()
-          }
-        },
-        {
-          label: t('reload'),
-          accelerator: 'CommandOrControl+R',
-          click: async () => {
-            const newUserSetting = resetUserUrls()
-            await options.withBrowserWindow(
-              (win) => {
-                if (win.isDestroyed()) {
-                  throw new Error('窗口已销毁')
-                }
+    const createModelSwitchHandler = (model: Model) => {
+      return () => {
+        const userSetting = readUserSetting()
+        const newUserSetting = writeUserSetting({
+          ...userSetting,
+          model
+        })
+        updateContextMenu()
 
-                const currentModel = newUserSetting.model
-                const defaultUrl =
-                  newUserSetting.urls?.[currentModel] ||
-                  (currentModel === Model.DeepSeek
-                    ? ModelUrl.DeepSeek
-                    : currentModel === Model.ChatGPT
-                      ? ModelUrl.ChatGPT
-                      : currentModel === Model.Gemini
-                        ? ModelUrl.Gemini
-                        : ModelUrl.Grok)
+        // 根据模型获取对应的 URL
+        const urlKey = MODEL_TO_URL_KEY[model]
+        const savedUrl =
+          newUserSetting.urls?.[model] || urls[urlKey]
 
-                win.webContents.send(
-                  'model-changed',
-                  currentModel,
-                  defaultUrl
-                )
-              },
-              {
-                onFailureMessage:
-                  '无法重新加载窗口，请稍后重试'
-              }
-            )
-          }
-        },
-        {
-          label: t('openInBrowser'),
-          accelerator: 'CommandOrControl+O',
-          click: async () => {
-            if (isChatGPT) {
-              shell.openExternal(urls.chatgpt)
-            }
-            if (isDeepSeek) {
-              shell.openExternal(urls.deepseek)
-            }
-            if (isGrok) {
-              shell.openExternal(urls.grok)
-            }
-            if (isGemini) {
-              shell.openExternal(urls.gemini)
-            }
-          }
-        },
-        {
-          label: t('checkForUpdates'),
-          click: async () => {
-            const browserWindow = getAvailableBrowserWindow(
-              electronMenubar,
-              options.getMainBrowserWindow
-            )
-            await options.updateManager.checkForUpdates(
-              browserWindow
-            )
-          }
-        },
-        {
-          label: t('autoLaunchOnStartup'),
-          type: 'checkbox',
-          checked: isAutoLaunchEnabled,
-          click: (menuItem) =>
-            handleAutoLaunchToggle(
-              Boolean(menuItem.checked)
-            )
-        },
-        {
-          label: t('windowBehavior'),
-          submenu: [
-            {
-              label: t('windowAutoHide'),
-              type: 'radio',
-              checked:
-                windowBehavior === WindowBehavior.AutoHide,
-              click: () =>
-                handleWindowBehaviorChange(
-                  WindowBehavior.AutoHide
-                )
-            },
-            {
-              label: t('windowLockOnDesktop'),
-              type: 'radio',
-              checked:
-                windowBehavior ===
-                WindowBehavior.LockOnDesktop,
-              click: () =>
-                handleWindowBehaviorChange(
-                  WindowBehavior.LockOnDesktop
-                )
-            },
-            {
-              label: t('windowAlwaysOnTop'),
-              type: 'radio',
-              checked:
-                windowBehavior ===
-                WindowBehavior.AlwaysOnTop,
-              click: () =>
-                handleWindowBehaviorChange(
-                  WindowBehavior.AlwaysOnTop
-                )
-            }
-          ]
-        },
-        {
-          label: t('language'),
-          submenu: [
-            {
-              label: t('languageEnglish'),
-              type: 'radio',
-              checked:
-                menuLanguage === MenuLanguage.English,
-              click: () =>
-                handleMenuLanguageChange(
-                  MenuLanguage.English
-                )
-            },
-            {
-              label: t('languageChinese'),
-              type: 'radio',
-              checked:
-                menuLanguage === MenuLanguage.Chinese,
-              click: () =>
-                handleMenuLanguageChange(
-                  MenuLanguage.Chinese
-                )
-            }
-          ]
-        },
-        {
-          label: t('model'),
-          submenu: [
-            {
-              label: Model.ChatGPT,
-              type: 'radio',
-              checked: isChatGPT,
-              click: createModelSwitchHandler(
-                Model.ChatGPT,
-                options,
-                tray,
-                electronMenubar,
-                urls
-              )
-            },
-            {
-              label: Model.DeepSeek,
-              type: 'radio',
-              checked: isDeepSeek,
-              click: createModelSwitchHandler(
-                Model.DeepSeek,
-                options,
-                tray,
-                electronMenubar,
-                urls
-              )
-            },
-            {
-              label: Model.Grok,
-              type: 'radio',
-              checked: isGrok,
-              click: createModelSwitchHandler(
-                Model.Grok,
-                options,
-                tray,
-                electronMenubar,
-                urls
-              )
-            },
-            {
-              label: Model.Gemini,
-              type: 'radio',
-              checked: isGemini,
-              click: createModelSwitchHandler(
-                Model.Gemini,
-                options,
-                tray,
-                electronMenubar,
-                urls
-              )
-            }
-          ]
-        },
-        { type: 'separator' },
-        {
-          label: t('checkForUpdates'),
-          click: async () => {
-            await options.checkForUpdates()
-          }
-        },
-        {
-          label: t('setShortcut'),
-          click: async () => {
-            try {
-              const userSetting = readUserSetting()
-              const savedShortcut =
-                userSetting.toggleShortcut ||
-                'CommandOrControl+g'
+        getAvailableBrowserWindow(
+          electronMenubar,
+          options.getMainBrowserWindow
+        )?.webContents.send(
+          'model-changed',
+          newUserSetting.model,
+          savedUrl
+        )
+      }
+    }
 
-              if (!options.isMenubarReady()) {
-                for (
-                  let i = 0;
-                  i < 20 && !options.isMenubarReady();
-                  i++
-                ) {
-                  await delay(100)
-                }
+    const contextMenu = Menu.buildFromTemplate([
+      {
+        label: t('quit'),
+        accelerator: 'CommandOrControl+Q',
+        click: () => {
+          resetUserUrls()
+          app.quit()
+        }
+      },
+      {
+        label: t('reload'),
+        accelerator: 'CommandOrControl+R',
+        click: async () => {
+          const newUserSetting = resetUserUrls()
+          await options.withBrowserWindow(
+            (win) => {
+              if (win.isDestroyed()) {
+                throw new Error('窗口已销毁')
               }
 
-              let browserWindow =
-                getAvailableBrowserWindow(
-                  electronMenubar,
-                  options.getMainBrowserWindow
-                ) || null
-              if (
-                !browserWindow ||
-                browserWindow.isDestroyed()
+              const currentModel = newUserSetting.model
+              const defaultUrl =
+                newUserSetting.urls?.[currentModel] ||
+                (currentModel === Model.DeepSeek
+                  ? ModelUrl.DeepSeek
+                  : currentModel === Model.ChatGPT
+                    ? ModelUrl.ChatGPT
+                    : currentModel === Model.Gemini
+                      ? ModelUrl.Gemini
+                      : ModelUrl.Grok)
+
+              win.webContents.send(
+                'model-changed',
+                currentModel,
+                defaultUrl
+              )
+            },
+            {
+              onFailureMessage:
+                '无法重新加载窗口，请稍后重试'
+            }
+          )
+        }
+      },
+      {
+        label: t('openInBrowser'),
+        accelerator: 'CommandOrControl+O',
+        click: async () => {
+          if (isChatGPT) {
+            shell.openExternal(urls.chatgpt)
+          }
+          if (isDeepSeek) {
+            shell.openExternal(urls.deepseek)
+          }
+          if (isGrok) {
+            shell.openExternal(urls.grok)
+          }
+          if (isGemini) {
+            shell.openExternal(urls.gemini)
+          }
+        }
+      },
+      {
+        label: t('checkForUpdates'),
+        click: async () => {
+          const browserWindow = getAvailableBrowserWindow(
+            electronMenubar,
+            options.getMainBrowserWindow
+          )
+          await options.updateManager.checkForUpdates(
+            browserWindow
+          )
+        }
+      },
+      {
+        label: t('autoLaunchOnStartup'),
+        type: 'checkbox',
+        checked: isAutoLaunchEnabled,
+        click: (menuItem) =>
+          handleAutoLaunchToggle(Boolean(menuItem.checked))
+      },
+      {
+        label: t('windowBehavior'),
+        submenu: [
+          {
+            label: t('windowAutoHide'),
+            type: 'radio',
+            checked:
+              windowBehavior === WindowBehavior.AutoHide,
+            click: () =>
+              handleWindowBehaviorChange(
+                WindowBehavior.AutoHide
+              )
+          },
+          {
+            label: t('windowLockOnDesktop'),
+            type: 'radio',
+            checked:
+              windowBehavior ===
+              WindowBehavior.LockOnDesktop,
+            click: () =>
+              handleWindowBehaviorChange(
+                WindowBehavior.LockOnDesktop
+              )
+          },
+          {
+            label: t('windowAlwaysOnTop'),
+            type: 'radio',
+            checked:
+              windowBehavior === WindowBehavior.AlwaysOnTop,
+            click: () =>
+              handleWindowBehaviorChange(
+                WindowBehavior.AlwaysOnTop
+              )
+          }
+        ]
+      },
+      {
+        label: t('language'),
+        submenu: [
+          {
+            label: t('languageEnglish'),
+            type: 'radio',
+            checked: menuLanguage === MenuLanguage.English,
+            click: () =>
+              handleMenuLanguageChange(MenuLanguage.English)
+          },
+          {
+            label: t('languageChinese'),
+            type: 'radio',
+            checked: menuLanguage === MenuLanguage.Chinese,
+            click: () =>
+              handleMenuLanguageChange(MenuLanguage.Chinese)
+          }
+        ]
+      },
+      {
+        label: t('model'),
+        submenu: [
+          {
+            label: Model.ChatGPT,
+            type: 'radio',
+            checked: isChatGPT,
+            click: createModelSwitchHandler(Model.ChatGPT)
+          },
+          {
+            label: Model.DeepSeek,
+            type: 'radio',
+            checked: isDeepSeek,
+            click: createModelSwitchHandler(Model.DeepSeek)
+          },
+          {
+            label: Model.Grok,
+            type: 'radio',
+            checked: isGrok,
+            click: createModelSwitchHandler(Model.Grok)
+          },
+          {
+            label: Model.Gemini,
+            type: 'radio',
+            checked: isGemini,
+            click: createModelSwitchHandler(Model.Gemini)
+          }
+        ]
+      },
+      { type: 'separator' },
+
+      {
+        label: t('setShortcut'),
+        click: async () => {
+          try {
+            const userSetting = readUserSetting()
+            const savedShortcut =
+              userSetting.toggleShortcut ||
+              'CommandOrControl+g'
+
+            if (!options.isMenubarReady()) {
+              for (
+                let i = 0;
+                i < 20 && !options.isMenubarReady();
+                i++
               ) {
-                try {
-                  if (!electronMenubar.tray) {
-                    dialog.showMessageBox({
-                      type: 'error',
-                      title: '错误',
-                      message:
-                        '应用程序未完全初始化，请稍后再试',
-                      buttons: ['确定']
-                    })
-                    return
-                  }
+                await delay(100)
+              }
+            }
 
-                  await electronMenubar.showWindow()
-                  await delay(200)
-
-                  for (let i = 0; i < 5; i++) {
-                    browserWindow =
-                      electronMenubar.browserWindow ||
-                      options.getMainBrowserWindow()
-                    if (
-                      browserWindow &&
-                      !browserWindow.isDestroyed()
-                    ) {
-                      break
-                    }
-                    await delay(100)
-                  }
-
-                  if (
-                    browserWindow &&
-                    !browserWindow.isDestroyed()
-                  ) {
-                    options.setMainBrowserWindow(
-                      browserWindow
-                    )
-                  }
-                } catch {
-                  browserWindow =
-                    electronMenubar.browserWindow ||
-                    options.getMainBrowserWindow()
-                }
-
-                if (
-                  !browserWindow ||
-                  browserWindow.isDestroyed()
-                ) {
+            let browserWindow =
+              getAvailableBrowserWindow(
+                electronMenubar,
+                options.getMainBrowserWindow
+              ) || null
+            if (
+              !browserWindow ||
+              browserWindow.isDestroyed()
+            ) {
+              try {
+                if (!electronMenubar.tray) {
                   dialog.showMessageBox({
                     type: 'error',
                     title: '错误',
-                    message: '窗口未准备好，请稍后再试',
+                    message:
+                      '应用程序未完全初始化，请稍后再试',
                     buttons: ['确定']
                   })
                   return
                 }
 
-                await waitForWindowLoad(browserWindow)
-              }
+                await electronMenubar.showWindow()
+                await delay(200)
 
-              if (!browserWindow.isVisible()) {
-                try {
-                  await electronMenubar.showWindow()
+                for (let i = 0; i < 5; i++) {
                   browserWindow =
                     electronMenubar.browserWindow ||
                     options.getMainBrowserWindow()
@@ -563,14 +462,23 @@ export const setupTrayContextMenu = (
                     browserWindow &&
                     !browserWindow.isDestroyed()
                   ) {
-                    options.setMainBrowserWindow(
-                      browserWindow
-                    )
+                    break
                   }
-                  await delay(300)
-                } catch {
-                  // 忽略在显示窗口时的瞬时错误，后续校验会提示用户
+                  await delay(100)
                 }
+
+                if (
+                  browserWindow &&
+                  !browserWindow.isDestroyed()
+                ) {
+                  options.setMainBrowserWindow(
+                    browserWindow
+                  )
+                }
+              } catch {
+                browserWindow =
+                  electronMenubar.browserWindow ||
+                  options.getMainBrowserWindow()
               }
 
               if (
@@ -587,253 +495,270 @@ export const setupTrayContextMenu = (
               }
 
               await waitForWindowLoad(browserWindow)
+            }
 
-              browserWindow =
-                electronMenubar.browserWindow ||
-                options.getMainBrowserWindow()
-              if (
-                !browserWindow ||
-                browserWindow.isDestroyed()
-              ) {
-                dialog.showMessageBox({
-                  type: 'error',
-                  title: '错误',
-                  message: '窗口未准备好，请稍后再试',
-                  buttons: ['确定']
-                })
-                return
-              }
-
-              if (!browserWindow.isVisible()) {
-                browserWindow.show()
-                await delay(100)
-              }
-
-              let input: string | null = null
+            if (!browserWindow.isVisible()) {
               try {
-                input = await showShortcutInputDialog(
-                  electronMenubar,
-                  browserWindow,
-                  savedShortcut
-                )
-              } catch (error) {
-                dialog.showMessageBox({
-                  type: 'error',
-                  title: '错误',
-                  message: '显示对话框失败，请稍后再试',
-                  buttons: ['确定']
-                })
-                return
-              }
-
-              if (input && input.trim()) {
-                const shortcut = input.trim()
-                if (!shortcut || shortcut.trim() === '') {
-                  dialog.showMessageBox(browserWindow, {
-                    type: 'error',
-                    title: '设置失败',
-                    message: '快捷键不能为空',
-                    buttons: ['确定']
-                  })
-                  return
-                }
-
-                const existingShortcut =
-                  options.getCurrentShortcut()
-                if (existingShortcut) {
-                  globalShortcut.unregister(
-                    existingShortcut
+                await electronMenubar.showWindow()
+                browserWindow =
+                  electronMenubar.browserWindow ||
+                  options.getMainBrowserWindow()
+                if (
+                  browserWindow &&
+                  !browserWindow.isDestroyed()
+                ) {
+                  options.setMainBrowserWindow(
+                    browserWindow
                   )
                 }
+                await delay(300)
+              } catch {
+                // 忽略在显示窗口时的瞬时错误，后续校验会提示用户
+              }
+            }
 
-                const registered = globalShortcut.register(
-                  shortcut,
-                  () => {
-                    const menubarWindow =
-                      getAvailableBrowserWindow(
-                        electronMenubar,
-                        options.getMainBrowserWindow
-                      )
-                    if (!menubarWindow) {
-                      return
-                    }
-                    const menubarVisible =
-                      menubarWindow.isVisible()
-                    if (menubarVisible) {
-                      electronMenubar.hideWindow()
-                    } else {
-                      electronMenubar.showWindow()
-                      if (process.platform === 'darwin') {
-                        electronMenubar.app.show()
-                      }
-                      electronMenubar.app.focus()
-                    }
+            if (
+              !browserWindow ||
+              browserWindow.isDestroyed()
+            ) {
+              dialog.showMessageBox({
+                type: 'error',
+                title: '错误',
+                message: '窗口未准备好，请稍后再试',
+                buttons: ['确定']
+              })
+              return
+            }
+
+            await waitForWindowLoad(browserWindow)
+
+            browserWindow =
+              electronMenubar.browserWindow ||
+              options.getMainBrowserWindow()
+            if (
+              !browserWindow ||
+              browserWindow.isDestroyed()
+            ) {
+              dialog.showMessageBox({
+                type: 'error',
+                title: '错误',
+                message: '窗口未准备好，请稍后再试',
+                buttons: ['确定']
+              })
+              return
+            }
+
+            if (!browserWindow.isVisible()) {
+              browserWindow.show()
+              await delay(100)
+            }
+
+            let input: string | null = null
+            try {
+              input = await showShortcutInputDialog(
+                electronMenubar,
+                browserWindow,
+                savedShortcut
+              )
+            } catch (error) {
+              dialog.showMessageBox({
+                type: 'error',
+                title: '错误',
+                message: '显示对话框失败，请稍后再试',
+                buttons: ['确定']
+              })
+              return
+            }
+
+            if (input && input.trim()) {
+              const shortcut = input.trim()
+              if (!shortcut || shortcut.trim() === '') {
+                dialog.showMessageBox(browserWindow, {
+                  type: 'error',
+                  title: '设置失败',
+                  message: '快捷键不能为空',
+                  buttons: ['确定']
+                })
+                return
+              }
+
+              const existingShortcut =
+                options.getCurrentShortcut()
+              if (existingShortcut) {
+                globalShortcut.unregister(existingShortcut)
+              }
+
+              const registered = globalShortcut.register(
+                shortcut,
+                () => {
+                  const menubarWindow =
+                    getAvailableBrowserWindow(
+                      electronMenubar,
+                      options.getMainBrowserWindow
+                    )
+                  if (!menubarWindow) {
+                    return
                   }
-                )
+                  const menubarVisible =
+                    menubarWindow.isVisible()
+                  if (menubarVisible) {
+                    electronMenubar.hideWindow()
+                  } else {
+                    electronMenubar.showWindow()
+                    if (process.platform === 'darwin') {
+                      electronMenubar.app.show()
+                    }
+                    electronMenubar.app.focus()
+                  }
+                }
+              )
 
-                if (registered) {
-                  const currentSetting = readUserSetting()
+              if (registered) {
+                const currentSetting = readUserSetting()
+                writeUserSetting({
+                  ...currentSetting,
+                  toggleShortcut: shortcut
+                })
+                options.setCurrentShortcut(shortcut)
+                dialog.showMessageBox(browserWindow, {
+                  type: 'info',
+                  title: '设置成功',
+                  message: `快捷键已设置为: ${shortcut}`,
+                  buttons: ['确定']
+                })
+                updateContextMenu()
+              } else {
+                if (existingShortcut) {
+                  globalShortcut.register(
+                    existingShortcut,
+                    () => {
+                      const menubarWindow =
+                        getAvailableBrowserWindow(
+                          electronMenubar,
+                          options.getMainBrowserWindow
+                        )
+                      if (!menubarWindow) {
+                        return
+                      }
+                      const menubarVisible =
+                        menubarWindow.isVisible()
+                      if (menubarVisible) {
+                        electronMenubar.hideWindow()
+                      } else {
+                        electronMenubar.showWindow()
+                        if (process.platform === 'darwin') {
+                          electronMenubar.app.show()
+                        }
+                        electronMenubar.app.focus()
+                      }
+                    }
+                  )
+                }
+                dialog.showMessageBox(browserWindow, {
+                  type: 'error',
+                  title: '设置失败',
+                  message:
+                    '快捷键已被占用或格式不正确，请尝试其他快捷键',
+                  buttons: ['确定']
+                })
+              }
+            } else {
+              const resetResult =
+                await dialog.showMessageBox(browserWindow, {
+                  type: 'question',
+                  title: '重置快捷键',
+                  message:
+                    '未输入快捷键，是否将快捷键重置为默认值 CommandOrControl+g？',
+                  buttons: ['是', '否'],
+                  cancelId: 1
+                })
+              if (resetResult.response === 0) {
+                const currentShortcut =
+                  options.getCurrentShortcut()
+                if (currentShortcut) {
+                  globalShortcut.unregister(currentShortcut)
+                }
+
+                const defaultRegistered =
+                  globalShortcut.register(
+                    'CommandOrControl+g',
+                    () => {
+                      const menubarWindow =
+                        getAvailableBrowserWindow(
+                          electronMenubar,
+                          options.getMainBrowserWindow
+                        )
+                      if (!menubarWindow) {
+                        return
+                      }
+                      const menubarVisible =
+                        menubarWindow.isVisible()
+                      if (menubarVisible) {
+                        electronMenubar.hideWindow()
+                      } else {
+                        electronMenubar.showWindow()
+                        if (process.platform === 'darwin') {
+                          electronMenubar.app.show()
+                        }
+                        electronMenubar.app.focus()
+                      }
+                    }
+                  )
+
+                if (defaultRegistered) {
+                  const userSetting = readUserSetting()
                   writeUserSetting({
-                    ...currentSetting,
-                    toggleShortcut: shortcut
+                    ...userSetting,
+                    toggleShortcut: 'CommandOrControl+g'
                   })
-                  options.setCurrentShortcut(shortcut)
+                  options.setCurrentShortcut(
+                    'CommandOrControl+g'
+                  )
                   dialog.showMessageBox(browserWindow, {
                     type: 'info',
                     title: '设置成功',
-                    message: `快捷键已设置为: ${shortcut}`,
+                    message:
+                      '快捷键已重置为默认值: CommandOrControl+g',
                     buttons: ['确定']
                   })
-                  tray.popUpContextMenu(options.menu)
                 } else {
-                  if (existingShortcut) {
-                    globalShortcut.register(
-                      existingShortcut,
-                      () => {
-                        const menubarWindow =
-                          getAvailableBrowserWindow(
-                            electronMenubar,
-                            options.getMainBrowserWindow
-                          )
-                        if (!menubarWindow) {
-                          return
-                        }
-                        const menubarVisible =
-                          menubarWindow.isVisible()
-                        if (menubarVisible) {
-                          electronMenubar.hideWindow()
-                        } else {
-                          electronMenubar.showWindow()
-                          if (
-                            process.platform === 'darwin'
-                          ) {
-                            electronMenubar.app.show()
-                          }
-                          electronMenubar.app.focus()
-                        }
-                      }
-                    )
-                  }
                   dialog.showMessageBox(browserWindow, {
                     type: 'error',
                     title: '设置失败',
                     message:
-                      '快捷键已被占用或格式不正确，请尝试其他快捷键',
+                      '无法注册默认快捷键，请尝试其他快捷键',
                     buttons: ['确定']
                   })
                 }
-              } else {
-                const resetResult =
-                  await dialog.showMessageBox(
-                    browserWindow,
-                    {
-                      type: 'question',
-                      title: '重置快捷键',
-                      message:
-                        '未输入快捷键，是否将快捷键重置为默认值 CommandOrControl+g？',
-                      buttons: ['是', '否'],
-                      cancelId: 1
-                    }
-                  )
-                if (resetResult.response === 0) {
-                  const currentShortcut =
-                    options.getCurrentShortcut()
-                  if (currentShortcut) {
-                    globalShortcut.unregister(
-                      currentShortcut
-                    )
-                  }
-
-                  const defaultRegistered =
-                    globalShortcut.register(
-                      'CommandOrControl+g',
-                      () => {
-                        const menubarWindow =
-                          getAvailableBrowserWindow(
-                            electronMenubar,
-                            options.getMainBrowserWindow
-                          )
-                        if (!menubarWindow) {
-                          return
-                        }
-                        const menubarVisible =
-                          menubarWindow.isVisible()
-                        if (menubarVisible) {
-                          electronMenubar.hideWindow()
-                        } else {
-                          electronMenubar.showWindow()
-                          if (
-                            process.platform === 'darwin'
-                          ) {
-                            electronMenubar.app.show()
-                          }
-                          electronMenubar.app.focus()
-                        }
-                      }
-                    )
-
-                  if (defaultRegistered) {
-                    const userSetting = readUserSetting()
-                    writeUserSetting({
-                      ...userSetting,
-                      toggleShortcut: 'CommandOrControl+g'
-                    })
-                    options.setCurrentShortcut(
-                      'CommandOrControl+g'
-                    )
-                    dialog.showMessageBox(browserWindow, {
-                      type: 'info',
-                      title: '设置成功',
-                      message:
-                        '快捷键已重置为默认值: CommandOrControl+g',
-                      buttons: ['确定']
-                    })
-                  } else {
-                    dialog.showMessageBox(browserWindow, {
-                      type: 'error',
-                      title: '设置失败',
-                      message:
-                        '无法注册默认快捷键，请尝试其他快捷键',
-                      buttons: ['确定']
-                    })
-                  }
-                }
               }
-            } catch (error) {
-              const browserWindow =
-                getAvailableBrowserWindow(
-                  options.electronMenubar,
-                  options.getMainBrowserWindow
-                )
-              dialog.showMessageBox(
-                browserWindow || undefined,
-                {
-                  type: 'error',
-                  title: '错误',
-                  message:
-                    '设置快捷键时发生错误: ' +
-                    (error instanceof Error
-                      ? error.message
-                      : String(error)),
-                  buttons: ['确定']
-                }
-              )
             }
+          } catch (error) {
+            const browserWindow = getAvailableBrowserWindow(
+              options.electronMenubar,
+              options.getMainBrowserWindow
+            )
+            dialog.showMessageBox(
+              browserWindow || undefined,
+              {
+                type: 'error',
+                title: '错误',
+                message:
+                  '设置快捷键时发生错误: ' +
+                  (error instanceof Error
+                    ? error.message
+                    : String(error)),
+                buttons: ['确定']
+              }
+            )
           }
         }
-      ])
-    )
+      }
+    ])
+
+    tray.setContextMenu(contextMenu)
   }
 
-  options.tray.on('right-click', () => {
-    buildContextMenu()
-  })
+  updateContextMenu()
 
-  options.tray.on('click', (event) => {
-    if (event.ctrlKey || event.metaKey) {
-      buildContextMenu()
-    }
-  })
-
-  return buildContextMenu
+  return updateContextMenu
 }

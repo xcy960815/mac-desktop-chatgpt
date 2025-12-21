@@ -77,6 +77,11 @@ body {
   --actual-height: 100vh;
 }
 
+.platform-win32 .webview-box {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
 .webview-loading {
   position: absolute;
   top: 50%;
