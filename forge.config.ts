@@ -261,7 +261,8 @@ const config: ForgeConfig = {
   makers: [
     new MakerSquirrel({
       // Windows Squirrel 安装程序配置
-      name: pkg.name
+      name: pkg.name,
+      setupIcon: path.resolve(__dirname, 'images/icon.ico')
     }),
     new MakerZIP({}, ['darwin', 'win32']),
     new MakerRpm({}),
