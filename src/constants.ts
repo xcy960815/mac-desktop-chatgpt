@@ -71,3 +71,10 @@ export const MAIN_WINDOW_WIDTH = 1024
  * @constant {number}
  */
 export const MAIN_WINDOW_HEIGHT = 768
+
+/**
+ * 标准 Chrome User-Agent，用于绕过 Google 登录检测
+ * @constant {string}
+ */
+export const CHROME_USER_AGENT =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
