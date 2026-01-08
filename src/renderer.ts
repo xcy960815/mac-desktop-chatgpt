@@ -70,13 +70,6 @@ function setWebviewSrc(
     webview.preload = `file://${window.electronAPI.webviewPreloadPath}`
   }
 
-  // 动态设置 User-Agent，移除 Electron 标识，保持 Chrome 版本一致
-  const userAgent = navigator.userAgent
-    .replace(/Electron\/[0-9.]+\s/, '')
-    .replace(/desktop-chatgpt\/[0-9.]+\s/, '')
-  console.log('Setting webview useragent:', userAgent)
-  webview.useragent = userAgent
-
   // 如果有保存的 URL，优先使用保存的 URL
   let webviewUrl: string
   if (savedUrl) {
@@ -87,10 +80,10 @@ function setWebviewSrc(
       modelName === Model.DeepSeek
         ? ModelUrl.DeepSeek
         : modelName === Model.ChatGPT
-        ? ModelUrl.ChatGPT
-        : modelName === Model.Gemini
-        ? ModelUrl.Gemini
-        : ModelUrl.Grok
+          ? ModelUrl.ChatGPT
+          : modelName === Model.Gemini
+            ? ModelUrl.Gemini
+            : ModelUrl.Grok
   }
 
   // 如果 URL 相同，不重复加载

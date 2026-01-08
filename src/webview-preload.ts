@@ -1,17 +1,10 @@
-console.log('Webview preload loaded')
-
-console.log('Webview preload loaded')
-
 // 移除 webdriver 属性，绕过 Cloudflare 检测
 try {
   const code = `
-    console.log('[Webview Preload] Injected script started');
-
     // 0. Remove Selenium/ChromeDriver markers (cdc_...)
     // These are often used by detection scripts.
     for (const key in window) {
       if (key.startsWith('cdc_')) {
-        console.log('[Webview Preload] Removing Selenium marker:', key);
         delete window[key];
       }
     }
@@ -20,15 +13,12 @@ try {
     // If the flag disable-blink-features=AutomationControlled didn't work for some reason,
     // or if some other mechanism set it, we ensure it's gone.
     if ('webdriver' in navigator) {
-      console.log('[Webview Preload] Deleting navigator.webdriver');
       delete Object.getPrototypeOf(navigator).webdriver;
       delete navigator.webdriver;
     }
-    console.log('[Webview Preload] navigator.webdriver check:', navigator.webdriver);
     
     // 2. Mock plugins if empty
     if (navigator.plugins.length === 0) {
-      console.log('[Webview Preload] Mocking plugins');
       const pdfPlugin = {
         0: { type: "application/x-google-chrome-pdf", suffixes: "pdf", description: "Portable Document Format", enabledPlugin: null },
         description: "Portable Document Format",
@@ -55,13 +45,10 @@ try {
         get: () => pluginArray,
         configurable: true
       });
-    } else {
-      console.log('[Webview Preload] Plugins already exist:', navigator.plugins.length);
     }
 
     // 3. Ensure languages exist
     if (!navigator.languages || navigator.languages.length === 0) {
-      console.log('[Webview Preload] Mocking languages');
       Object.defineProperty(navigator, 'languages', {
         get: () => ['zh-CN', 'zh', 'en'],
         configurable: true
@@ -84,7 +71,6 @@ try {
 
     // 5. Mock window.chrome
     if (!window.chrome) {
-      console.log('[Webview Preload] Mocking window.chrome');
       const chromeMock = {
         runtime: {
           connect: () => {},
@@ -124,11 +110,10 @@ try {
     }
 
     // 7. Ensure User-Agent consistency in Main World
-    const newUA = navigator.userAgent
-      .replace(/Electron\\/[0-9.]+\\s/, '')
-      .replace(/desktop-chatgpt\\/[0-9.]+\\s/, '');
+    // Use the SAME hardcoded UA as in main.ts
+    // Note: We hardcode it here to avoid import issues in the preload script
+    const newUA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
     
-    console.log('[Webview Preload] Overriding UserAgent to:', newUA);
     Object.defineProperty(navigator, 'userAgent', {
       get: () => newUA,
       configurable: true
@@ -139,8 +124,6 @@ try {
       get: () => 0,
       configurable: true
     });
-    
-    console.log('[Webview Preload] Injected script finished');
   `
 
   const inject = () => {
@@ -151,24 +134,15 @@ try {
         script.textContent = code
         doc.appendChild(script)
         script.remove()
-        console.log(
-          '[Webview Preload] Script injected successfully'
-        )
       } catch (e) {
-        console.error(
-          '[Webview Preload] Injection failed:',
-          e
-        )
+        // silent fail
       }
     } else {
-      console.log(
-        '[Webview Preload] DOM not ready, retrying injection...'
-      )
       setTimeout(inject, 10)
     }
   }
 
   inject()
 } catch (e) {
-  console.error('Failed to apply anti-detection patches', e)
+  // silent fail
 }

@@ -1,10 +1,10 @@
-import { autoUpdater } from 'electron-updater'
 import {
   dialog,
   BrowserWindow,
   app,
   shell,
-  MessageBoxOptions
+  MessageBoxOptions,
+  net
 } from 'electron'
 
 /**
@@ -15,18 +15,11 @@ export class UpdateManager {
   private checkingUpdate = false
   private readonly RELEASES_URL =
     'https://github.com/xcy960815/mac-desktop-chatgpt/releases'
+  private readonly API_URL =
+    'https://api.github.com/repos/xcy960815/mac-desktop-chatgpt/releases/latest'
 
   constructor() {
-    // 配置自动更新器
-    autoUpdater.autoDownload = false
-    autoUpdater.autoInstallOnAppQuit = false
-
-    // 配置更新服务器（GitHub Releases）
-    autoUpdater.setFeedURL({
-      provider: 'github',
-      owner: 'xcy960815',
-      repo: 'mac-desktop-chatgpt'
-    })
+    // 无需初始化配置
   }
 
   /**
@@ -37,12 +30,6 @@ export class UpdateManager {
   async checkForUpdates(
     window: BrowserWindow | null = null
   ): Promise<void> {
-    // 立即给用户反馈
-    // 采用静默检查策略：
-    // 1. 点击后不弹窗，直接后台检查
-    // 2. 检查完成后，无论是有更新还是无更新，都会弹窗提示结果
-    // 3. 避免了"正在检查" -> "确定" -> "结果" 的割裂体验
-
     if (this.checkingUpdate) {
       return
     }
@@ -50,28 +37,31 @@ export class UpdateManager {
     this.checkingUpdate = true
 
     try {
-      // 直接获取检查结果
-      const result = await autoUpdater.checkForUpdates()
+      const latestRelease = await this.getLatestRelease()
 
-      if (result && result.updateInfo) {
-        const updateInfo = result.updateInfo
-        console.log('最新版本:', updateInfo.version)
-        const currentVersion = app.getVersion()
+      if (!latestRelease) {
+        this.showErrorDialog(window, '无法获取版本信息')
+        return
+      }
 
-        if (
-          this.isNewerVersion(
-            updateInfo.version,
-            currentVersion
-          )
-        ) {
-          this.showUpdateAvailableDialog(
-            window,
-            updateInfo.version,
-            currentVersion
-          )
-        } else {
-          this.showNoUpdateDialog(window)
-        }
+      // 移除版本号中的 'v' 前缀
+      const latestVersion = latestRelease.tag_name.replace(
+        /^v/,
+        ''
+      )
+      const currentVersion = app.getVersion()
+
+      console.log('当前版本:', currentVersion)
+      console.log('最新版本:', latestVersion)
+
+      if (
+        this.isNewerVersion(latestVersion, currentVersion)
+      ) {
+        this.showUpdateAvailableDialog(
+          window,
+          latestVersion,
+          currentVersion
+        )
       } else {
         this.showNoUpdateDialog(window)
       }
@@ -86,6 +76,46 @@ export class UpdateManager {
     } finally {
       this.checkingUpdate = false
     }
+  }
+
+  /**
+   * 获取最新发布信息
+   */
+  private getLatestRelease(): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const request = net.request(this.API_URL)
+
+      request.on('response', (response) => {
+        if (response.statusCode !== 200) {
+          reject(
+            new Error(
+              `GitHub API 返回错误: ${response.statusCode}`
+            )
+          )
+          return
+        }
+
+        let data = ''
+        response.on('data', (chunk) => {
+          data += chunk.toString()
+        })
+
+        response.on('end', () => {
+          try {
+            const json = JSON.parse(data)
+            resolve(json)
+          } catch (e) {
+            reject(new Error('解析响应数据失败'))
+          }
+        })
+      })
+
+      request.on('error', (error) => {
+        reject(error)
+      })
+
+      request.end()
+    })
   }
 
   /**
