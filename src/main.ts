@@ -8,7 +8,8 @@ import {
   Model,
   MAIN_WINDOW_WIDTH,
   MAIN_WINDOW_HEIGHT,
-  WindowBehavior
+  WindowBehavior,
+  CHROME_USER_AGENT
 } from './constants'
 import { resolveMainIndexUrl } from './utils/common'
 import { createWindowManager } from './window-manager'
@@ -22,11 +23,11 @@ import {
   globalShortcut,
   nativeImage,
   Tray,
-  Menu
+  Menu,
+  session
 } from 'electron'
 
 import { readUserSetting } from './utils/user-setting'
-import { createUpdater } from './updater'
 
 app.commandLine.appendSwitch('ignore-certificate-errors')
 app.commandLine.appendSwitch(
@@ -38,7 +39,65 @@ app.commandLine.appendSwitch('disable-features', 'WebGPU')
 // 标记 ready 事件是否已触发
 let isMenubarReady = false
 
+/**
+ * 修复 Google 登录时的 "此浏览器或应用可能不安全" 提示
+ * @param {string} [partition] - Webview 的 partition 属性值，例如 'persist:webview'。如果未使用 partition，请传 undefined 或 null。
+ */
+async function fixGoogleLogin(partition?: string) {
+  const ses = partition
+    ? session.fromPartition(partition)
+    : session.defaultSession
+
+  // 清除缓存和存储，确保干净的登录环境（可选，如果用户反馈登录循环可开启）
+  // await ses.clearStorageData()
+
+  // 1. 获取原始 UA
+  const originalUA = ses.getUserAgent()
+
+  // 2. 清洗 UA：移除 Electron 和 应用名称，保留 Chrome/Safari 版本
+  // 或者直接使用硬编码的 Chrome UA，这通常更稳妥
+  const cleanUA = CHROME_USER_AGENT
+
+  // 3. 设置全局 UA
+  ses.setUserAgent(cleanUA)
+
+  // 4. 强制拦截 Google 相关请求，确保 UA 绝对干净，并处理 Client Hints
+  const filter = {
+    urls: [
+      '*://*.google.com/*',
+      '*://accounts.google.com/*'
+    ]
+  }
+
+  ses.webRequest.onBeforeSendHeaders(
+    filter,
+    (details, callback) => {
+      const { requestHeaders } = details
+
+      // 强制覆盖 User-Agent
+      requestHeaders['User-Agent'] = cleanUA
+
+      // 移除可能暴露 Electron 身份的 Client Hints
+      // 或者伪造它们以匹配 Chrome UA
+      // 简单起见，我们先移除它们，让服务器依赖 User-Agent
+      delete requestHeaders['sec-ch-ua']
+      delete requestHeaders['sec-ch-ua-mobile']
+      delete requestHeaders['sec-ch-ua-platform']
+      delete requestHeaders['sec-ch-ua-full-version']
+      delete requestHeaders['sec-ch-ua-full-version-list']
+
+      // 也可以尝试伪造（如果移除无效）：
+      // requestHeaders['sec-ch-ua'] = '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"'
+      // requestHeaders['sec-ch-ua-mobile'] = '?0'
+      // requestHeaders['sec-ch-ua-platform'] = '"macOS"'
+
+      callback({ requestHeaders })
+    }
+  )
+}
+
 app.on('ready', () => {
+  fixGoogleLogin()
   const appPath = app.getAppPath()
   /**
    * @desc 创建菜单栏图标
@@ -91,12 +150,6 @@ app.on('ready', () => {
   electronMenubar.setWindowBehavior(initialBehavior)
 
   const windowManager = createWindowManager(electronMenubar)
-
-  // 初始化更新检查器（不自动检查，仅手动检查）
-  const updater = createUpdater({
-    autoCheckOnStart: false,
-    checkInterval: 0 // 禁用定期检查，仅手动检查
-  })
 
   electronMenubar.on('ready', async (menubar) => {
     const browserWindow = menubar.browserWindow
@@ -152,7 +205,7 @@ app.on('ready', () => {
     Menu.setApplicationMenu(menu)
 
     // 打开开发工具
-    // browserWindow.webContents.openDevTools()
+    // browserWindow.webContents.openDevTools({ mode: 'detach' })
 
     // 应用启动后默认显示窗口
     await electronMenubar.showWindow()
