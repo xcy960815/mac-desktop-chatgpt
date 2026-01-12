@@ -563,6 +563,15 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
       )
     }
 
+    // 如果窗口已存在且可见，并且处于锁定在桌面模式，则不做任何操作，避免抖动
+    if (
+      this._browserWindow &&
+      this._isVisible &&
+      this._windowBehavior === WindowBehavior.LockOnDesktop
+    ) {
+      return
+    }
+
     if (!this._browserWindow) {
       await this.createWindow()
     }
@@ -720,6 +729,24 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     // 给托盘绑定双击事件
     this.tray.on('double-click', this.clicked.bind(this))
 
+    // 右键点击事件 - 显示上下文菜单
+    this.tray.on('right-click', (event, bounds) => {
+      // 如果默认点击事件已经是右键，则不再处理
+      if (defaultClickEvent === 'right-click') {
+        return
+      }
+
+      // 显示存储的上下文菜单
+      const contextMenu = (this.tray as any)._contextMenu
+      if (
+        this.tray &&
+        contextMenu &&
+        this.tray.popUpContextMenu
+      ) {
+        this.tray.popUpContextMenu(contextMenu)
+      }
+    })
+
     // 设置托盘提示
     this.tray.setToolTip(this._options.tooltip)
 
@@ -801,6 +828,15 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
       return
     }
 
+    // 如果窗口已锁定在桌面，且窗口已获得焦点，则不做任何操作，避免抖动
+    if (
+      this.isWindowLocked() &&
+      this._browserWindow.isFocused()
+    ) {
+      return
+    }
+
+    // 如果窗口已锁定在桌面，但窗口未获得焦点，则将窗口置于前台
     if (
       this.isWindowLocked() &&
       !this._browserWindow.isFocused()
@@ -809,6 +845,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
       return
     }
 
+    // 非锁定模式下，隐藏窗口
     this.hideWindow()
   }
 

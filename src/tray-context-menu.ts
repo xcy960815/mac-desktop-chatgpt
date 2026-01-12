@@ -755,7 +755,12 @@ export const setupTrayContextMenu = (
       }
     ])
 
-    tray.setContextMenu(contextMenu)
+    // 不自动设置上下文菜单，而是通过 ElectronMenubar 中的右键事件处理程序显示
+    // 这样可以确保左键点击只控制窗口显示，右键点击显示菜单
+    // tray.setContextMenu(contextMenu)
+
+    // 存储上下文菜单，供右键事件处理程序使用
+    ;(tray as any)._contextMenu = contextMenu
   }
 
   updateContextMenu()
