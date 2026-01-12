@@ -8,25 +8,25 @@ import {
   Tray
 } from 'electron'
 
-import { ElectronMenubar } from './electron-menubar'
-import { showShortcutInputDialog } from './shortcut-input-dialog'
+import { ElectronMenubar } from '@/electron-menubar'
+import { showShortcutInputDialog } from '@/shortcut-input-dialog'
 import {
   readUserSetting,
   resetUserUrls,
   writeUserSetting
-} from './utils/user-setting'
-import { delay } from './utils/common'
+} from '@/utils/user-setting'
+import { delay } from '@/utils/common'
 import {
   MenuLanguage,
   Model,
   ModelUrl,
   WindowBehavior
-} from './constants'
+} from '@/constants'
 import {
   getTrayMenuText,
   TrayMenuMessageKey
-} from './i18n/tray-menu'
-import { UpdateManager } from './utils/update-manager'
+} from '@/i18n/tray-menu'
+import { UpdateManager } from '@/utils/update-manager'
 
 /**
  * 浏览器窗口操作选项

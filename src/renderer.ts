@@ -1,4 +1,4 @@
-import { Model, ModelUrl } from './constants'
+import { Model, ModelUrl } from '@/constants'
 
 export {}
 
@@ -98,11 +98,6 @@ function setWebviewSrc(
   webview.addEventListener('did-stop-loading', () => {
     webviewLoading.classList.remove('active')
   })
-
-  // 调试：自动打开 Webview 开发者工具以便查看日志
-  // webview.addEventListener('dom-ready', () => {
-  //   webview.openDevTools()
-  // })
 }
 
 /**
