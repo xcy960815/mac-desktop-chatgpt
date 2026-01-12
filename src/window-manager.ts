@@ -1,7 +1,7 @@
 import { BrowserWindow, dialog } from 'electron'
 
-import { ElectronMenubar } from './electron-menubar'
-import { delay } from './utils/common'
+import { ElectronMenubar } from '@/electron-menubar'
+import { delay } from '@/utils/common'
 
 /**
  * 浏览器窗口操作选项

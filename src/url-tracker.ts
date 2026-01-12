@@ -3,7 +3,7 @@ import { BrowserWindow } from 'electron'
 import {
   readUserSetting,
   writeUserSetting
-} from './utils/user-setting'
+} from '@/utils/user-setting'
 
 /**
  * 初始化上次访问的 URL 跟踪

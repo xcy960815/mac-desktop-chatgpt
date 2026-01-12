@@ -1,6 +1,7 @@
 import type { ConfigEnv, UserConfig } from 'vite' with {
   'resolution-mode': 'import'
 }
+import { resolve } from 'path'
 
 import { pluginExposeRenderer } from './vite.base.config'
 
@@ -83,14 +84,10 @@ export default async function createRendererConfig(
     resolve: {
       preserveSymlinks: true,
       alias: {
-        '@': root
+        '@': resolve(root, 'src')
       }
     },
     clearScreen: false,
-    server: {
-      port: 12138,
-      strictPort: true
-    },
     optimizeDeps: {
       exclude: ['electron']
     }

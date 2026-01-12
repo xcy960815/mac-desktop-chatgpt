@@ -1,13 +1,13 @@
 import { app, shell, WebContents } from 'electron'
 import contextMenu from 'electron-context-menu'
 
-import { ElectronMenubar } from './electron-menubar'
-import { ModelUrl } from './constants'
+import { ElectronMenubar } from '@/electron-menubar'
+import { ModelUrl } from '@/constants'
 import {
   readUserSetting,
   writeUserSetting,
   UserSetting
-} from './utils/user-setting'
+} from '@/utils/user-setting'
 
 type UserSettingWithUrls = UserSetting & {
   urls: Required<UserSetting['urls']>
