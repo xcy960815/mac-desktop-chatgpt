@@ -8,7 +8,7 @@ import {
   screen
 } from 'electron'
 
-import { ElectronMenubar } from './electron-menubar'
+import { ElectronMenubar } from '@/electron-menubar'
 
 /**
  * 显示快捷键输入对话框

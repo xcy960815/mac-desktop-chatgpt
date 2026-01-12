@@ -6,7 +6,7 @@ import {
   Model,
   ModelUrl,
   WindowBehavior
-} from '../constants'
+} from '@/constants'
 
 /**
  * Electron userData 目录下用于保存设置的子目录

@@ -1,6 +1,12 @@
 import { builtinModules } from 'node:module'
 import type { AddressInfo } from 'node:net'
-import type { ConfigEnv, Plugin, UserConfig } from 'vite'
+import type {
+  ConfigEnv,
+  Plugin,
+  UserConfig
+} from 'vite' with {
+  'resolution-mode': 'import'
+}
 import pkg from './package.json'
 import { resolve } from 'path'
 
@@ -35,6 +41,7 @@ export function getBuildConfig(
     mode,
     resolve: {
       alias: {
+        '@': resolve('src'),
         // 只是想在项目中 像使用node_modules 那样使用 electron-menubar
         'electron-menubar': resolve(
           './src/electron-menubar'
@@ -113,9 +120,8 @@ export function pluginExposeRenderer(name: string): Plugin {
         const addressInfo =
           server.httpServer!.address() as AddressInfo
         // Expose env constant for main process use.
-        process.env[
-          VITE_DEV_SERVER_URL
-        ] = `http://localhost:${addressInfo?.port}`
+        process.env[VITE_DEV_SERVER_URL] =
+          `http://localhost:${addressInfo?.port}`
       })
     }
   }

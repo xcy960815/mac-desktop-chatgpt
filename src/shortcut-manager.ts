@@ -4,11 +4,11 @@ import {
   ipcMain
 } from 'electron'
 
-import { ElectronMenubar } from './electron-menubar'
+import { ElectronMenubar } from '@/electron-menubar'
 import {
   readUserSetting,
   writeUserSetting
-} from './utils/user-setting'
+} from '@/utils/user-setting'
 
 /**
  * 快捷键管理器接口

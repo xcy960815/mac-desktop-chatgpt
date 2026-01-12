@@ -10,7 +10,7 @@ import Positioner from 'electron-positioner'
 import { EventEmitter } from 'events'
 import * as fs from 'fs'
 import * as path from 'path'
-import { WindowBehavior } from './constants'
+import { WindowBehavior } from '@/constants'
 
 /**
  * @description 负责控制托盘图标、BrowserWindow 以及定位逻辑的菜单栏管理器。
