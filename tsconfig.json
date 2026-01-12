@@ -15,9 +15,10 @@
     "types": ["node"],
     "paths": {
       "*": ["node_modules/*"],
+      "@/*": ["src/*"],
       "electron-positioner": ["types/electron-positioner.d.ts"],
       "electron-squirrel-startup": ["types/electron-squirrel-startup.d.ts"],
-      "electron-menubar":["./src/electron-menubar.ts"],
+      "electron-menubar":["./src/electron-menubar.ts"]
     }
   }
 }
