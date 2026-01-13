@@ -69,6 +69,12 @@ interface ElectronAPI {
    */
   sendShortcutInput: (value: string | null) => void
   /**
+   * 发送代理输入
+   * @param {string | null} value - 代理字符串，如果为 null 表示取消
+   * @returns {void}
+   */
+  sendProxyInput: (value: string | null) => void
+  /**
    * 当前运行平台
    * @type {string}
    */
@@ -130,6 +136,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   sendShortcutInput: (value: string | null) => {
     ipcRenderer.send('shortcut-input-response', value)
+  },
+  sendProxyInput: (value: string | null) => {
+    ipcRenderer.send('proxy-input-response', value)
   },
   platform: process.platform
 } as ElectronAPI)

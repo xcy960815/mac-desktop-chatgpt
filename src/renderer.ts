@@ -63,6 +63,9 @@ function setWebviewSrc(
   const webviewLoading = document.getElementById(
     'webview-loading'
   ) as HTMLDivElement
+  const webviewError = document.getElementById(
+    'webview-error'
+  ) as HTMLDivElement
   const originWebviewUrl = webview?.src
 
   // 设置 preload 脚本
@@ -86,10 +89,20 @@ function setWebviewSrc(
             : ModelUrl.Grok
   }
 
-  // 如果 URL 相同，不重复加载
-  if (originWebviewUrl && originWebviewUrl === webviewUrl) {
+  const isErrorActive =
+    webviewError?.classList.contains('active')
+
+  // 如果 URL 相同且当前没有报错，不重复加载
+  if (
+    originWebviewUrl &&
+    originWebviewUrl === webviewUrl &&
+    !isErrorActive
+  ) {
     return
   }
+
+  // 隐藏错误提示
+  hideError()
 
   // 显示 webviewLoading
   webviewLoading.classList.add('active')
