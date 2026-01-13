@@ -90,6 +90,7 @@ const registerLoadFailureHandler = (
 
       const errorMessages: { [key: string]: string } = {
         '-7': '网络连接超时，请检查您的网络连接',
+        '-100': '网络连接意外断开，请检查代理设置',
         '-102': '无法连接到服务器，请稍后重试',
         '-105': 'DNS 解析失败，请检查网络设置',
         '-106': '无法访问互联网，请检查网络连接',

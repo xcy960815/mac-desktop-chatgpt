@@ -30,7 +30,8 @@ const DEFAULTSETTING: UserSetting = {
   autoLaunchOnStartup: false,
   lockWindowOnBlur: false,
   windowBehavior: WindowBehavior.AutoHide,
-  menuLanguage: MenuLanguage.Chinese
+  menuLanguage: MenuLanguage.Chinese,
+  proxy: undefined
 }
 /**
  * 位于 SUBPATH 目录中的配置文件名称
@@ -56,6 +57,7 @@ export interface UserSetting {
   lockWindowOnBlur?: boolean // 锁定窗口，失去焦点时不隐藏
   windowBehavior?: WindowBehavior // 窗口行为模式
   menuLanguage?: MenuLanguage // 托盘菜单语言
+  proxy?: string // 代理设置，例如 socks5://127.0.0.1:7897
 }
 
 /**

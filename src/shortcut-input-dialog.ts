@@ -45,8 +45,8 @@ export function showShortcutInputDialog(
       }
     }
 
-    const dialogWidth = 360
-    const dialogHeight = 160
+    const dialogWidth = 400
+    const dialogHeight = 200
     const x = Math.round(
       parentBounds.x +
         (parentBounds.width - dialogWidth) / 2
@@ -140,6 +140,7 @@ export function showShortcutInputDialog(
       display: flex;
       gap: 10px;
       justify-content: flex-end;
+      margin-top: auto;
     }
     button {
       padding: 6px 18px;

@@ -38,10 +38,41 @@ app.commandLine.appendSwitch(
 )
 app.commandLine.appendSwitch('disable-features', 'WebGPU')
 
+// 强制使用代理 (解决 GFW 阻断问题)
+// Clash Verge 默认端口通常是 7897，ClashX 是 7890。如果不生效请检查你的代理软件端口。
+// 尝试使用 socks5 协议，穿透性更好
+// 注意：如果开启了 Clash Tun 模式，请注释掉下面这行，否则可能冲突！
+// app.commandLine.appendSwitch('proxy-server', 'socks5://127.0.0.1:7897')
+// app.commandLine.appendSwitch('proxy-bypass-list', '<local>')
+
 // 标记 ready 事件是否已触发
 let isMenubarReady = false
 
+app.on(
+  'certificate-error',
+  (
+    event,
+    webContents,
+    url,
+    error,
+    certificate,
+    callback
+  ) => {
+    // 允许所有证书错误，防止自签名证书或代理证书导致连接失败
+    event.preventDefault()
+    callback(true)
+  }
+)
+
 app.on('ready', () => {
+  const userSetting = readUserSetting()
+  if (userSetting.proxy) {
+    app.commandLine.appendSwitch(
+      'proxy-server',
+      userSetting.proxy
+    )
+  }
+
   // fixGoogleLogin()
   const appPath = app.getAppPath()
   /**
@@ -111,7 +142,42 @@ app.on('ready', () => {
 
     initializeLastVisitedUrlTracking(browserWindow)
 
-    const menu = new Menu()
+    const template: Electron.MenuItemConstructorOptions[] =
+      [
+        {
+          label: 'Edit',
+          submenu: [
+            { role: 'undo' },
+            { role: 'redo' },
+            { type: 'separator' },
+            { role: 'cut' },
+            { role: 'copy' },
+            { role: 'paste' },
+            { role: 'pasteAndMatchStyle' },
+            { role: 'delete' },
+            { role: 'selectAll' }
+          ]
+        }
+      ]
+
+    if (process.platform === 'darwin') {
+      template.unshift({
+        label: app.name,
+        submenu: [
+          { role: 'about' },
+          { type: 'separator' },
+          { role: 'services' },
+          { type: 'separator' },
+          { role: 'hide' },
+          { role: 'hideOthers' },
+          { role: 'unhide' },
+          { type: 'separator' },
+          { role: 'quit' }
+        ]
+      })
+    }
+
+    const menu = Menu.buildFromTemplate(template)
 
     const shortcutManager = createShortcutManager({
       browserWindow,
