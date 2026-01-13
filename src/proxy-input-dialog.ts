@@ -11,16 +11,16 @@ import {
 import { ElectronMenubar } from '@/electron-menubar'
 
 /**
- * 显示快捷键输入对话框
+ * 显示代理输入对话框
  * @param {ElectronMenubar} electronMenubar - Electron 菜单栏实例
  * @param {BrowserWindow} parentWindow - 父窗口实例
- * @param {string} currentShortcut - 当前快捷键字符串
- * @returns {Promise<string | null>} 返回用户输入的快捷键字符串，如果取消则返回 null
+ * @param {string} currentProxy - 当前代理字符串
+ * @returns {Promise<string | null>} 返回用户输入的代理字符串，如果取消则返回 null
  */
-export function showShortcutInputDialog(
+export function showProxyInputDialog(
   electronMenubar: ElectronMenubar,
   parentWindow: BrowserWindow,
-  currentShortcut: string
+  currentProxy: string
 ): Promise<string | null> {
   return new Promise((resolve, reject) => {
     if (!parentWindow || parentWindow.isDestroyed()) {
@@ -87,18 +87,18 @@ export function showShortcutInputDialog(
         sandbox: false,
         preload: resolvePreloadPath()
       },
-      title: '设置快捷键',
+      title: '设置代理',
       show: false
     })
 
-    const initialShortcut = (currentShortcut ?? '').trim()
+    const initialProxy = (currentProxy ?? '').trim()
 
     const html = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>设置快捷键</title>
+  <title>设置代理</title>
   <style>
     * {
       margin: 0;
@@ -121,20 +121,26 @@ export function showShortcutInputDialog(
       background: #ffffff;
     }
     .input-group {
-      margin-bottom: 16px;
+      margin-bottom: 8px;
     }
-    .shortcut-display {
+    .proxy-input {
       width: 100%;
       padding: 8px;
       border: 1px solid #ddd;
       border-radius: 4px;
       font-size: 14px;
-      font-family: monospace;
       background: #fafafa;
       color: #333;
-      min-height: 32px;
-      display: flex;
-      align-items: center;
+    }
+    .proxy-input:focus {
+      outline: none;
+      border-color: #007AFF;
+      background: #fff;
+    }
+    .hint {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
     }
     .buttons {
       display: flex;
@@ -169,7 +175,8 @@ export function showShortcutInputDialog(
 <body>
   <div class="container">
     <div class="input-group">
-      <div id="shortcut-display" class="shortcut-display"></div>
+      <input type="text" id="proxy-input" class="proxy-input" placeholder="例如: socks5://127.0.0.1:7897" value="${initialProxy}">
+      <div class="hint">格式: 协议://IP:端口 (留空则禁用代理)</div>
     </div>
     <div class="buttons">
       <button class="btn-cancel" id="cancel-btn">取消</button>
@@ -177,86 +184,28 @@ export function showShortcutInputDialog(
     </div>
   </div>
   <script>
-    const display = document.getElementById('shortcut-display');
+    const input = document.getElementById('proxy-input');
     const okBtn = document.getElementById('ok-btn');
     const cancelBtn = document.getElementById('cancel-btn');
 
-    let currentValue = ${JSON.stringify(initialShortcut)};
+    input.focus();
+    input.select();
 
-    function renderDisplay() {
-      display.textContent = currentValue || '请在键盘上按下新的快捷键组合';
-    }
-
-    function normalizeKey(key) {
-      if (key.length === 1) {
-        return key.toUpperCase();
-      }
-      const map = {
-        'ArrowUp': 'Up',
-        'ArrowDown': 'Down',
-        'ArrowLeft': 'Left',
-        'ArrowRight': 'Right',
-        ' ': 'Space',
-        'Escape': 'Esc',
-      };
-      return map[key] || key;
-    }
-
-    function buildShortcutFromEvent(e) {
-      if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta') {
-        return null;
-      }
-
-      const parts = [];
-      if (e.metaKey) {
-        parts.push('CommandOrControl');
-      } else if (e.ctrlKey) {
-        parts.push('Ctrl');
-      }
-      if (e.altKey) {
-        parts.push('Alt');
-      }
-      if (e.shiftKey) {
-        parts.push('Shift');
-      }
-
-      let key = e.key;
-      key = normalizeKey(key);
-      parts.push(key);
-      return parts.join('+');
-    }
-
-    document.addEventListener('keydown', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      if (e.key === 'Escape') {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        okBtn.click();
+      } else if (e.key === 'Escape') {
         cancelBtn.click();
-        return;
       }
-
-      if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
-        if (currentValue) {
-          okBtn.click();
-        }
-        return;
-      }
-
-      const value = buildShortcutFromEvent(e);
-      if (!value) return;
-      currentValue = value;
-      renderDisplay();
     });
 
-    renderDisplay();
-
     okBtn.addEventListener('click', () => {
-      const value = (currentValue || '').trim();
-      window.electronAPI?.sendShortcutInput(value);
+      const value = input.value.trim();
+      window.electronAPI?.sendProxyInput(value);
     });
 
     cancelBtn.addEventListener('click', () => {
-      window.electronAPI?.sendShortcutInput(null);
+      window.electronAPI?.sendProxyInput(null);
     });
   </script>
 </body>
@@ -269,14 +218,11 @@ export function showShortcutInputDialog(
       )}`
     )
 
-    const CHANNEL = 'shortcut-input-response'
+    const CHANNEL = 'proxy-input-response'
     let isResolved = false
 
     const cleanupIpcListener = () => {
-      ipcMain.removeListener(
-        CHANNEL,
-        handleShortcutResponse
-      )
+      ipcMain.removeListener(CHANNEL, handleProxyResponse)
     }
 
     const finalize = (value: string | null) => {
@@ -297,7 +243,7 @@ export function showShortcutInputDialog(
       }, 50)
     }
 
-    const handleShortcutResponse = (
+    const handleProxyResponse = (
       _event: Electron.IpcMainEvent,
       value: string | null
     ) => {
@@ -308,7 +254,7 @@ export function showShortcutInputDialog(
       closeWindowSafely()
     }
 
-    ipcMain.on(CHANNEL, handleShortcutResponse)
+    ipcMain.on(CHANNEL, handleProxyResponse)
 
     inputWindow.once('closed', () => {
       if (!isResolved) {

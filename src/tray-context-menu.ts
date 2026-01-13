@@ -5,11 +5,13 @@ import {
   globalShortcut,
   Menu,
   shell,
-  Tray
+  Tray,
+  session
 } from 'electron'
 
 import { ElectronMenubar } from '@/electron-menubar'
 import { showShortcutInputDialog } from '@/shortcut-input-dialog'
+import { showProxyInputDialog } from '@/proxy-input-dialog'
 import {
   readUserSetting,
   resetUserUrls,
@@ -410,7 +412,121 @@ export const setupTrayContextMenu = (
         ]
       },
       { type: 'separator' },
+      {
+        label: t('setProxy'),
+        click: async () => {
+          try {
+            const userSetting = readUserSetting()
+            const savedProxy = userSetting.proxy || ''
 
+            if (!options.isMenubarReady()) {
+              for (
+                let i = 0;
+                i < 20 && !options.isMenubarReady();
+                i++
+              ) {
+                await delay(100)
+              }
+            }
+
+            let browserWindow =
+              getAvailableBrowserWindow(
+                electronMenubar,
+                options.getMainBrowserWindow
+              ) || null
+
+            // 确保窗口准备好
+            if (
+              !browserWindow ||
+              browserWindow.isDestroyed()
+            ) {
+              await electronMenubar.showWindow()
+              await delay(200)
+              browserWindow =
+                electronMenubar.browserWindow ||
+                options.getMainBrowserWindow()
+            }
+
+            if (
+              !browserWindow ||
+              browserWindow.isDestroyed()
+            ) {
+              dialog.showMessageBox({
+                type: 'error',
+                title: '错误',
+                message: '窗口未准备好，请稍后再试',
+                buttons: ['确定']
+              })
+              return
+            }
+
+            await waitForWindowLoad(browserWindow)
+
+            if (!browserWindow.isVisible()) {
+              browserWindow.show()
+              await delay(100)
+            }
+
+            let input: string | null = null
+            try {
+              input = await showProxyInputDialog(
+                electronMenubar,
+                browserWindow,
+                savedProxy
+              )
+            } catch (error) {
+              dialog.showMessageBox({
+                type: 'error',
+                title: '错误',
+                message: '显示对话框失败，请稍后再试',
+                buttons: ['确定']
+              })
+              return
+            }
+
+            if (input !== null) {
+              const proxy = input.trim()
+              const currentSetting = readUserSetting()
+              writeUserSetting({
+                ...currentSetting,
+                proxy: proxy || undefined
+              })
+
+              // 应用代理设置
+              if (proxy) {
+                app.commandLine.appendSwitch(
+                  'proxy-server',
+                  proxy
+                )
+                // 立即应用到当前会话
+                await session.defaultSession.setProxy({
+                  proxyRules: proxy
+                })
+              } else {
+                app.commandLine.removeSwitch('proxy-server')
+                // 立即清除当前会话代理
+                await session.defaultSession.setProxy({
+                  proxyRules: ''
+                })
+              }
+
+              // 提示重启生效
+              dialog.showMessageBox(browserWindow, {
+                type: 'info',
+                title: '设置成功',
+                message:
+                  '代理设置已保存，请重启应用以生效。',
+                buttons: ['确定']
+              })
+            }
+          } catch (error) {
+            dialog.showErrorBox(
+              '错误',
+              '设置代理时发生错误: ' + String(error)
+            )
+          }
+        }
+      },
       {
         label: t('setShortcut'),
         click: async () => {
@@ -755,7 +871,12 @@ export const setupTrayContextMenu = (
       }
     ])
 
-    tray.setContextMenu(contextMenu)
+    // 不自动设置上下文菜单，而是通过 ElectronMenubar 中的右键事件处理程序显示
+    // 这样可以确保左键点击只控制窗口显示，右键点击显示菜单
+    // tray.setContextMenu(contextMenu)
+
+    // 存储上下文菜单，供右键事件处理程序使用
+    ;(tray as any)._contextMenu = contextMenu
   }
 
   updateContextMenu()

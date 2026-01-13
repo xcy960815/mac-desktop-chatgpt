@@ -10,7 +10,10 @@ import {
   MAIN_WINDOW_HEIGHT,
   WindowBehavior
 } from '@/constants'
-import { resolveMainIndexUrl } from '@/utils/common'
+import {
+  resolveMainIndexUrl,
+  fixGoogleLogin
+} from '@/utils/common'
 import { createWindowManager } from '@/window-manager'
 import { createShortcutManager } from '@/shortcut-manager'
 import { initializeLastVisitedUrlTracking } from '@/url-tracker'
@@ -35,72 +38,41 @@ app.commandLine.appendSwitch(
 )
 app.commandLine.appendSwitch('disable-features', 'WebGPU')
 
+// 强制使用代理 (解决 GFW 阻断问题)
+// Clash Verge 默认端口通常是 7897，ClashX 是 7890。如果不生效请检查你的代理软件端口。
+// 尝试使用 socks5 协议，穿透性更好
+// 注意：如果开启了 Clash Tun 模式，请注释掉下面这行，否则可能冲突！
+// app.commandLine.appendSwitch('proxy-server', 'socks5://127.0.0.1:7897')
+// app.commandLine.appendSwitch('proxy-bypass-list', '<local>')
+
 // 标记 ready 事件是否已触发
 let isMenubarReady = false
 
-/**
- * 修复 Google 登录时的 "此浏览器或应用可能不安全" 提示
- * @param {string} [partition] - Webview 的 partition 属性值，例如 'persist:webview'。如果未使用 partition，请传 undefined 或 null。
- */
-async function fixGoogleLogin(partition?: string) {
-  const ses = partition
-    ? session.fromPartition(partition)
-    : session.defaultSession
-
-  // 清除缓存和存储，确保干净的登录环境（可选，如果用户反馈登录循环可开启）
-  await ses.clearStorageData()
-
-  // 1. 获取原始 UA
-  const originalUA = ses.getUserAgent()
-
-  // 2. 清洗 UA：移除 Electron 和 应用名称，保留 Chrome/Safari 版本
-  // 或者直接使用硬编码的 Chrome UA，这通常更稳妥
-  const cleanUA =
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-
-  // 3. 设置全局 UA
-  ses.setUserAgent(cleanUA)
-
-  // 4. 强制拦截 Google 相关请求，确保 UA 绝对干净，并处理 Client Hints
-  const filter = {
-    urls: [
-      '*://*.google.com/*',
-      '*://accounts.google.com/*'
-    ]
+app.on(
+  'certificate-error',
+  (
+    event,
+    webContents,
+    url,
+    error,
+    certificate,
+    callback
+  ) => {
+    // 允许所有证书错误，防止自签名证书或代理证书导致连接失败
+    event.preventDefault()
+    callback(true)
   }
-
-  ses.webRequest.onBeforeSendHeaders(
-    filter,
-    (details, callback) => {
-      try {
-        const { requestHeaders } = details
-        // console.log('Intercepting request:', details.url)
-
-        // 使用最新的 Chrome UA
-        const chromeUA =
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-        requestHeaders['User-Agent'] = chromeUA
-
-        // 伪造 Client Hints 以匹配 UA
-        requestHeaders['sec-ch-ua'] =
-          '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"'
-        requestHeaders['sec-ch-ua-mobile'] = '?0'
-        requestHeaders['sec-ch-ua-platform'] = '"macOS"'
-
-        // 移除可能暴露的完整版本信息
-        delete requestHeaders['sec-ch-ua-full-version']
-        delete requestHeaders['sec-ch-ua-full-version-list']
-
-        callback({ requestHeaders })
-      } catch (e) {
-        console.error('Error in webRequest interceptor:', e)
-        callback({ requestHeaders: details.requestHeaders })
-      }
-    }
-  )
-}
+)
 
 app.on('ready', () => {
+  const userSetting = readUserSetting()
+  if (userSetting.proxy) {
+    app.commandLine.appendSwitch(
+      'proxy-server',
+      userSetting.proxy
+    )
+  }
+
   // fixGoogleLogin()
   const appPath = app.getAppPath()
   /**
@@ -142,7 +114,8 @@ app.on('ready', () => {
     preloadWindow: true,
     showDockIcon: false,
     icon: image,
-    tooltip: TOOLTIP
+    tooltip: TOOLTIP,
+    showOnRightClick: false // 确保左键点击控制窗口显示，右键点击显示菜单
   })
 
   const initialSetting = readUserSetting()
@@ -169,7 +142,42 @@ app.on('ready', () => {
 
     initializeLastVisitedUrlTracking(browserWindow)
 
-    const menu = new Menu()
+    const template: Electron.MenuItemConstructorOptions[] =
+      [
+        {
+          label: 'Edit',
+          submenu: [
+            { role: 'undo' },
+            { role: 'redo' },
+            { type: 'separator' },
+            { role: 'cut' },
+            { role: 'copy' },
+            { role: 'paste' },
+            { role: 'pasteAndMatchStyle' },
+            { role: 'delete' },
+            { role: 'selectAll' }
+          ]
+        }
+      ]
+
+    if (process.platform === 'darwin') {
+      template.unshift({
+        label: app.name,
+        submenu: [
+          { role: 'about' },
+          { type: 'separator' },
+          { role: 'services' },
+          { type: 'separator' },
+          { role: 'hide' },
+          { role: 'hideOthers' },
+          { role: 'unhide' },
+          { type: 'separator' },
+          { role: 'quit' }
+        ]
+      })
+    }
+
+    const menu = Menu.buildFromTemplate(template)
 
     const shortcutManager = createShortcutManager({
       browserWindow,
