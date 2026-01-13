@@ -104,3 +104,15 @@ export async function fixGoogleLogin(partition?: string) {
     }
   )
 }
+
+/**
+ * 验证代理配置是否生效
+ */
+export const checkProxy = async () => {
+  const url = 'https://chat.deepseek.com'
+  const proxy =
+    await session.defaultSession.resolveProxy(url)
+  console.log(
+    `[Proxy Check] URL: ${url} 将使用代理: ${proxy}`
+  )
+}
