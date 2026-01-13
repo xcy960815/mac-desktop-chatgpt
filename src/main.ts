@@ -11,8 +11,9 @@ import {
   WindowBehavior
 } from '@/constants'
 import {
-  resolveMainIndexUrl,
-  fixGoogleLogin
+  resolveMainIndexUrl
+  // checkProxy,
+  // fixGoogleLogin
 } from '@/utils/common'
 import { createWindowManager } from '@/window-manager'
 import { createShortcutManager } from '@/shortcut-manager'
@@ -25,8 +26,7 @@ import {
   globalShortcut,
   nativeImage,
   Tray,
-  Menu,
-  session
+  Menu
 } from 'electron'
 
 import { readUserSetting } from '@/utils/user-setting'
@@ -36,14 +36,12 @@ app.commandLine.appendSwitch(
   'disable-blink-features',
   'AutomationControlled'
 )
-app.commandLine.appendSwitch('disable-features', 'WebGPU')
-
-// 强制使用代理 (解决 GFW 阻断问题)
-// Clash Verge 默认端口通常是 7897，ClashX 是 7890。如果不生效请检查你的代理软件端口。
-// 尝试使用 socks5 协议，穿透性更好
-// 注意：如果开启了 Clash Tun 模式，请注释掉下面这行，否则可能冲突！
-// app.commandLine.appendSwitch('proxy-server', 'socks5://127.0.0.1:7897')
-// app.commandLine.appendSwitch('proxy-bypass-list', '<local>')
+app.commandLine.appendSwitch(
+  'disable-features',
+  'WebGPU,WebAuthn'
+)
+// 禁用 QUIC 协议，解决代理环境下 Google 服务连接不稳定/SSL 握手失败的问题
+app.commandLine.appendSwitch('disable-quic')
 
 // 标记 ready 事件是否已触发
 let isMenubarReady = false
@@ -72,6 +70,8 @@ app.on('ready', () => {
       userSetting.proxy
     )
   }
+
+  // checkProxy()
 
   // fixGoogleLogin()
   const appPath = app.getAppPath()
