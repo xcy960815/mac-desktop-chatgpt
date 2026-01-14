@@ -1,4 +1,4 @@
-# Desktop ChatGPT
+# ChatHub Desktop
 
 > 一款基于 Electron + Vite + TypeScript 开发的跨平台桌面级 AI 助手应用，以单一托盘窗口集中承载多家模型的网页端，免去在不同 AI 对话框之间频繁来回切换。
 
@@ -19,8 +19,9 @@
 - 🎯 **导航事件监听** - 支持单页应用路由变化追踪
 - ⌨️ **全局快捷键** - Cmd/Ctrl+G 显示/隐藏，Esc 快速关闭
 - 🌐 **跨平台支持** - 支持 macOS (Intel/Apple Silicon) 和 Windows (32/64位)
-- 🧲 **窗口锁定模式** - 失焦后保持可见，适合比对内容
+- 🧲 **窗口锁定模式** - 支持自动隐藏、锁定在桌面、置顶于所有应用三种模式
 - 🔁 **一键开机自启** - 托盘菜单直接切换自动启动
+- 🛡️ **自定义代理设置** - 支持 HTTP/HTTPS 代理配置，解决网络连接问题
 
 ## 📸 预览
 
@@ -38,18 +39,18 @@
 ### macOS
 
 1. 下载对应架构的 ZIP 文件：
-   - Apple Silicon (M1/M2/M3)：`desktop-chatgpt-darwin-arm64-1.0.3.zip`
-   - Intel 芯片：`desktop-chatgpt-darwin-x64-1.0.3.zip`
-2. 解压并将 `Desktop ChatGPT.app` 拖入「应用程序」文件夹
+   - Apple Silicon (M1/M2/M3)：`chathub-desktop-darwin-arm64-1.0.7.zip`
+   - Intel 芯片：`chathub-desktop-darwin-x64-1.0.7.zip`
+2. 解压并将 `ChatHub Desktop.app` 拖入「应用程序」文件夹
 3. 首次打开可能需要右键点击 → 打开（绕过安全检查）
 
 ### Windows
 
 1. 下载对应架构的 ZIP 文件：
-   - 64位系统：`desktop-chatgpt-windows-x64-1.0.3.zip`
-   - 32位系统：`desktop-chatgpt-windows-ia32-1.0.3.zip`
+   - 64位系统：`chathub-desktop-windows-x64-1.0.7.zip`
+   - 32位系统：`chathub-desktop-windows-ia32-1.0.7.zip`
 2. 解压到任意目录
-3. 运行 `Desktop ChatGPT.exe`
+3. 运行 `ChatHub Desktop.exe`
 4. 首次运行可能需要允许通过 Windows Defender 防火墙
 
 ## 🚀 快速开始
@@ -119,8 +120,8 @@ pnpm run make:mac
 **输出文件：**
 ```
 out/make/zip/
-├── desktop-chatgpt-darwin-arm64-1.0.3.zip
-└── desktop-chatgpt-darwin-x64-1.0.3.zip
+├── chathub-desktop-darwin-arm64-1.0.7.zip
+└── chathub-desktop-darwin-x64-1.0.7.zip
 ```
 
 #### 构建 Windows 版本
@@ -132,8 +133,8 @@ pnpm run make:win
 **输出文件：**
 ```
 out/make/zip/
-├── desktop-chatgpt-windows-x64-1.0.3.zip
-└── desktop-chatgpt-windows-ia32-1.0.3.zip
+├── chathub-desktop-windows-x64-1.0.7.zip
+└── chathub-desktop-windows-ia32-1.0.7.zip
 ```
 
 #### 构建所有平台
@@ -162,6 +163,7 @@ pnpm run make:all
   - `锁定在桌面`：窗口失焦依然保持可见，可被其他应用遮挡
   - `置顶于所有应用`：窗口始终置顶，适合持续对照参考
 - `Set shortcut`：打开快捷键输入对话框，自定义全局快捷键
+- `Set Proxy`：配置 HTTP/HTTPS 代理，解决网络连接问题
 
 切换模型步骤：
 
@@ -173,17 +175,19 @@ pnpm run make:all
 应用会自动保存以下数据到本地：
 - 当前选择的模型
 - 每个模型的最后访问 URL
+- 代理设置
+- 窗口行为偏好
 
 **配置文件位置：**
-- macOS: `~/Library/Application Support/desktop-chatgpt/config/settings.json`
-- Windows: `%APPDATA%/desktop-chatgpt/config/settings.json`
+- macOS: `~/Library/Application Support/chathub-desktop/config/settings.json`
+- Windows: `%APPDATA%/chathub-desktop/config/settings.json`
 
 ## 🔧 开发指南
 
 ### 项目结构
 
 ```
-desktop-chatgpt/
+chathub-desktop/
 ├── src/
 │   ├── main.ts              # Electron 主进程
 │   ├── preload.ts           # 预加载脚本（IPC 通信桥梁）
@@ -193,6 +197,7 @@ desktop-chatgpt/
 │   ├── window-manager.ts    # 主窗口状态与行为
 │   ├── shortcut-manager.ts  # 全局快捷键注册
 │   ├── shortcut-input-dialog.ts # 快捷键输入对话框
+│   ├── proxy-input-dialog.ts    # 代理设置对话框
 │   ├── webview-handlers.ts  # WebView 事件与通信
 │   ├── url-tracker.ts       # 模型 URL 追踪
 │   ├── constants.ts         # 常量定义（模型和 URL 枚举）
@@ -205,7 +210,6 @@ desktop-chatgpt/
 ├── forge.config.ts         # Electron Forge 配置
 └── package.json            # 项目配置
 ```
-
 
 ## 🤝 贡献
 
@@ -238,11 +242,13 @@ pnpm changelog
 
 > 首次运行会在根目录创建 `CHANGELOG.md`，后续执行会根据最新的提交记录追加内容。
 
-### v1.1.1
+### v1.0.7
 
+- ✨ 新增：支持自定义代理设置，解决网络连接问题
 - ✨ 新增：托盘菜单支持 `Auto-launch on startup`，一键开机自启
-- ✨ 新增：`窗口行为` 子菜单，可在自动隐藏与锁定窗口之间切换
+- ✨ 新增：`窗口行为` 子菜单，支持自动隐藏、锁定在桌面、置顶于所有应用
 - 💄 优化：快捷键设置对话框与菜单文案，体验更一致
+- 🐛 修复：解决部分网络环境下连接不稳定的问题
 
 ### v1.0.4
 

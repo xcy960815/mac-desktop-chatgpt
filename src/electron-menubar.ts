@@ -211,6 +211,14 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
+   * @description 获取托盘图标
+   * @returns {string | Electron.NativeImage | undefined}
+   */
+  get icon(): string | Electron.NativeImage | undefined {
+    return this._options.icon
+  }
+
+  /**
    * @description Electron BrowserWindow 实例
    * @link https://electronjs.org/docs/api/browser-browserWindow
    * @returns {BrowserWindow | undefined}
