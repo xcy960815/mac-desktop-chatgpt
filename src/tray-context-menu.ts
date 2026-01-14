@@ -487,6 +487,41 @@ export const setupTrayContextMenu = (
             if (input !== null) {
               const proxy = input.trim()
               const currentSetting = readUserSetting()
+
+              // 检查是否有变更
+              const oldProxy = currentSetting.proxy || ''
+              if (proxy === oldProxy) {
+                return
+              }
+
+              // 校验代理格式
+              if (proxy) {
+                // 支持的格式:
+                // 1. 协议://IP:端口 (http://127.0.0.1:7890)
+                // 2. IP:端口 (127.0.0.1:7890)
+                // 3. 域名:端口 (example.com:8080)
+                const proxyRegex =
+                  /^(?:(http|https|socks|socks4|socks5):\/\/)?(?:[\w-]+\.)+[\w-]+(?::\d+)?$/
+                // 简单的 IP:Port 校验
+                const simpleProxyRegex =
+                  /^([\w-]+\.)+[\w-]+:\d+$/
+
+                if (
+                  !proxyRegex.test(proxy) &&
+                  !simpleProxyRegex.test(proxy)
+                ) {
+                  dialog.showMessageBox(browserWindow, {
+                    type: 'error',
+                    title: '格式错误',
+                    message:
+                      '代理地址格式不正确。\n\n示例:\nhttp://127.0.0.1:7890\n127.0.0.1:7890',
+                    buttons: ['确定'],
+                    icon: electronMenubar.icon
+                  })
+                  return
+                }
+              }
+
               writeUserSetting({
                 ...currentSetting,
                 proxy: proxy || undefined
