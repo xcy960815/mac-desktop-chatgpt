@@ -1,3 +1,12 @@
+## <small>1.0.8 (2026-01-14)</small>
+
+* chore: bump version to 1.0.8 ([fac9d8a](https://github.com/xcy960815/mac-desktop-chatgpt/commit/fac9d8a))
+* fix: resolve double paste issue and blank window on startup ([84a4f89](https://github.com/xcy960815/mac-desktop-chatgpt/commit/84a4f89))
+* docs: remove manual changelog from readme and update CHANGELOG.md ([5391571](https://github.com/xcy960815/mac-desktop-chatgpt/commit/5391571))
+* feat: rename to ChatHub Desktop, add proxy validation and custom icon ([10c3cb7](https://github.com/xcy960815/mac-desktop-chatgpt/commit/10c3cb7))
+
+
+
 ## <small>1.0.7 (2026-01-13)</small>
 
 * fix: 禁用 QUIC 和 WebAuthn 以优化 Google 登录稳定性，清理测试代码 ([4cb8255](https://github.com/xcy960815/mac-desktop-chatgpt/commit/4cb8255))
