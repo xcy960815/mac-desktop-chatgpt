@@ -135,9 +135,9 @@ const registerInputShortcuts = (
       case 'c':
         webContents.copy()
         break
-      case 'v':
-        webContents.paste()
-        break
+      // case 'v':
+      //   webContents.paste()
+      //   break
       case 'a':
         webContents.selectAll()
         break
