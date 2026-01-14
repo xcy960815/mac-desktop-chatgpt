@@ -2,7 +2,7 @@
  * 工具提示文本，用于托盘等位置
  * @constant {string}
  */
-export const TOOLTIP = 'desktop-chatgpt'
+export const TOOLTIP = 'ChatHub Desktop'
 
 /**
  * 支持的模型枚举

@@ -1,6 +1,6 @@
 {
-  "name": "desktop-chatgpt",
-  "productName": "desktop-chatgpt",
+  "name": "chathub-desktop",
+  "productName": "ChatHub Desktop",
   "version": "1.0.7",
   "description": "一款基于 electron + vite + typescript 开发的跨平台桌面级应用，统一承载 ChatGPT、DeepSeek、Grok 与 Gemini 等模型网页端，免去来回切换。",
   "main": ".vite/build/main.js",
