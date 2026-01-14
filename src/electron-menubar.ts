@@ -61,6 +61,9 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
    * @description 配置项
    */
   private _options: ElectronMenubarOptions
+  /**
+   * @description 位置器
+   */
   private _positioner: Positioner | undefined
   /**
    * @description Electron Tray 实例
@@ -95,7 +98,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   private registerAppShutdownHandlers() {
     this._app.once('before-quit', () => {
       this.stopTrayPositionWatcher()
-      this.unregisterEscapeShortcut()
+      this.unregisterEscShortcut()
     })
   }
 
@@ -523,8 +526,8 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   /**
    * @description 注册 ESC 快捷键用于快速关闭窗口
    */
-  private registerEscapeShortcut(): void {
-    this.unregisterEscapeShortcut()
+  private registerEscShortcut(): void {
+    this.unregisterEscShortcut()
     globalShortcut.register('esc', () => {
       const menubarVisible =
         this._browserWindow?.isVisible()
@@ -537,7 +540,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   /**
    * @description 注销 ESC 快捷键
    */
-  private unregisterEscapeShortcut(): void {
+  private unregisterEscShortcut(): void {
     globalShortcut.unregister('esc')
   }
 
@@ -896,7 +899,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     // 给窗口添加失去焦点事件，所有平台保持一致
     this._browserWindow.on('blur', () => {
       // 注销 ESC 快捷键
-      this.unregisterEscapeShortcut()
+      this.unregisterEscShortcut()
       if (!this._browserWindow) return
       // 清除可能存在的隐藏定时器
       if (this._blurTimeout) {
@@ -920,7 +923,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 
     this._browserWindow.on('focus', () => {
       // 注册esc快捷键 快捷关闭窗口
-      this.registerEscapeShortcut()
+      this.registerEscShortcut()
     })
 
     if (this._options.showOnAllWorkspaces !== false) {
@@ -953,7 +956,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
    * @return {void}
    */
   private windowClear(): void {
-    this.unregisterEscapeShortcut()
+    this.unregisterEscShortcut()
     this._browserWindow = undefined
     this.stopTrayPositionWatcher()
     this.emit('after-close', this)
