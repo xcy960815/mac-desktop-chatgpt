@@ -36,9 +36,6 @@ importers:
       '@electron-forge/maker-zip':
         specifier: ^7.8.0
         version: 7.8.0
-      '@electron-forge/plugin-auto-unpack-natives':
-        specifier: ^7.8.0
-        version: 7.8.0
       '@electron-forge/plugin-fuses':
         specifier: ^7.8.0
         version: 7.8.0(@electron/fuses@1.8.0)
@@ -219,10 +216,6 @@ packages:
     resolution: {integrity: sha512-7MLD7GkZdlGecC9GvgBu0sWYt48p3smYvr+YCwlpdH1CTeLmWhvCqeH33a2AB0XI5CY8U8jnkG2jgdTkzr/EQw==}
     engines: {node: '>= 16.4.0'}
 
-  '@electron-forge/plugin-auto-unpack-natives@7.8.0':
-    resolution: {integrity: sha512-JGal5ltZmbTQ5rNq67OgGC4MJ2zjjFW0fqykHy8X9J8cgaH7SRdKkT4yYZ8jH01IAF1J57FD2zIob1MvcBqjcg==}
-    engines: {node: '>= 16.4.0'}
-
   '@electron-forge/plugin-base@7.8.0':
     resolution: {integrity: sha512-rDeeChRWIp5rQVo3Uc1q0ncUvA+kWWURW7tMuQjPvy2qVSgX+jIf5krk+T1Dp06+D4YZzEIrkibRaamAaIcR1w==}
     engines: {node: '>= 16.4.0'}
@@ -290,8 +283,8 @@ packages:
     resolution: {integrity: sha512-F+nKc0xW+kVbBRhFzaMgPy3KwmuNTYX1fx6+FxxoSnNgwYX6LD7AKBTWkU0MQ6IBoe7dz069CNkR673sPAgkCQ==}
     engines: {node: '>=14'}
 
-  '@electron/node-gyp@https://codeload.github.com/electron/node-gyp/tar.gz/06b29aafb7708acef8b3669835c8a7857ebc92d2':
-    resolution: {tarball: https://codeload.github.com/electron/node-gyp/tar.gz/06b29aafb7708acef8b3669835c8a7857ebc92d2}
+  '@electron/node-gyp@git+https://github.com/electron/node-gyp.git#06b29aafb7708acef8b3669835c8a7857ebc92d2':
+    resolution: {commit: 06b29aafb7708acef8b3669835c8a7857ebc92d2, repo: https://github.com/electron/node-gyp.git, type: git}
     version: 10.2.0-electron.1
     engines: {node: '>=12.13.0'}
     hasBin: true
@@ -4049,14 +4042,6 @@ snapshots:
       - bluebird
       - supports-color
 
-  '@electron-forge/plugin-auto-unpack-natives@7.8.0':
-    dependencies:
-      '@electron-forge/plugin-base': 7.8.0
-      '@electron-forge/shared-types': 7.8.0
-    transitivePeerDependencies:
-      - bluebird
-      - supports-color
-
   '@electron-forge/plugin-base@7.8.0':
     dependencies:
       '@electron-forge/shared-types': 7.8.0
@@ -4210,7 +4195,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@electron/node-gyp@https://codeload.github.com/electron/node-gyp/tar.gz/06b29aafb7708acef8b3669835c8a7857ebc92d2':
+  '@electron/node-gyp@git+https://github.com/electron/node-gyp.git#06b29aafb7708acef8b3669835c8a7857ebc92d2':
     dependencies:
       env-paths: 2.2.1
       exponential-backoff: 3.1.2
@@ -4271,7 +4256,7 @@ snapshots:
 
   '@electron/rebuild@3.7.1':
     dependencies:
-      '@electron/node-gyp': https://codeload.github.com/electron/node-gyp/tar.gz/06b29aafb7708acef8b3669835c8a7857ebc92d2
+      '@electron/node-gyp': git+https://github.com/electron/node-gyp.git#06b29aafb7708acef8b3669835c8a7857ebc92d2
       '@malept/cross-spawn-promise': 2.0.0
       chalk: 4.1.2
       debug: 4.4.3
