@@ -48,7 +48,6 @@
     "terser": "^5.39.0",
     "ts-node": "^10.9.2",
     "typescript": "~5.8.2",
-    "vcm-cli": "^1.0.6",
     "vite": "^6.2.3"
   },
   "keywords": [
