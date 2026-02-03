@@ -248,47 +248,33 @@ export const setupTrayContextMenu = (
 
     const contextMenu = Menu.buildFromTemplate([
       {
-        label: t('quit'),
-        accelerator: 'CommandOrControl+Q',
-        click: () => {
-          resetUserUrls()
-          app.quit()
-        }
-      },
-      {
-        label: t('reload'),
-        accelerator: 'CommandOrControl+R',
-        click: async () => {
-          const newUserSetting = resetUserUrls()
-          await options.withBrowserWindow(
-            (win) => {
-              if (win.isDestroyed()) {
-                throw new Error('窗口已销毁')
-              }
-
-              const currentModel = newUserSetting.model
-              const defaultUrl =
-                newUserSetting.urls?.[currentModel] ||
-                (currentModel === Model.DeepSeek
-                  ? ModelUrl.DeepSeek
-                  : currentModel === Model.ChatGPT
-                    ? ModelUrl.ChatGPT
-                    : currentModel === Model.Gemini
-                      ? ModelUrl.Gemini
-                      : ModelUrl.Grok)
-
-              win.webContents.send(
-                'model-changed',
-                currentModel,
-                defaultUrl
-              )
-            },
-            {
-              onFailureMessage:
-                '无法重新加载窗口，请稍后重试'
-            }
-          )
-        }
+        label: t('model'),
+        submenu: [
+          {
+            label: Model.ChatGPT,
+            type: 'radio',
+            checked: isChatGPT,
+            click: createModelSwitchHandler(Model.ChatGPT)
+          },
+          {
+            label: Model.DeepSeek,
+            type: 'radio',
+            checked: isDeepSeek,
+            click: createModelSwitchHandler(Model.DeepSeek)
+          },
+          {
+            label: Model.Grok,
+            type: 'radio',
+            checked: isGrok,
+            click: createModelSwitchHandler(Model.Grok)
+          },
+          {
+            label: Model.Gemini,
+            type: 'radio',
+            checked: isGemini,
+            click: createModelSwitchHandler(Model.Gemini)
+          }
+        ]
       },
       {
         label: t('openInBrowser'),
@@ -308,25 +294,7 @@ export const setupTrayContextMenu = (
           }
         }
       },
-      {
-        label: t('checkForUpdates'),
-        click: async () => {
-          const browserWindow = getAvailableBrowserWindow(
-            electronMenubar,
-            options.getMainBrowserWindow
-          )
-          await options.updateManager.checkForUpdates(
-            browserWindow
-          )
-        }
-      },
-      {
-        label: t('autoLaunchOnStartup'),
-        type: 'checkbox',
-        checked: isAutoLaunchEnabled,
-        click: (menuItem) =>
-          handleAutoLaunchToggle(Boolean(menuItem.checked))
-      },
+      { type: 'separator' },
       {
         label: t('windowBehavior'),
         submenu: [
@@ -362,205 +330,6 @@ export const setupTrayContextMenu = (
               )
           }
         ]
-      },
-      {
-        label: t('language'),
-        submenu: [
-          {
-            label: t('languageEnglish'),
-            type: 'radio',
-            checked: menuLanguage === MenuLanguage.English,
-            click: () =>
-              handleMenuLanguageChange(MenuLanguage.English)
-          },
-          {
-            label: t('languageChinese'),
-            type: 'radio',
-            checked: menuLanguage === MenuLanguage.Chinese,
-            click: () =>
-              handleMenuLanguageChange(MenuLanguage.Chinese)
-          }
-        ]
-      },
-      {
-        label: t('model'),
-        submenu: [
-          {
-            label: Model.ChatGPT,
-            type: 'radio',
-            checked: isChatGPT,
-            click: createModelSwitchHandler(Model.ChatGPT)
-          },
-          {
-            label: Model.DeepSeek,
-            type: 'radio',
-            checked: isDeepSeek,
-            click: createModelSwitchHandler(Model.DeepSeek)
-          },
-          {
-            label: Model.Grok,
-            type: 'radio',
-            checked: isGrok,
-            click: createModelSwitchHandler(Model.Grok)
-          },
-          {
-            label: Model.Gemini,
-            type: 'radio',
-            checked: isGemini,
-            click: createModelSwitchHandler(Model.Gemini)
-          }
-        ]
-      },
-      { type: 'separator' },
-      {
-        label: t('setProxy'),
-        click: async () => {
-          try {
-            const userSetting = readUserSetting()
-            const savedProxy = userSetting.proxy || ''
-
-            if (!options.isMenubarReady()) {
-              for (
-                let i = 0;
-                i < 20 && !options.isMenubarReady();
-                i++
-              ) {
-                await delay(100)
-              }
-            }
-
-            let browserWindow =
-              getAvailableBrowserWindow(
-                electronMenubar,
-                options.getMainBrowserWindow
-              ) || null
-
-            // 确保窗口准备好
-            if (
-              !browserWindow ||
-              browserWindow.isDestroyed()
-            ) {
-              await electronMenubar.showWindow()
-              await delay(200)
-              browserWindow =
-                electronMenubar.browserWindow ||
-                options.getMainBrowserWindow()
-            }
-
-            if (
-              !browserWindow ||
-              browserWindow.isDestroyed()
-            ) {
-              dialog.showMessageBox({
-                type: 'error',
-                title: '错误',
-                message: '窗口未准备好，请稍后再试',
-                buttons: ['确定']
-              })
-              return
-            }
-
-            await waitForWindowLoad(browserWindow)
-
-            if (!browserWindow.isVisible()) {
-              browserWindow.show()
-              await delay(100)
-            }
-
-            let input: string | null = null
-            try {
-              input = await showProxyInputDialog(
-                electronMenubar,
-                browserWindow,
-                savedProxy
-              )
-            } catch (error) {
-              dialog.showMessageBox({
-                type: 'error',
-                title: '错误',
-                message: '显示对话框失败，请稍后再试',
-                buttons: ['确定']
-              })
-              return
-            }
-
-            if (input !== null) {
-              const proxy = input.trim()
-              const currentSetting = readUserSetting()
-
-              // 检查是否有变更
-              const oldProxy = currentSetting.proxy || ''
-              if (proxy === oldProxy) {
-                return
-              }
-
-              // 校验代理格式
-              if (proxy) {
-                // 支持的格式:
-                // 1. 协议://IP:端口 (http://127.0.0.1:7890)
-                // 2. IP:端口 (127.0.0.1:7890)
-                // 3. 域名:端口 (example.com:8080)
-                const proxyRegex =
-                  /^(?:(http|https|socks|socks4|socks5):\/\/)?(?:[\w-]+\.)+[\w-]+(?::\d+)?$/
-                // 简单的 IP:Port 校验
-                const simpleProxyRegex =
-                  /^([\w-]+\.)+[\w-]+:\d+$/
-
-                if (
-                  !proxyRegex.test(proxy) &&
-                  !simpleProxyRegex.test(proxy)
-                ) {
-                  dialog.showMessageBox(browserWindow, {
-                    type: 'error',
-                    title: '格式错误',
-                    message:
-                      '代理地址格式不正确。\n\n示例:\nhttp://127.0.0.1:7890\n127.0.0.1:7890',
-                    buttons: ['确定'],
-                    icon: electronMenubar.icon
-                  })
-                  return
-                }
-              }
-
-              writeUserSetting({
-                ...currentSetting,
-                proxy: proxy || undefined
-              })
-
-              // 应用代理设置
-              if (proxy) {
-                app.commandLine.appendSwitch(
-                  'proxy-server',
-                  proxy
-                )
-                // 立即应用到当前会话
-                await session.defaultSession.setProxy({
-                  proxyRules: proxy
-                })
-              } else {
-                app.commandLine.removeSwitch('proxy-server')
-                // 立即清除当前会话代理
-                await session.defaultSession.setProxy({
-                  proxyRules: ''
-                })
-              }
-
-              // 提示重启生效
-              dialog.showMessageBox(browserWindow, {
-                type: 'info',
-                title: '设置成功',
-                message:
-                  '代理设置已保存，请重启应用以生效。',
-                buttons: ['确定']
-              })
-            }
-          } catch (error) {
-            dialog.showErrorBox(
-              '错误',
-              '设置代理时发生错误: ' + String(error)
-            )
-          }
-        }
       },
       {
         label: t('setShortcut'),
@@ -902,6 +671,238 @@ export const setupTrayContextMenu = (
               }
             )
           }
+        }
+      },
+      {
+        label: t('setProxy'),
+        click: async () => {
+          try {
+            const userSetting = readUserSetting()
+            const savedProxy = userSetting.proxy || ''
+
+            if (!options.isMenubarReady()) {
+              for (
+                let i = 0;
+                i < 20 && !options.isMenubarReady();
+                i++
+              ) {
+                await delay(100)
+              }
+            }
+
+            let browserWindow =
+              getAvailableBrowserWindow(
+                electronMenubar,
+                options.getMainBrowserWindow
+              ) || null
+
+            // 确保窗口准备好
+            if (
+              !browserWindow ||
+              browserWindow.isDestroyed()
+            ) {
+              await electronMenubar.showWindow()
+              await delay(200)
+              browserWindow =
+                electronMenubar.browserWindow ||
+                options.getMainBrowserWindow()
+            }
+
+            if (
+              !browserWindow ||
+              browserWindow.isDestroyed()
+            ) {
+              dialog.showMessageBox({
+                type: 'error',
+                title: '错误',
+                message: '窗口未准备好，请稍后再试',
+                buttons: ['确定']
+              })
+              return
+            }
+
+            await waitForWindowLoad(browserWindow)
+
+            if (!browserWindow.isVisible()) {
+              browserWindow.show()
+              await delay(100)
+            }
+
+            let input: string | null = null
+            try {
+              input = await showProxyInputDialog(
+                electronMenubar,
+                browserWindow,
+                savedProxy
+              )
+            } catch (error) {
+              dialog.showMessageBox({
+                type: 'error',
+                title: '错误',
+                message: '显示对话框失败，请稍后再试',
+                buttons: ['确定']
+              })
+              return
+            }
+
+            if (input !== null) {
+              const proxy = input.trim()
+              const currentSetting = readUserSetting()
+
+              // 检查是否有变更
+              const oldProxy = currentSetting.proxy || ''
+              if (proxy === oldProxy) {
+                return
+              }
+
+              // 校验代理格式
+              if (proxy) {
+                // 支持的格式:
+                // 1. 协议://IP:端口 (http://127.0.0.1:7890)
+                // 2. IP:端口 (127.0.0.1:7890)
+                // 3. 域名:端口 (example.com:8080)
+                const proxyRegex =
+                  /^(?:(http|https|socks|socks4|socks5):\/\/)?(?:[\w-]+\.)+[\w-]+(?::\d+)?$/
+                // 简单的 IP:Port 校验
+                const simpleProxyRegex =
+                  /^([\w-]+\.)+[\w-]+:\d+$/
+
+                if (
+                  !proxyRegex.test(proxy) &&
+                  !simpleProxyRegex.test(proxy)
+                ) {
+                  dialog.showMessageBox(browserWindow, {
+                    type: 'error',
+                    title: '格式错误',
+                    message:
+                      '代理地址格式不正确。\n\n示例:\nhttp://127.0.0.1:7890\n127.0.0.1:7890',
+                    buttons: ['确定'],
+                    icon: electronMenubar.icon
+                  })
+                  return
+                }
+              }
+
+              writeUserSetting({
+                ...currentSetting,
+                proxy: proxy || undefined
+              })
+
+              // 应用代理设置
+              if (proxy) {
+                app.commandLine.appendSwitch(
+                  'proxy-server',
+                  proxy
+                )
+                // 立即应用到当前会话
+                await session.defaultSession.setProxy({
+                  proxyRules: proxy
+                })
+              } else {
+                app.commandLine.removeSwitch('proxy-server')
+                // 立即清除当前会话代理
+                await session.defaultSession.setProxy({
+                  proxyRules: ''
+                })
+              }
+
+              // 提示重启生效
+              dialog.showMessageBox(browserWindow, {
+                type: 'info',
+                title: '设置成功',
+                message:
+                  '代理设置已保存，请重启应用以生效。',
+                buttons: ['确定']
+              })
+            }
+          } catch (error) {
+            dialog.showErrorBox(
+              '错误',
+              '设置代理时发生错误: ' + String(error)
+            )
+          }
+        }
+      },
+      {
+        label: t('autoLaunchOnStartup'),
+        type: 'checkbox',
+        checked: isAutoLaunchEnabled,
+        click: (menuItem) =>
+          handleAutoLaunchToggle(Boolean(menuItem.checked))
+      },
+      {
+        label: t('language'),
+        submenu: [
+          {
+            label: t('languageEnglish'),
+            type: 'radio',
+            checked: menuLanguage === MenuLanguage.English,
+            click: () =>
+              handleMenuLanguageChange(MenuLanguage.English)
+          },
+          {
+            label: t('languageChinese'),
+            type: 'radio',
+            checked: menuLanguage === MenuLanguage.Chinese,
+            click: () =>
+              handleMenuLanguageChange(MenuLanguage.Chinese)
+          }
+        ]
+      },
+      { type: 'separator' },
+      {
+        label: t('reload'),
+        accelerator: 'CommandOrControl+R',
+        click: async () => {
+          const newUserSetting = resetUserUrls()
+          await options.withBrowserWindow(
+            (win) => {
+              if (win.isDestroyed()) {
+                throw new Error('窗口已销毁')
+              }
+
+              const currentModel = newUserSetting.model
+              const defaultUrl =
+                newUserSetting.urls?.[currentModel] ||
+                (currentModel === Model.DeepSeek
+                  ? ModelUrl.DeepSeek
+                  : currentModel === Model.ChatGPT
+                    ? ModelUrl.ChatGPT
+                    : currentModel === Model.Gemini
+                      ? ModelUrl.Gemini
+                      : ModelUrl.Grok)
+
+              win.webContents.send(
+                'model-changed',
+                currentModel,
+                defaultUrl
+              )
+            },
+            {
+              onFailureMessage:
+                '无法重新加载窗口，请稍后重试'
+            }
+          )
+        }
+      },
+      {
+        label: t('checkForUpdates'),
+        click: async () => {
+          const browserWindow = getAvailableBrowserWindow(
+            electronMenubar,
+            options.getMainBrowserWindow
+          )
+          await options.updateManager.checkForUpdates(
+            browserWindow
+          )
+        }
+      },
+      {
+        label: t('quit'),
+        accelerator: 'CommandOrControl+Q',
+        click: () => {
+          resetUserUrls()
+          app.quit()
         }
       }
     ])
