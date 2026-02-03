@@ -79,8 +79,7 @@ body {
 }
 
 .platform-win32 .webview-box {
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
+  border-radius: 0;
 }
 
 .webview-loading {
