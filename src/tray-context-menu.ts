@@ -298,7 +298,7 @@ export const setupTrayContextMenu = (
       },
       {
         label: t('openInBrowser'),
-        accelerator: 'CommandOrControl+O',
+        // accelerator: 'CommandOrControl+O',
         click: async () => {
           if (isChatGPT) {
             shell.openExternal(urls.chatgpt)
@@ -878,7 +878,7 @@ export const setupTrayContextMenu = (
       { type: 'separator' },
       {
         label: t('reload'),
-        accelerator: 'CommandOrControl+R',
+        // accelerator: 'CommandOrControl+R',
         click: async () => {
           const newUserSetting = resetUserUrls()
           await options.withBrowserWindow(
@@ -929,7 +929,7 @@ export const setupTrayContextMenu = (
       },
       {
         label: t('quit'),
-        accelerator: 'CommandOrControl+Q',
+        // accelerator: 'CommandOrControl+Q',
         click: () => {
           resetUserUrls()
           app.quit()
