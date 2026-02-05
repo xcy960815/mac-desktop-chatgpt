@@ -9,6 +9,11 @@ import {
 } from 'electron'
 
 import { ElectronMenubar } from '@/electron-menubar'
+import { MenuLanguage } from '@/constants'
+import {
+  TrayMenuMessageKey,
+  getTrayMenuText
+} from '@/i18n/tray-menu'
 
 /**
  * 显示快捷键输入对话框
@@ -20,7 +25,8 @@ import { ElectronMenubar } from '@/electron-menubar'
 export function showShortcutInputDialog(
   electronMenubar: ElectronMenubar,
   parentWindow: BrowserWindow,
-  currentShortcut: string
+  currentShortcut: string,
+  language: MenuLanguage
 ): Promise<string | null> {
   return new Promise((resolve, reject) => {
     if (!parentWindow || parentWindow.isDestroyed()) {
@@ -87,18 +93,24 @@ export function showShortcutInputDialog(
         sandbox: false,
         preload: resolvePreloadPath()
       },
-      title: '设置快捷键',
+      title: getTrayMenuText(
+        'shortcutDialogTitle',
+        language
+      ),
       show: false
     })
 
     const initialShortcut = (currentShortcut ?? '').trim()
+
+    const t = (key: TrayMenuMessageKey) =>
+      getTrayMenuText(key, language)
 
     const html = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>设置快捷键</title>
+  <title>${t('shortcutDialogTitle')}</title>
   <style>
     * {
       margin: 0;
@@ -172,8 +184,8 @@ export function showShortcutInputDialog(
       <div id="shortcut-display" class="shortcut-display"></div>
     </div>
     <div class="buttons">
-      <button class="btn-cancel" id="cancel-btn">取消</button>
-      <button class="btn-ok" id="ok-btn">确定</button>
+      <button class="btn-cancel" id="cancel-btn">${t('cancel')}</button>
+      <button class="btn-ok" id="ok-btn">${t('confirm')}</button>
     </div>
   </div>
   <script>
@@ -184,7 +196,7 @@ export function showShortcutInputDialog(
     let currentValue = ${JSON.stringify(initialShortcut)};
 
     function renderDisplay() {
-      display.textContent = currentValue || '请在键盘上按下新的快捷键组合';
+      display.textContent = currentValue || '${t('shortcutPlaceholder')}';
     }
 
     function normalizeKey(key) {

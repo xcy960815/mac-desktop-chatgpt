@@ -9,6 +9,11 @@ import {
 } from 'electron'
 
 import { ElectronMenubar } from '@/electron-menubar'
+import { MenuLanguage } from '@/constants'
+import {
+  TrayMenuMessageKey,
+  getTrayMenuText
+} from '@/i18n/tray-menu'
 
 /**
  * 显示代理输入对话框
@@ -20,7 +25,8 @@ import { ElectronMenubar } from '@/electron-menubar'
 export function showProxyInputDialog(
   electronMenubar: ElectronMenubar,
   parentWindow: BrowserWindow,
-  currentProxy: string
+  currentProxy: string,
+  language: MenuLanguage
 ): Promise<string | null> {
   return new Promise((resolve, reject) => {
     if (!parentWindow || parentWindow.isDestroyed()) {
@@ -87,18 +93,21 @@ export function showProxyInputDialog(
         sandbox: false,
         preload: resolvePreloadPath()
       },
-      title: '设置代理',
+      title: getTrayMenuText('proxyDialogTitle', language),
       show: false
     })
 
     const initialProxy = (currentProxy ?? '').trim()
+
+    const t = (key: TrayMenuMessageKey) =>
+      getTrayMenuText(key, language)
 
     const html = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>设置代理</title>
+  <title>${t('proxyDialogTitle')}</title>
   <style>
     * {
       margin: 0;
@@ -175,12 +184,12 @@ export function showProxyInputDialog(
 <body>
   <div class="container">
     <div class="input-group">
-      <input type="text" id="proxy-input" class="proxy-input" placeholder="例如: socks5://127.0.0.1:7897" value="${initialProxy}">
-      <div class="hint">格式: 协议://IP:端口 (留空则禁用代理)</div>
+      <input type="text" id="proxy-input" class="proxy-input" placeholder="${t('proxyPlaceholder')}" value="${initialProxy}">
+      <div class="hint">${t('proxyHint')}</div>
     </div>
     <div class="buttons">
-      <button class="btn-cancel" id="cancel-btn">取消</button>
-      <button class="btn-ok" id="ok-btn">确定</button>
+      <button class="btn-cancel" id="cancel-btn">${t('cancel')}</button>
+      <button class="btn-ok" id="ok-btn">${t('confirm')}</button>
     </div>
   </div>
   <script>
