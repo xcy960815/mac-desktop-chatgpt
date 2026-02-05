@@ -6,7 +6,7 @@ import {
   screen as electronScreen,
   globalShortcut
 } from 'electron'
-import Positioner from 'electron-positioner'
+
 import { EventEmitter } from 'events'
 import * as fs from 'fs'
 import * as path from 'path'
@@ -62,22 +62,13 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
    */
   private _options: ElectronMenubarOptions
   /**
-   * @description 位置器
-   */
-  private _positioner: Positioner | undefined
-  /**
    * @description Electron Tray 实例
    */
   private _tray?: Tray
   /**
-   * @description 托盘位置检查定时器
+   * @description 位置器
    */
-  // 在类中新增私有变量
-  private _trayPositionChecker: NodeJS.Timeout | null = null
-  /**
-   * @description 上次托盘边界
-   */
-  private _lastTrayBounds: Electron.Rectangle | null = null
+
   /**
    * @description 临时禁用自动隐藏标志
    */
@@ -97,7 +88,6 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
    */
   private registerAppShutdownHandlers() {
     this._app.once('before-quit', () => {
-      this.stopTrayPositionWatcher()
       this.unregisterEscShortcut()
     })
   }
@@ -185,21 +175,6 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   }
 
   /**
-   * @description electron-positioner 实例
-   * @link https://github.com/jenslind/electron-positioner
-   * @returns {Positioner}
-   */
-  get positioner(): Positioner {
-    if (!this._positioner) {
-      throw new Error(
-        'Please access `this.positioner` after the `after-create-browserWindow` event has fired.'
-      )
-    }
-
-    return this._positioner
-  }
-
-  /**
    * @description Electron Tray 实例
    * @link https://electronjs.org/docs/api/tray
    * @returns {Tray}
@@ -228,149 +203,6 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
    */
   get browserWindow(): BrowserWindow | undefined {
     return this._browserWindow
-  }
-
-  /**
-   * @description 开始监听 Tray 位置变化
-   */
-  private startTrayPositionWatcher() {
-    if (!this._tray || this._trayPositionChecker) return
-    // 初始记录位置
-    this._lastTrayBounds = this._tray.getBounds()
-    // 每 500ms 检查一次位置变化
-    this._trayPositionChecker = setInterval(() => {
-      const currentBounds = this._tray.getBounds()
-      if (
-        !this._lastTrayBounds ||
-        currentBounds.x !== this._lastTrayBounds.x ||
-        currentBounds.y !== this._lastTrayBounds.y
-      ) {
-        this._lastTrayBounds = currentBounds
-        this.emit('tray-position-changed', this) // 触发事件
-        this.correctArrowPosition() // 修正箭头位置（如果窗口可见）
-      }
-    }, 500)
-  }
-
-  /**
-   * @description 停止监听 Tray 位置变化
-   */
-  private stopTrayPositionWatcher() {
-    if (this._trayPositionChecker) {
-      clearInterval(this._trayPositionChecker)
-      this._trayPositionChecker = null
-    }
-  }
-
-  /**
-   * @description 订正箭头位置
-   * @return {void}
-   */
-  private correctArrowPosition() {
-    if (
-      this._isWindows ||
-      !this._tray ||
-      !this._browserWindow
-    ) {
-      return
-    }
-    // 获取 Tray 的位置
-    const { x: trayX, width: trayWidth } =
-      this._tray.getBounds()
-    const { x: windowX } = this._browserWindow.getBounds()
-    const rawTriangleLeft = trayX + trayWidth / 2 - windowX
-    const triangleLeft = Math.max(0, rawTriangleLeft)
-    this.sendArrowPositionUpdate(triangleLeft)
-  }
-
-  /**
-   * @description 向渲染进程发送箭头偏移量
-   * @param {number} triangleLeft
-   */
-  private sendArrowPositionUpdate(triangleLeft: number) {
-    if (
-      !this._browserWindow ||
-      this._browserWindow.isDestroyed()
-    ) {
-      return
-    }
-    this._browserWindow.webContents.send(
-      'update-arrow-position',
-      triangleLeft
-    )
-  }
-
-  /**
-   * 依据托盘所在屏幕返回屏幕的全尺寸和可用工作区
-   * @param {Tray} tray - 托盘实例
-   * @returns {[Rectangle, Rectangle]} 返回包含屏幕边界和工作区边界的元组
-   */
-  private trayToScreenRects(
-    tray: Tray
-  ): [Rectangle, Rectangle] {
-    const { workArea, bounds: screenBounds } =
-      electronScreen.getDisplayMatching(tray.getBounds())
-    workArea.x -= screenBounds.x
-    workArea.y -= screenBounds.y
-    return [screenBounds, workArea]
-  }
-
-  /**
-   * 计算托盘所在任务栏的位置（顶部/底部/左右）
-   * @param {Tray} tray - 托盘实例
-   * @returns {TaskbarLocation} 任务栏方位字符串
-   */
-  private taskbarLocation(tray: Tray): TaskbarLocation {
-    const [screenBounds, workArea] =
-      this.trayToScreenRects(tray)
-    if (workArea.x > 0) {
-      if (this._isLinux && workArea.y > 0) return 'top'
-      return 'left'
-    }
-
-    if (workArea.y > 0) {
-      return 'top'
-    }
-
-    if (workArea.width < screenBounds.width) {
-      return 'right'
-    }
-    return 'bottom'
-  }
-
-  /**
-   * 获取窗口位置
-   * @param {Tray} tray - 托盘实例
-   * @returns {Positioner.Position} 窗口位置字符串
-   */
-  private getWindowPosition(
-    tray: Tray
-  ): Positioner.Position {
-    switch (process.platform) {
-      case 'darwin':
-        return 'trayCenter'
-      case 'linux':
-      case 'win32': {
-        const traySide = this.taskbarLocation(tray)
-        if (traySide === 'top') {
-          return this._isLinux ? 'topRight' : 'trayCenter'
-        }
-        if (traySide === 'bottom') {
-          return this._isLinux
-            ? 'bottomRight'
-            : 'trayBottomCenter'
-        }
-        if (traySide === 'left') {
-          return 'bottomLeft'
-        }
-        if (traySide === 'right') {
-          return 'bottomRight'
-        }
-        break
-      }
-      default:
-        return 'topRight'
-    }
   }
 
   /**
@@ -565,9 +397,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
    * @param {Electron.Rectangle} [trayPosition] - 托盘位置信息（可选）
    * @returns {Promise<void>}
    */
-  public async showWindow(
-    trayPosition?: Electron.Rectangle
-  ): Promise<void> {
+  public async showWindow(): Promise<void> {
     if (!this.tray) {
       throw new Error(
         'Tray should have been instantiated by now'
@@ -593,89 +423,15 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
       )
     }
 
-    /**
-     * @description Windows任务栏：每次显示前同步窗口位置
-     * @link https://github.com/maxogden/menubar/issues/232
-     */
-    if (['win32', 'linux'].includes(process.platform)) {
-      this._options.windowPosition = this.getWindowPosition(
-        this.tray
-      )
-    }
-
     this.emit('show', this)
 
-    // Windows 平台：显示在屏幕中央
-    if (this._isWindows) {
-      this._browserWindow.center()
-      this._browserWindow.restore()
-      this._browserWindow.focus()
-      this._browserWindow.show()
-      // 在窗口显示后立即设置可见状态，确保状态一致性
-      this._isVisible = true
-      this.emit('after-show', this)
-      return
-    }
-
-    if (trayPosition && trayPosition.x !== 0) {
-      // 将位置缓存起来
-      this._cachedBounds = trayPosition
-    } else if (this._cachedBounds) {
-      // 如果在没有边界数据的情况下调用 showWindow，将使用缓存的值
-      trayPosition = this._cachedBounds
-    } else if (this.tray.getBounds) {
-      // 获取当前图标边界
-      trayPosition = this.tray.getBounds()
-    }
-
-    // Default the browserWindow to the right if `trayPosition` bounds are undefined or null.
-    let windowPosition = this._options.windowPosition
-    if (
-      (trayPosition === undefined ||
-        trayPosition.x === 0) &&
-      this._options.windowPosition &&
-      this._options.windowPosition.startsWith('tray')
-    ) {
-      windowPosition =
-        process.platform !== 'darwin' &&
-        process.platform !== 'linux'
-          ? 'bottomRight'
-          : 'topRight'
-    }
-
-    const calculateResult = this.positioner.calculate(
-      windowPosition,
-      trayPosition
-    )
-
-    // 不使用"||"，因为 x 和 y 可以为零。
-    const x = Math.round(
-      this._options.browserWindow.x !== undefined
-        ? this._options.browserWindow.x
-        : calculateResult.x
-    )
-
-    const y = Math.round(
-      this._options.browserWindow.y !== undefined
-        ? this._options.browserWindow.y
-        : calculateResult.y
-    )
-
-    /**
-     * @description setPosition 方法只能使用整数
-     * @link https://github.com/maxogden/menubar/issues/233
-     */
-    this._browserWindow.setPosition(x, y)
-
+    this._browserWindow.center()
+    this._browserWindow.restore()
+    this._browserWindow.focus()
     this._browserWindow.show()
     // 在窗口显示后立即设置可见状态，确保状态一致性
     this._isVisible = true
-
-    // 调整箭头位置
-    this.correctArrowPosition()
-
     this.emit('after-show', this)
-
     return
   }
 
@@ -726,7 +482,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
 
     // 初始化托盘
     this._tray = this._options.tray || new Tray(trayImage)
-    this.startTrayPositionWatcher()
+
     if (!this.tray) {
       throw new Error('Tray has been initialized above')
     }
@@ -761,13 +517,6 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
     // 设置托盘提示
     this.tray.setToolTip(this._options.tooltip)
 
-    if (!this._options.windowPosition) {
-      // 当任务栏位置可用时填写this._options.windowPosition
-      this._options.windowPosition = this.getWindowPosition(
-        this.tray
-      )
-    }
-
     if (this._options.preloadWindow) {
       await this.createWindow()
     }
@@ -797,9 +546,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
       return
     }
 
-    this._cachedBounds = bounds || this._cachedBounds
-
-    await this.showWindow(this._cachedBounds)
+    await this.showWindow()
   }
 
   /**
@@ -889,13 +636,6 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
       baseBrowserWindowOptions
     )
 
-    this._positioner = new Positioner(this._browserWindow)
-
-    // 监听窗口大小变化 调整箭头的位置
-    this._browserWindow.on('resize', () => {
-      this.correctArrowPosition()
-    })
-
     // 给窗口添加失去焦点事件，所有平台保持一致
     this._browserWindow.on('blur', () => {
       // 注销 ESC 快捷键
@@ -958,7 +698,7 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
   private windowClear(): void {
     this.unregisterEscShortcut()
     this._browserWindow = undefined
-    this.stopTrayPositionWatcher()
+
     this.emit('after-close', this)
   }
 }
