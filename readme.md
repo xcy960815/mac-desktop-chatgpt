@@ -2,7 +2,7 @@
 
 > 一款基于 Electron + Vite + TypeScript 开发的跨平台桌面级 AI 助手应用，以单一托盘窗口集中承载多家模型的网页端，免去在不同 AI 对话框之间频繁来回切换。
 
-桌面菜单栏是整个体验的核心：应用常驻系统托盘，快捷键唤起即可在同一视图内切换 ChatGPT、DeepSeek、Grok 与 Gemini，保持上下文与 URL 连续，适合需要在多模型间快速对比和验证的工作流。
+桌面菜单栏是整个体验的核心：应用常驻系统托盘，快捷键唤起即可在同一视图内切换 ChatGPT、DeepSeek、Grok、Gemini、Qwen 与 Doubao，保持上下文与 URL 连续，适合需要在多模型间快速对比和验证的工作流。
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Electron](https://img.shields.io/badge/Electron-36.2.0-47848F?logo=electron)](https://www.electronjs.org/)
@@ -12,7 +12,7 @@
 ## ✨ 功能特性
 
 - 🚀 **菜单栏快捷访问** - 驻留系统托盘，一键唤起多种 AI 助手
-- 🔄 **多模型支持** - 支持 ChatGPT、DeepSeek、Grok 和 Gemini 四种模型
+- 🔄 **多模型支持** - 支持 ChatGPT、DeepSeek、Grok、Gemini、Qwen 和 Doubao 六种模型
 - 🔄 **模型快速切换** - 支持多种 AI 模型无缝切换
 - 💾 **智能 URL 记忆** - 自动保存每个模型的最后访问页面
 - 🔗 **会话持久化** - 重启应用自动恢复到上次访问的对话
@@ -168,7 +168,7 @@ pnpm run make:all
 切换模型步骤：
 
 1. 右键点击菜单栏图标
-2. 选择 `model` → `ChatGPT`、`DeepSeek`、`Grok` 或 `Gemini`
+2. 选择 `model` → `ChatGPT`、`DeepSeek`、`Grok`、`Gemini`、`Qwen` 或 `Doubao`
 
 ### 数据存储
 
@@ -259,6 +259,8 @@ pnpm changelog
 - [DeepSeek](https://chat.deepseek.com/)
 - [Grok](https://grok.com/)
 - [Google Gemini](https://gemini.google.com/)
+- [Qwen](https://tongyi.aliyun.com/)
+- [Doubao](https://www.doubao.com/)
 
 ---
 
