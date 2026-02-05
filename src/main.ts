@@ -194,7 +194,9 @@ app.on('ready', () => {
         chatgpt: ModelUrl.ChatGPT,
         deepseek: ModelUrl.DeepSeek,
         grok: ModelUrl.Grok,
-        gemini: ModelUrl.Gemini
+        gemini: ModelUrl.Gemini,
+        qwen: ModelUrl.Qwen,
+        doubao: ModelUrl.Doubao
       },
       isMenubarReady: () => isMenubarReady,
       getMainBrowserWindow: () =>
@@ -213,6 +215,15 @@ app.on('ready', () => {
 
     shortcutManager.registerToggleShortcut()
     shortcutManager.registerIpcHandlers()
+
+    globalShortcut.register(
+      'CommandOrControl+Shift+I',
+      () => {
+        if (browserWindow && !browserWindow.isDestroyed()) {
+          browserWindow.webContents.toggleDevTools()
+        }
+      }
+    )
 
     Menu.setApplicationMenu(menu)
 
@@ -239,7 +250,9 @@ app.on('ready', () => {
         [Model.ChatGPT]: ModelUrl.ChatGPT,
         [Model.DeepSeek]: ModelUrl.DeepSeek,
         [Model.Grok]: ModelUrl.Grok,
-        [Model.Gemini]: ModelUrl.Gemini
+        [Model.Gemini]: ModelUrl.Gemini,
+        [Model.Qwen]: ModelUrl.Qwen,
+        [Model.Doubao]: ModelUrl.Doubao
       }
       const savedUrl =
         userSetting.urls?.[userSetting.model] ||

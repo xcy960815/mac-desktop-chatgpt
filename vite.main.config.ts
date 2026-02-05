@@ -1,4 +1,6 @@
-import type { ConfigEnv, UserConfig } from 'vite'
+import type { ConfigEnv, UserConfig } from 'vite' with {
+  'resolution-mode': 'import'
+}
 import {
   getBuildConfig,
   getBuildDefine,
