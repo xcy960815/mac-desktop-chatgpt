@@ -60,6 +60,10 @@ export interface TrayContextMenuOptions {
     grok: string
     /** Gemini 模型 URL */
     gemini: string
+    /** Qwen 模型 URL */
+    qwen: string
+    /** Doubao 模型 URL */
+    doubao: string
   }
   /** 检查菜单栏是否已就绪 */
   isMenubarReady(): boolean
@@ -116,7 +120,9 @@ const MODEL_TO_URL_KEY: Record<
   [Model.ChatGPT]: 'chatgpt',
   [Model.DeepSeek]: 'deepseek',
   [Model.Grok]: 'grok',
-  [Model.Gemini]: 'gemini'
+  [Model.Gemini]: 'gemini',
+  [Model.Qwen]: 'qwen',
+  [Model.Doubao]: 'doubao'
 }
 
 /**
@@ -159,6 +165,8 @@ export const setupTrayContextMenu = (
     const isDeepSeek = userSetting.model === Model.DeepSeek
     const isGrok = userSetting.model === Model.Grok
     const isGemini = userSetting.model === Model.Gemini
+    const isQwen = userSetting.model === Model.Qwen
+    const isDoubao = userSetting.model === Model.Doubao
     const windowBehavior =
       userSetting.windowBehavior ||
       (userSetting.lockWindowOnBlur
@@ -273,6 +281,18 @@ export const setupTrayContextMenu = (
             type: 'radio',
             checked: isGemini,
             click: createModelSwitchHandler(Model.Gemini)
+          },
+          {
+            label: Model.Qwen,
+            type: 'radio',
+            checked: isQwen,
+            click: createModelSwitchHandler(Model.Qwen)
+          },
+          {
+            label: Model.Doubao,
+            type: 'radio',
+            checked: isDoubao,
+            click: createModelSwitchHandler(Model.Doubao)
           }
         ]
       },
@@ -291,6 +311,12 @@ export const setupTrayContextMenu = (
           }
           if (isGemini) {
             shell.openExternal(urls.gemini)
+          }
+          if (isQwen) {
+            shell.openExternal(urls.qwen)
+          }
+          if (isDoubao) {
+            shell.openExternal(urls.doubao)
           }
         }
       },
@@ -862,15 +888,19 @@ export const setupTrayContextMenu = (
               }
 
               const currentModel = newUserSetting.model
+
+              const modelUrlMap: Record<Model, string> = {
+                [Model.ChatGPT]: ModelUrl.ChatGPT,
+                [Model.DeepSeek]: ModelUrl.DeepSeek,
+                [Model.Grok]: ModelUrl.Grok,
+                [Model.Gemini]: ModelUrl.Gemini,
+                [Model.Qwen]: ModelUrl.Qwen,
+                [Model.Doubao]: ModelUrl.Doubao
+              }
+
               const defaultUrl =
                 newUserSetting.urls?.[currentModel] ||
-                (currentModel === Model.DeepSeek
-                  ? ModelUrl.DeepSeek
-                  : currentModel === Model.ChatGPT
-                    ? ModelUrl.ChatGPT
-                    : currentModel === Model.Gemini
-                      ? ModelUrl.Gemini
-                      : ModelUrl.Grok)
+                modelUrlMap[currentModel]
 
               win.webContents.send(
                 'model-changed',
