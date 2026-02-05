@@ -12,7 +12,9 @@ export enum Model {
   ChatGPT = 'ChatGPT',
   DeepSeek = 'DeepSeek',
   Grok = 'Grok',
-  Gemini = 'Gemini'
+  Gemini = 'Gemini',
+  Qwen = 'Qwen',
+  Doubao = 'Doubao'
 }
 
 /**
@@ -23,7 +25,9 @@ export enum ModelUrl {
   ChatGPT = 'https://chatgpt.com',
   DeepSeek = 'https://chat.deepseek.com/',
   Grok = 'https://grok.com/',
-  Gemini = 'https://gemini.google.com/app'
+  Gemini = 'https://gemini.google.com/app',
+  Qwen = 'https://www.qianwen.com/chat',
+  Doubao = 'https://www.doubao.com/chat/'
 }
 
 /**

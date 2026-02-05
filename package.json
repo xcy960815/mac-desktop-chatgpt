@@ -2,9 +2,10 @@
   "name": "chathub-desktop",
   "productName": "ChatHub Desktop",
   "version": "1.0.12",
-  "description": "一款基于 electron + vite + typescript 开发的跨平台桌面级应用，统一承载 ChatGPT、DeepSeek、Grok 与 Gemini 等模型网页端，免去来回切换。",
+  "description": "一款基于 electron + vite + typescript 开发的跨平台桌面级应用，统一承载 ChatGPT、DeepSeek、Grok、Gemini、Qwen 与 Doubao 等模型网页端，免去来回切换。",
   "main": ".vite/build/main.js",
   "scripts": {
+    "preinstall": "npx only-allow pnpm",
     "start": "electron-forge start",
     "build": "npm run package",
     "start:prod": "npm run build && electron .",
@@ -30,7 +31,6 @@
     "@electron-forge/maker-rpm": "^7.8.0",
     "@electron-forge/maker-squirrel": "^7.8.0",
     "@electron-forge/maker-zip": "^7.8.0",
-    "@electron-forge/plugin-auto-unpack-natives": "^7.8.0",
     "@electron-forge/plugin-fuses": "^7.8.0",
     "@electron-forge/plugin-vite": "^7.8.0",
     "@electron/fuses": "^1.7.0",
@@ -44,11 +44,9 @@
     "husky": "^8.0.3",
     "lint-staged": "^15.2.0",
     "prettier": "^3.0.0",
-    "pretty-quick": "^1.8.0",
     "terser": "^5.39.0",
     "ts-node": "^10.9.2",
     "typescript": "~5.8.2",
-    "vcm-cli": "^1.0.6",
     "vite": "^6.2.3"
   },
   "keywords": [
@@ -61,6 +59,8 @@
     "deepseek",
     "grok",
     "gemini",
+    "qwen",
+    "doubao",
     "cross-platform",
     "windows",
     "macos"
@@ -76,8 +76,7 @@
   "license": "MIT",
   "dependencies": {
     "electron-context-menu": "^3.6.1",
-    "electron-positioner": "^4.1.0",
-    "electron-squirrel-startup": "^1.0.1"
+    "electron-positioner": "^4.1.0"
   },
   "volta": {
     "node": "20.19.0"
@@ -88,6 +87,7 @@
       "prettier --write"
     ]
   },
+  "packageManager": "pnpm@10.24.0",
   "commitlint": {
     "extends": [
       "@commitlint/config-conventional"

@@ -24,7 +24,9 @@ const DEFAULTSETTING: UserSetting = {
     ChatGPT: ModelUrl.ChatGPT,
     DeepSeek: ModelUrl.DeepSeek,
     Grok: ModelUrl.Grok,
-    Gemini: ModelUrl.Gemini
+    Gemini: ModelUrl.Gemini,
+    Qwen: ModelUrl.Qwen,
+    Doubao: ModelUrl.Doubao
   },
   toggleShortcut: 'CommandOrControl+g',
   autoLaunchOnStartup: false,
@@ -51,6 +53,8 @@ export interface UserSetting {
     DeepSeek?: string
     Grok?: string
     Gemini?: string
+    Qwen?: string
+    Doubao?: string
   }
   toggleShortcut?: string // 用于打开/关闭窗口的快捷键，默认 CommandOrControl+g
   autoLaunchOnStartup?: boolean // 是否随系统启动
@@ -145,7 +149,9 @@ function resetUserUrls(): UserSetting {
     [Model.ChatGPT]: ModelUrl.ChatGPT,
     [Model.DeepSeek]: ModelUrl.DeepSeek,
     [Model.Grok]: ModelUrl.Grok,
-    [Model.Gemini]: ModelUrl.Gemini
+    [Model.Gemini]: ModelUrl.Gemini,
+    [Model.Qwen]: ModelUrl.Qwen,
+    [Model.Doubao]: ModelUrl.Doubao
   } as const
   const resetSetting: UserSetting = {
     ...currentSetting,
