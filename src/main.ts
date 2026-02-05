@@ -216,6 +216,15 @@ app.on('ready', () => {
     shortcutManager.registerToggleShortcut()
     shortcutManager.registerIpcHandlers()
 
+    globalShortcut.register(
+      'CommandOrControl+Shift+I',
+      () => {
+        if (browserWindow && !browserWindow.isDestroyed()) {
+          browserWindow.webContents.toggleDevTools()
+        }
+      }
+    )
+
     Menu.setApplicationMenu(menu)
 
     // 打开开发工具
