@@ -160,7 +160,7 @@ const registerInputShortcuts = (
 let macHideHandlerRegistered = false
 
 /** commandLine.appendSwitch 是否已调用 */
-let commandLineSwitchAppended = false
+const commandLineSwitchAppended = false
 
 /**
  * 注册 macOS 隐藏处理器
@@ -196,14 +196,7 @@ export const registerWebContentsHandlers = (
 ) => {
   registerMacHideHandler(windowManager)
 
-  // 只调用一次 commandLine.appendSwitch
-  if (!commandLineSwitchAppended) {
-    app.commandLine.appendSwitch(
-      'disable-backgrounding-occluded-windows',
-      'true'
-    )
-    commandLineSwitchAppended = true
-  }
+  // commandLine.appendSwitch 已移动到 main.ts 以确保在 app ready 之前运行
 
   app.on('web-contents-created', (_event, webContents) => {
     if (webContents.getType() !== 'webview') {

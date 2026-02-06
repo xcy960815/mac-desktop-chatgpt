@@ -41,11 +41,7 @@ export function getBuildConfig(
     mode,
     resolve: {
       alias: {
-        '@': resolve('src'),
-        // 只是想在项目中 像使用node_modules 那样使用 electron-menubar
-        'electron-menubar': resolve(
-          './src/electron-menubar'
-        )
+        '@': resolve(__dirname, 'src')
       }
     },
     build: {

@@ -206,31 +206,49 @@ jobs:
           draft: false
           prerelease: ${{ contains(github.ref, '-') || contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
 
-      - name: Sync version back to package.json
+      - name: Sync version and merge to main
         run: |
           VERSION=${{ steps.get_version.outputs.version }}
           TARGET_BRANCH=${{ github.event.repository.default_branch }}
-          echo "Updating package.json to $VERSION on branch $TARGET_BRANCH"
+          
+          # 获取触发 tag 的源分支
+          SOURCE_BRANCH=$(git branch -r --contains ${{ github.sha }} | grep -v HEAD | head -1 | sed 's/origin\///' | xargs)
+          echo "源分支: $SOURCE_BRANCH"
+          echo "目标分支: $TARGET_BRANCH"
+          echo "版本号: $VERSION"
 
           # 配置 git 机器人
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-          # 确保切换到目标分支并拉取最新
-          git fetch origin $TARGET_BRANCH
+          # 获取最新代码
+          git fetch origin --prune
+
+          # 切换到目标分支
           git checkout $TARGET_BRANCH
           git pull origin $TARGET_BRANCH --rebase
+
+          # 合并源分支到目标分支（如果源分支不是目标分支本身）
+          if [ "$SOURCE_BRANCH" != "$TARGET_BRANCH" ] && [ -n "$SOURCE_BRANCH" ]; then
+            echo "🔀 合并 $SOURCE_BRANCH 到 $TARGET_BRANCH..."
+            git merge origin/$SOURCE_BRANCH --no-edit -m "chore: merge $SOURCE_BRANCH after release $VERSION [skip ci]" || {
+              echo "⚠️ 合并存在冲突，尝试使用 theirs 策略..."
+              git merge origin/$SOURCE_BRANCH --no-edit -X theirs -m "chore: merge $SOURCE_BRANCH after release $VERSION [skip ci]"
+            }
+          fi
 
           # 更新版本号 (不产生新 tag)
           npm version $VERSION --no-git-tag-version || true
 
           # 检查是否有变化需要提交
           if git diff --quiet package.json; then
-            echo "Version already in sync, skipping commit."
+            echo "✅ 版本号已同步，无需额外提交"
           else
             git add package.json
             git add package-lock.json pnpm-lock.yaml 2>/dev/null || true
-            
             git commit -m "chore: bump version to $VERSION [skip ci]"
-            git push origin $TARGET_BRANCH
           fi
+
+          # 推送更改
+          git push origin $TARGET_BRANCH
+          echo "✅ 已成功合并并推送到 $TARGET_BRANCH"
