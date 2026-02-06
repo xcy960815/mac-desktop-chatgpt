@@ -101,9 +101,13 @@ function setWebviewSrc(
   webviewLoading.classList.add('active')
   webview.src = webviewUrl
   // 监听 webview 加载完成
-  webview.addEventListener('did-stop-loading', () => {
-    webviewLoading.classList.remove('active')
-  })
+  webview.addEventListener(
+    'did-stop-loading',
+    () => {
+      webviewLoading.classList.remove('active')
+    },
+    { once: true }
+  )
 }
 
 /**

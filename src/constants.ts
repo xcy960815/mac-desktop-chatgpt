@@ -31,25 +31,6 @@ export enum ModelUrl {
 }
 
 /**
- * 窗口行为模式
- * @enum {string}
- */
-export enum WindowBehavior {
-  /**
-   * 自动隐藏
-   */
-  AutoHide = 'auto-hide',
-  /**
-   * 锁定在桌面上
-   */
-  LockOnDesktop = 'lock-on-desktop',
-  /**
-   * 始终置顶
-   */
-  AlwaysOnTop = 'always-on-top'
-}
-
-/**
  * 托盘菜单支持的语言
  * @enum {string}
  */

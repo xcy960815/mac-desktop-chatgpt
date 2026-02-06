@@ -192,7 +192,6 @@ chathub-desktop/
 │   ├── main.ts              # Electron 主进程
 │   ├── preload.ts           # 预加载脚本（IPC 通信桥梁）
 │   ├── renderer.ts          # 渲染进程
-│   ├── electron-menubar.ts  # 菜单栏窗口管理
 │   ├── tray-context-menu.ts # 系统托盘上下文菜单
 │   ├── window-manager.ts    # 主窗口状态与行为
 │   ├── shortcut-manager.ts  # 全局快捷键注册

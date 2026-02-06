@@ -1,12 +1,7 @@
 import fsSync from 'fs'
 import path from 'path'
 import { app } from 'electron'
-import {
-  MenuLanguage,
-  Model,
-  ModelUrl,
-  WindowBehavior
-} from '@/constants'
+import { MenuLanguage, Model, ModelUrl } from '@/constants'
 
 /**
  * Electron userData 目录下用于保存设置的子目录
@@ -30,8 +25,7 @@ const DEFAULTSETTING: UserSetting = {
   },
   toggleShortcut: 'CommandOrControl+g',
   autoLaunchOnStartup: false,
-  lockWindowOnBlur: false,
-  windowBehavior: WindowBehavior.AutoHide,
+  alwaysOnTop: false,
   menuLanguage: MenuLanguage.Chinese,
   proxy: undefined,
   showInDock: false
@@ -59,31 +53,10 @@ export interface UserSetting {
   }
   toggleShortcut?: string // 用于打开/关闭窗口的快捷键，默认 CommandOrControl+g
   autoLaunchOnStartup?: boolean // 是否随系统启动
-  lockWindowOnBlur?: boolean // 锁定窗口，失去焦点时不隐藏
-  windowBehavior?: WindowBehavior // 窗口行为模式
+  alwaysOnTop?: boolean // 是否始终置顶
   menuLanguage?: MenuLanguage // 托盘菜单语言
   proxy?: string // 代理设置，例如 socks5://127.0.0.1:7897
   showInDock?: boolean // 是否在程序坞中显示图标
-}
-
-/**
- * 规范化窗口行为设置，如果未设置则根据 lockWindowOnBlur 推导
- * @param {UserSetting} setting - 用户设置对象
- * @returns {UserSetting} 规范化后的用户设置对象
- */
-function normalizeWindowBehavior(
-  setting: UserSetting
-): UserSetting {
-  if (setting.windowBehavior) {
-    return setting
-  }
-  const derivedBehavior = setting.lockWindowOnBlur
-    ? WindowBehavior.LockOnDesktop
-    : WindowBehavior.AutoHide
-  return {
-    ...setting,
-    windowBehavior: derivedBehavior
-  }
 }
 
 /**
@@ -119,7 +92,7 @@ function readUserSetting(): UserSetting {
   const filePath = getUserSettingPath()
   try {
     const data = fsSync.readFileSync(filePath, 'utf-8')
-    return normalizeWindowBehavior(JSON.parse(data))
+    return JSON.parse(data)
   } catch (err) {
     return DEFAULTSETTING
   }
