@@ -9,9 +9,6 @@ export type TrayMenuMessageKey =
   | 'reload'
   | 'openInBrowser'
   | 'autoLaunchOnStartup'
-  | 'windowBehavior'
-  | 'windowAutoHide'
-  | 'windowLockOnDesktop'
   | 'windowAlwaysOnTop'
   | 'model'
   | 'setShortcut'
@@ -62,9 +59,7 @@ const MENU_MESSAGES: Record<
     openInBrowser: 'Open in browser',
     autoLaunchOnStartup: 'Auto-launch on startup',
     showInDock: 'Show in Dock',
-    windowBehavior: 'Window behavior',
-    windowAutoHide: 'Auto hide',
-    windowLockOnDesktop: 'Lock on desktop',
+
     windowAlwaysOnTop: 'Always on top',
     model: 'Model',
     setShortcut: 'Set shortcut',
@@ -123,9 +118,6 @@ const MENU_MESSAGES: Record<
     openInBrowser: '在浏览器中打开',
     autoLaunchOnStartup: '开机自启',
     showInDock: '在程序坞显示',
-    windowBehavior: '窗口行为',
-    windowAutoHide: '自动隐藏',
-    windowLockOnDesktop: '锁定在桌面',
     windowAlwaysOnTop: '置顶于所有应用',
     model: '模型',
     setShortcut: '设置快捷键',

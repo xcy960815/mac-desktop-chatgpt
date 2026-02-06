@@ -6,8 +6,7 @@ import {
   TOOLTIP,
   Model,
   MAIN_WINDOW_WIDTH,
-  MAIN_WINDOW_HEIGHT,
-  WindowBehavior
+  MAIN_WINDOW_HEIGHT
 } from '@/constants'
 import {
   resolveMainIndexUrl
@@ -52,6 +51,11 @@ app.commandLine.appendSwitch(
 )
 // 禁用 QUIC 协议，解决代理环境下 Google 服务连接不稳定/SSL 握手失败的问题
 app.commandLine.appendSwitch('disable-quic')
+// 防止后台窗口被节流，解决隐藏后再打开白屏的问题
+app.commandLine.appendSwitch(
+  'disable-backgrounding-occluded-windows',
+  'true'
+)
 
 // 标记 ready 事件是否已触发
 let isMenubarReady = false
@@ -66,8 +70,6 @@ app.on(
     certificate,
     callback
   ) => {
-    // 允许所有证书错误，防止自签名证书或代理证书导致连接失败
-    event.preventDefault()
     callback(true)
   }
 )
@@ -103,28 +105,21 @@ app.on('ready', async () => {
     rendererDir: __dirname
   })
 
-  // Create WindowManager
+  // 创建窗口管理器
   const windowManager = createWindowManager()
 
-  // Create BrowserWindow
+  // 创建浏览器窗口
   const browserWindow = new BrowserWindow({
     icon: image,
     transparent: true,
     width: MAIN_WINDOW_WIDTH,
     height: MAIN_WINDOW_HEIGHT,
     useContentSize: true,
-    show: false, // Initially hidden
-    frame: false, // Frameless for custom UI
-    titleBarStyle: 'hidden', // Restore traffic lights on macOS
-    // electron-menubar usually creates a frameless window.
-    // The previous CSS had "full-height", suggesting it might control its own frame or be frameless.
-    // The previous `src/electron-menubar.ts` options in main.ts didn't explicitly set frame: false in the user code I saw earlier,
-    // but `ElectronMenubar` class likely defaulted it or `electron-positioner` usage implies it.
-    // However, looking at the user's `index.html` (viewed earlier), it had "drag-region".
-    // Let's assume frameless for now to match typical "menubar app" look, or standard if standard positioning.
-    // User said "standard window position", but didn't say "standard window frame".
-    // Usually these apps use custom frames. Let's stick to `frame: false` for now as it's safer for UI continuity.
-    // Wait, I saw `src/main.ts` passed options: `transparent: true`. Transparent usually implies frameless.
+    show: false, // 初始状态隐藏
+    frame: false, // 无边框以支持自定义 UI
+    titleBarStyle: 'hidden', // 在 macOS 上显示红绿灯
+    // 为自定义 UI 设置窗口属性
+    // 确保无边框窗口以适配自定义设计
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       // 启用webview标签
@@ -135,10 +130,18 @@ app.on('ready', async () => {
     }
   })
 
+  browserWindow.once('ready-to-show', async () => {
+    await windowManager.showWindow()
+    if (process.platform === 'darwin') {
+      app.show()
+    }
+    app.focus()
+  })
+
   browserWindow.loadURL(indexUrl)
 
-  // Setup separate Taskbar icon behavior?
-  // Previous code:
+  // 设置独立的任务栏图标行为？
+  // 之前的代码：
   // if (process.platform === 'darwin') { app.dock.hide() }
   // else if (process.platform === 'linux') { browserWindow.setSkipTaskbar(true) }
 
@@ -152,20 +155,17 @@ app.on('ready', async () => {
       app.dock.hide()
     }
   } else if (process.platform === 'linux') {
-    // Linux behavior could also check this setting potentially, but for now focus on Mac as requested
+    // Linux 行为可能也需要检查此设置，但目前根据需求主要关注 macOS
     browserWindow.setSkipTaskbar(true)
   }
 
   windowManager.setMainBrowserWindow(browserWindow)
 
-  // Set initial behavior
+  // 设置初始行为
   const initialSetting = readUserSetting()
-  const initialBehavior =
-    initialSetting.windowBehavior ||
-    (initialSetting.lockWindowOnBlur
-      ? WindowBehavior.LockOnDesktop
-      : WindowBehavior.AutoHide)
-  windowManager.setWindowBehavior(initialBehavior)
+  if (initialSetting.alwaysOnTop) {
+    windowManager.setAlwaysOnTop(true)
+  }
 
   isMenubarReady = true
 
@@ -206,7 +206,7 @@ app.on('ready', async () => {
   }
 
   const menu = Menu.buildFromTemplate(template)
-  // Check if we need to set application menu
+  // 检查是否需要设置应用程序菜单
   Menu.setApplicationMenu(menu)
 
   const shortcutManager = createShortcutManager({
@@ -243,7 +243,7 @@ app.on('ready', async () => {
     updateManager
   })
 
-  // Tray Event Handlers
+  // 托盘事件处理程序
   tray.on('click', () => {
     windowManager.toggleWindow()
   })
@@ -296,12 +296,11 @@ app.on('ready', async () => {
     )
   })
 
-  // Initial show
-  await windowManager.showWindow()
-  if (process.platform === 'darwin') {
-    app.show()
-  }
-  app.focus()
+  // 初始显示由 ready-to-show 事件处理
+
+  app.on('activate', () => {
+    windowManager.showWindow()
+  })
 })
 
 app.on('window-all-closed', () => {

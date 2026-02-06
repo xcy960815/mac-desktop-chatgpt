@@ -25,12 +25,7 @@ import {
   writeUserSetting
 } from '@/utils/user-setting'
 import { delay } from '@/utils/common'
-import {
-  MenuLanguage,
-  Model,
-  ModelUrl,
-  WindowBehavior
-} from '@/constants'
+import { MenuLanguage, Model, ModelUrl } from '@/constants'
 import {
   getTrayMenuText,
   TrayMenuMessageKey
@@ -174,11 +169,7 @@ export const setupTrayContextMenu = (
     const isGemini = userSetting.model === Model.Gemini
     const isQwen = userSetting.model === Model.Qwen
     const isDoubao = userSetting.model === Model.Doubao
-    const windowBehavior =
-      userSetting.windowBehavior ||
-      (userSetting.lockWindowOnBlur
-        ? WindowBehavior.LockOnDesktop
-        : WindowBehavior.AutoHide)
+    const alwaysOnTop = !!userSetting.alwaysOnTop
     const loginItemSettings = app.getLoginItemSettings()
     const isAutoLaunchEnabled =
       loginItemSettings?.openAtLogin ??
@@ -214,17 +205,14 @@ export const setupTrayContextMenu = (
       }
     }
 
-    const handleWindowBehaviorChange = (
-      behavior: WindowBehavior
-    ) => {
-      const latestSetting = readUserSetting()
+    const handleAlwaysOnTopToggle = () => {
+      const current = readUserSetting()
+      const newValue = !current.alwaysOnTop
       writeUserSetting({
-        ...latestSetting,
-        lockWindowOnBlur:
-          behavior !== WindowBehavior.AutoHide,
-        windowBehavior: behavior
+        ...current,
+        alwaysOnTop: newValue
       })
-      windowManager.setWindowBehavior(behavior)
+      windowManager.setAlwaysOnTop(newValue)
       updateContextMenu()
     }
 
@@ -278,12 +266,6 @@ export const setupTrayContextMenu = (
             click: createModelSwitchHandler(Model.ChatGPT)
           },
           {
-            label: Model.DeepSeek,
-            type: 'radio',
-            checked: isDeepSeek,
-            click: createModelSwitchHandler(Model.DeepSeek)
-          },
-          {
             label: Model.Grok,
             type: 'radio',
             checked: isGrok,
@@ -294,6 +276,13 @@ export const setupTrayContextMenu = (
             type: 'radio',
             checked: isGemini,
             click: createModelSwitchHandler(Model.Gemini)
+          },
+          { type: 'separator' },
+          {
+            label: Model.DeepSeek,
+            type: 'radio',
+            checked: isDeepSeek,
+            click: createModelSwitchHandler(Model.DeepSeek)
           },
           {
             label: Model.Qwen,
@@ -356,40 +345,10 @@ export const setupTrayContextMenu = (
       },
       { type: 'separator' },
       {
-        label: t('windowBehavior'),
-        submenu: [
-          {
-            label: t('windowAutoHide'),
-            type: 'radio',
-            checked:
-              windowBehavior === WindowBehavior.AutoHide,
-            click: () =>
-              handleWindowBehaviorChange(
-                WindowBehavior.AutoHide
-              )
-          },
-          {
-            label: t('windowLockOnDesktop'),
-            type: 'radio',
-            checked:
-              windowBehavior ===
-              WindowBehavior.LockOnDesktop,
-            click: () =>
-              handleWindowBehaviorChange(
-                WindowBehavior.LockOnDesktop
-              )
-          },
-          {
-            label: t('windowAlwaysOnTop'),
-            type: 'radio',
-            checked:
-              windowBehavior === WindowBehavior.AlwaysOnTop,
-            click: () =>
-              handleWindowBehaviorChange(
-                WindowBehavior.AlwaysOnTop
-              )
-          }
-        ]
+        label: t('windowAlwaysOnTop'),
+        type: 'checkbox',
+        checked: alwaysOnTop,
+        click: handleAlwaysOnTopToggle
       },
       {
         label: t('setShortcut'),
@@ -1081,7 +1040,7 @@ export const setupTrayContextMenu = (
       }
     ])
 
-    // 不自动设置上下文菜单，而是通过 ElectronMenubar 中的右键事件处理程序显示
+    // 不自动设置上下文菜单，而是通过主进程中的右键事件处理程序显示
     // 这样可以确保左键点击只控制窗口显示，右键点击显示菜单
     // tray.setContextMenu(contextMenu)
 
