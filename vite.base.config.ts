@@ -39,7 +39,11 @@ export function getBuildConfig(
   return {
     root,
     mode,
-    resolve: {},
+    resolve: {
+      alias: {
+        '@': resolve(__dirname, 'src')
+      }
+    },
     build: {
       // Prevent multiple builds from interfering with each other.
       emptyOutDir: false,
