@@ -1,9 +1,27 @@
-import type { ConfigEnv, UserConfig } from 'vite' with {
+import type {
+  ConfigEnv,
+  UserConfig,
+  PluginOption
+} from 'vite' with {
   'resolution-mode': 'import'
 }
 import { resolve } from 'path'
+import pkg from './package.json'
 
 import { pluginExposeRenderer } from './vite.base.config'
+
+// HTML 插件：注入 productName 到 title
+function htmlTitlePlugin(): PluginOption {
+  return {
+    name: 'html-title-plugin',
+    transformIndexHtml(html) {
+      return html.replace(
+        /<title>(.*?)<\/title>/,
+        `<title>${pkg.productName}</title>`
+      )
+    }
+  }
+}
 
 // https://vitejs.dev/config
 export default async function createRendererConfig(
@@ -80,7 +98,10 @@ export default async function createRendererConfig(
         }
       }
     },
-    plugins: [pluginExposeRenderer(name)],
+    plugins: [
+      pluginExposeRenderer(name),
+      htmlTitlePlugin()
+    ],
     resolve: {
       preserveSymlinks: true,
       alias: {
