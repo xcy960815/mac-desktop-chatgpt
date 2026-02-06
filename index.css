@@ -1,3 +1,40 @@
+/* 
+ * ChatHub Desktop - 主样式文件
+ * 使用 CSS 变量实现主题化和易维护性
+ */
+
+:root {
+  /* 布局变量 */
+  --traffic-light-offset: 28px;
+  --actual-height: 100vh;
+  
+  /* 主题色 */
+  --color-primary: #667eea;
+  --color-secondary: #764ba2;
+  --bg-color: #eeeeee;
+  --text-color: #1a1a1a;
+  --text-secondary: #666;
+  
+  /* Spinner 颜色 */
+  --spinner-red: #FF6B6B;
+  --spinner-teal: #4ECDC4;
+  --spinner-blue: #45B7D1;
+  
+  /* 遮罩层背景 */
+  --overlay-bg: rgba(255, 255, 255, 0.98);
+}
+
+/* 暗色主题变量 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-color: #111111;
+    --text-color: #ffffff;
+    --text-secondary: #aaa;
+    --overlay-bg: rgba(17, 17, 17, 0.98);
+  }
+}
+
+/* 基础重置 */
 html,
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -5,42 +42,31 @@ body {
   margin: 0;
   overflow: hidden;
   background: transparent;
-  /* background-color: #eeeeee; */
 }
 
-
-/* 
- * 实际高度 = 窗口高度
- */
-:root {
-  --actual-height: 100vh;
-}
-
-.container {
-  position: relative;
-  padding: 0;
-}
-
+/* 主容器 */
 .webview-box {
-  background: #eeeeee;
+  background: var(--bg-color);
   width: 100%;
   height: 100vh;
   margin: 0 auto;
   position: relative;
-  border-radius: 0;
   overflow: hidden;
 }
 
+/* WebView 容器 */
 .webview {
   position: absolute;
-  top: 0;
+  top: var(--traffic-light-offset);
   left: 0;
   width: 100%;
-  height: var(--actual-height);
+  height: calc(var(--actual-height) - var(--traffic-light-offset));
   display: inline-flex !important;
 }
 
-.webview-loading {
+/* 公共遮罩层样式 */
+.webview-loading,
+.webview-error {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -49,20 +75,35 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-  background: rgba(255, 255, 255, 0.98);
   width: 100%;
   height: 100%;
-  opacity: 0;
-  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  pointer-events: none;
+  background: var(--overlay-bg);
   backdrop-filter: blur(12px);
+}
+
+/* 加载动画 */
+.webview-loading {
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
 }
 
 .webview-loading.active {
   opacity: 1;
 }
 
+.webview-loading span {
+  margin-top: 24px;
+  font-size: 16px;
+  color: var(--text-color);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+/* Spinner 动画 */
 .spinner {
   display: flex;
   align-items: center;
@@ -80,87 +121,37 @@ body {
 }
 
 .spinner-dot:nth-child(1) {
-  background: #FF6B6B;
+  background: var(--spinner-red);
   box-shadow: 0 0 8px rgba(255, 107, 107, 0.5);
 }
 
 .spinner-dot:nth-child(2) {
-  background: #4ECDC4;
+  background: var(--spinner-teal);
   box-shadow: 0 0 8px rgba(78, 205, 196, 0.5);
   animation-delay: 0.2s;
 }
 
 .spinner-dot:nth-child(3) {
-  background: #45B7D1;
+  background: var(--spinner-blue);
   box-shadow: 0 0 8px rgba(69, 183, 209, 0.5);
   animation-delay: 0.4s;
 }
 
 @keyframes bounce {
-
-  0%,
-  80%,
-  100% {
+  0%, 80%, 100% {
     transform: scale(0.7) translateY(0);
     opacity: 0.7;
   }
-
   40% {
     transform: scale(1.2) translateY(-16px);
     opacity: 1;
   }
 }
 
-.webview-loading span {
-  margin-top: 24px;
-  font-size: 16px;
-  color: #1a1a1a;
-  font-weight: 500;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  opacity: 0.9;
-}
-
-@media (prefers-color-scheme: dark) {
-  .webview-loading {
-    background: rgba(17, 17, 17, 0.98);
-  }
-
-  .webview-loading span {
-    color: #ffffff;
-  }
-
-  .spinner-dot:nth-child(1) {
-    background: #FF6B6B;
-    box-shadow: 0 0 12px rgba(255, 107, 107, 0.6);
-  }
-
-  .spinner-dot:nth-child(2) {
-    background: #4ECDC4;
-    box-shadow: 0 0 12px rgba(78, 205, 196, 0.6);
-  }
-
-  .spinner-dot:nth-child(3) {
-    background: #45B7D1;
-    box-shadow: 0 0 12px rgba(69, 183, 209, 0.6);
-  }
-}
-
-/* 错误提示样式 */
+/* 错误提示 */
 .webview-error {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
   z-index: 1001;
-  background: rgba(255, 255, 255, 0.98);
-  width: 100%;
-  height: 100%;
-  backdrop-filter: blur(12px);
+  display: none;
   padding: 40px;
   box-sizing: border-box;
 }
@@ -176,31 +167,21 @@ body {
 }
 
 @keyframes shake {
-
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-
-  25% {
-    transform: translateX(-10px);
-  }
-
-  75% {
-    transform: translateX(10px);
-  }
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  75% { transform: translateX(10px); }
 }
 
 .error-title {
   font-size: 24px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--text-color);
   margin-bottom: 12px;
 }
 
 .error-message {
   font-size: 16px;
-  color: #666;
+  color: var(--text-secondary);
   margin-bottom: 32px;
   text-align: center;
   max-width: 400px;
@@ -212,7 +193,7 @@ body {
   font-size: 16px;
   font-weight: 500;
   color: white;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -229,16 +210,9 @@ body {
   transform: translateY(0);
 }
 
+/* 暗色主题增强 - Spinner 发光效果 */
 @media (prefers-color-scheme: dark) {
-  .webview-error {
-    background: rgba(17, 17, 17, 0.98);
-  }
-
-  .error-title {
-    color: #ffffff;
-  }
-
-  .error-message {
-    color: #aaa;
-  }
+  .spinner-dot:nth-child(1) { box-shadow: 0 0 12px rgba(255, 107, 107, 0.6); }
+  .spinner-dot:nth-child(2) { box-shadow: 0 0 12px rgba(78, 205, 196, 0.6); }
+  .spinner-dot:nth-child(3) { box-shadow: 0 0 12px rgba(69, 183, 209, 0.6); }
 }

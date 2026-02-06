@@ -118,7 +118,7 @@ app.on('ready', async () => {
     show: false, // 初始状态隐藏
     frame: false, // 无边框以支持自定义 UI
     titleBarStyle: 'hidden', // 在 macOS 上显示红绿灯
-    trafficLightPosition: { x: 3, y: 3 }, // 调整红绿灯位置避免与内容重叠
+    trafficLightPosition: { x: 10, y: 6 }, // 调整红绿灯位置避免与内容重叠
     // 为自定义 UI 设置窗口属性
     // 确保无边框窗口以适配自定义设计
     webPreferences: {
