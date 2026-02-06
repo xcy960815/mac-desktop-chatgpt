@@ -1,8 +1,72 @@
+## <small>1.0.13 (2026-02-06)</small>
+
+* feat: 调整红绿灯位置避免与内容重叠，动态注入HTML标题 ([0c3070f](https://github.com/xcy960815/mac-desktop-chatgpt/commit/0c3070f))
+
+
+
+## 1.1.0 (2026-02-06)
+
+* fix: 修复构建配置，添加@别名到vite.base.config.ts ([677a9fb](https://github.com/xcy960815/mac-desktop-chatgpt/commit/677a9fb))
+* refactor: 重构窗口管理及修复TS类型错误，恢复窗口控制按钮 ([9065d83](https://github.com/xcy960815/mac-desktop-chatgpt/commit/9065d83))
+* refactor: remove menubar, update window behaviors, translate comments, and reorder menu ([d5b0aec](https://github.com/xcy960815/mac-desktop-chatgpt/commit/d5b0aec))
+* refactor: remove tray positioning logic and use standard window position ([0ec5255](https://github.com/xcy960815/mac-desktop-chatgpt/commit/0ec5255))
+* feat: 新增'在程序坞显示'选项，配置程序坞图标及应用名称 ([e818ad9](https://github.com/xcy960815/mac-desktop-chatgpt/commit/e818ad9))
+
+
+
+## <small>1.0.13 (2026-02-05)</small>
+
+* 1.0.13 ([68a5b8e](https://github.com/xcy960815/mac-desktop-chatgpt/commit/68a5b8e))
+* feat: 更新 readme ([ee79b36](https://github.com/xcy960815/mac-desktop-chatgpt/commit/ee79b36))
+* feat: 为代理和快捷键设置对话框及托盘菜单消息添加国际化支持 ([92a8fdb](https://github.com/xcy960815/mac-desktop-chatgpt/commit/92a8fdb))
+* docs: update README and package description for Qwen and Doubao models ([35a8d1e](https://github.com/xcy960815/mac-desktop-chatgpt/commit/35a8d1e))
+* chore: bump version to 1.0.11 [skip ci] ([0c99cb6](https://github.com/xcy960815/mac-desktop-chatgpt/commit/0c99cb6))
+* chore: bump version to 1.0.12 [skip ci] ([d82ca28](https://github.com/xcy960815/mac-desktop-chatgpt/commit/d82ca28))
+
+
+
+## <small>1.0.12 (2026-02-05)</small>
+
+* feat: 禁用托盘菜单中“在浏览器中打开”、“重新加载”和“退出”项的键盘快捷键。 ([1785a5e](https://github.com/xcy960815/mac-desktop-chatgpt/commit/1785a5e))
+* feat: add Qwen and Doubao models to context menu ([30728a7](https://github.com/xcy960815/mac-desktop-chatgpt/commit/30728a7))
+* feat: register devtools shortcut and bump version to 1.0.12 ([f7548cb](https://github.com/xcy960815/mac-desktop-chatgpt/commit/f7548cb))
+* chore: 添加全局快捷键以切换开发者工具。 ([aabffdc](https://github.com/xcy960815/mac-desktop-chatgpt/commit/aabffdc))
+
+
+
+## <small>1.0.11 (2026-02-03)</small>
+
+* fix: remove empty with block in CI workflow and bump to v1.0.11 ([878f12e](https://github.com/xcy960815/mac-desktop-chatgpt/commit/878f12e))
+
+
+
+## <small>1.0.10 (2026-02-03)</small>
+
+* fix: remove explicit pnpm version in CI and bump to v1.0.10 ([75adb15](https://github.com/xcy960815/mac-desktop-chatgpt/commit/75adb15))
+
+
+
+## <small>1.0.9 (2026-02-03)</small>
+
+* chore: bump version to 1.0.6 [skip ci] ([ea7e431](https://github.com/xcy960815/mac-desktop-chatgpt/commit/ea7e431))
+* chore: bump version to 1.0.7 [skip ci] ([6cfe6fc](https://github.com/xcy960815/mac-desktop-chatgpt/commit/6cfe6fc))
+* chore: bump version to 1.0.8 [skip ci] ([8a8ec23](https://github.com/xcy960815/mac-desktop-chatgpt/commit/8a8ec23))
+* chore: release v1.0.9 ([531bed7](https://github.com/xcy960815/mac-desktop-chatgpt/commit/531bed7))
+* chore: remove unused @electron-forge/plugin-auto-unpack-natives ([fb230e2](https://github.com/xcy960815/mac-desktop-chatgpt/commit/fb230e2))
+* chore: remove unused electron-squirrel-startup dependency ([5e281eb](https://github.com/xcy960815/mac-desktop-chatgpt/commit/5e281eb))
+* chore: remove unused pretty-quick devDependency ([34515e3](https://github.com/xcy960815/mac-desktop-chatgpt/commit/34515e3))
+* chore: remove unused vcm-cli devDependency ([37bf1ce](https://github.com/xcy960815/mac-desktop-chatgpt/commit/37bf1ce))
+* feat: 简化托盘菜单，移除退出、重新加载、检查更新、开机自启和语言选项，并调整菜单项顺序。 ([f2cb7ba](https://github.com/xcy960815/mac-desktop-chatgpt/commit/f2cb7ba))
+* style: remove border radius on windows ([2b46345](https://github.com/xcy960815/mac-desktop-chatgpt/commit/2b46345))
+
+
+
 ## <small>1.0.8 (2026-01-14)</small>
 
+* docs: remove manual changelog from readme and update CHANGELOG.md ([5391571](https://github.com/xcy960815/mac-desktop-chatgpt/commit/5391571))
+* docs: update changelog for v1.0.8 ([a715eb4](https://github.com/xcy960815/mac-desktop-chatgpt/commit/a715eb4))
 * chore: bump version to 1.0.8 ([fac9d8a](https://github.com/xcy960815/mac-desktop-chatgpt/commit/fac9d8a))
 * fix: resolve double paste issue and blank window on startup ([84a4f89](https://github.com/xcy960815/mac-desktop-chatgpt/commit/84a4f89))
-* docs: remove manual changelog from readme and update CHANGELOG.md ([5391571](https://github.com/xcy960815/mac-desktop-chatgpt/commit/5391571))
 * feat: rename to ChatHub Desktop, add proxy validation and custom icon ([10c3cb7](https://github.com/xcy960815/mac-desktop-chatgpt/commit/10c3cb7))
 
 
