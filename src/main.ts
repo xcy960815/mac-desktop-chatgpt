@@ -1,6 +1,5 @@
 import * as path from 'path'
 
-import { ElectronMenubar } from '@/electron-menubar'
 import { setupTrayContextMenu } from '@/tray-context-menu'
 import {
   ModelUrl,
@@ -26,10 +25,18 @@ import {
   globalShortcut,
   nativeImage,
   Tray,
-  Menu
+  Menu,
+  BrowserWindow
 } from 'electron'
 
 import { readUserSetting } from '@/utils/user-setting'
+
+/**
+ * 带有上下文菜单的 Tray 接口
+ */
+interface TrayWithContextMenu extends Tray {
+  _contextMenu?: Menu
+}
 
 app.commandLine.appendSwitch('ignore-certificate-errors')
 app.commandLine.appendSwitch(
@@ -62,7 +69,7 @@ app.on(
   }
 )
 
-app.on('ready', () => {
+app.on('ready', async () => {
   const userSetting = readUserSetting()
   if (userSetting.proxy) {
     app.commandLine.appendSwitch(
@@ -85,186 +92,205 @@ app.on('ready', () => {
   )
 
   const tray = new Tray(image)
+  tray.setToolTip(TOOLTIP)
+  tray.setIgnoreDoubleClickEvents(true)
 
   const indexUrl = resolveMainIndexUrl({
     devServerUrl: MAIN_WINDOW_VITE_DEV_SERVER_URL,
     rendererDir: __dirname
   })
 
-  const electronMenubar = new ElectronMenubar(app, {
-    browserWindow: {
-      icon: image,
-      transparent: true,
-      width: MAIN_WINDOW_WIDTH,
-      height: MAIN_WINDOW_HEIGHT,
-      useContentSize: true,
-      webPreferences: {
-        preload: path.join(__dirname, 'preload.js'),
-        // 启用webview标签
-        webviewTag: true,
-        contextIsolation: true,
-        nodeIntegration: false,
-        sandbox: false
-      }
-    },
-    index: indexUrl,
-    tray,
-    dir: appPath,
-    showOnAllWorkspaces: true,
-    preloadWindow: true,
-    showDockIcon: false,
+  // Create WindowManager
+  const windowManager = createWindowManager()
+
+  // Create BrowserWindow
+  const browserWindow = new BrowserWindow({
     icon: image,
-    tooltip: TOOLTIP,
-    showOnRightClick: false // 确保左键点击控制窗口显示，右键点击显示菜单
+    transparent: true,
+    width: MAIN_WINDOW_WIDTH,
+    height: MAIN_WINDOW_HEIGHT,
+    useContentSize: true,
+    show: false, // Initially hidden
+    frame: false, // Frameless for custom UI
+    titleBarStyle: 'hidden', // Restore traffic lights on macOS
+    // electron-menubar usually creates a frameless window.
+    // The previous CSS had "full-height", suggesting it might control its own frame or be frameless.
+    // The previous `src/electron-menubar.ts` options in main.ts didn't explicitly set frame: false in the user code I saw earlier,
+    // but `ElectronMenubar` class likely defaulted it or `electron-positioner` usage implies it.
+    // However, looking at the user's `index.html` (viewed earlier), it had "drag-region".
+    // Let's assume frameless for now to match typical "menubar app" look, or standard if standard positioning.
+    // User said "standard window position", but didn't say "standard window frame".
+    // Usually these apps use custom frames. Let's stick to `frame: false` for now as it's safer for UI continuity.
+    // Wait, I saw `src/main.ts` passed options: `transparent: true`. Transparent usually implies frameless.
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      // 启用webview标签
+      webviewTag: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false
+    }
   })
 
+  browserWindow.loadURL(indexUrl)
+
+  // Setup separate Taskbar icon behavior?
+  // Previous code:
+  // if (process.platform === 'darwin') { app.dock.hide() }
+  // else if (process.platform === 'linux') { browserWindow.setSkipTaskbar(true) }
+
+  if (process.platform === 'darwin') {
+    app.dock.hide()
+  } else if (process.platform === 'linux') {
+    browserWindow.setSkipTaskbar(true)
+  }
+
+  windowManager.setMainBrowserWindow(browserWindow)
+
+  // Set initial behavior
   const initialSetting = readUserSetting()
   const initialBehavior =
     initialSetting.windowBehavior ||
     (initialSetting.lockWindowOnBlur
       ? WindowBehavior.LockOnDesktop
       : WindowBehavior.AutoHide)
-  electronMenubar.setWindowBehavior(initialBehavior)
+  windowManager.setWindowBehavior(initialBehavior)
 
-  const windowManager = createWindowManager(electronMenubar)
+  isMenubarReady = true
 
-  electronMenubar.on('ready', async (menubar) => {
-    const browserWindow = menubar.browserWindow
+  initializeLastVisitedUrlTracking(browserWindow)
 
-    windowManager.setMainBrowserWindow(browserWindow)
-    isMenubarReady = true
-
-    if (process.platform === 'darwin') {
-      app.dock.hide()
-    } else if (process.platform === 'linux') {
-      browserWindow.setSkipTaskbar(true)
-    }
-
-    initializeLastVisitedUrlTracking(browserWindow)
-
-    const template: Electron.MenuItemConstructorOptions[] =
-      [
-        {
-          label: 'Edit',
-          submenu: [
-            { role: 'undo' },
-            { role: 'redo' },
-            { type: 'separator' },
-            { role: 'cut' },
-            { role: 'copy' },
-            { role: 'paste' },
-            { role: 'pasteAndMatchStyle' },
-            { role: 'delete' },
-            { role: 'selectAll' }
-          ]
-        }
+  const template: Electron.MenuItemConstructorOptions[] = [
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'pasteAndMatchStyle' },
+        { role: 'delete' },
+        { role: 'selectAll' }
       ]
-
-    if (process.platform === 'darwin') {
-      template.unshift({
-        label: app.name,
-        submenu: [
-          { role: 'about' },
-          { type: 'separator' },
-          { role: 'services' },
-          { type: 'separator' },
-          { role: 'hide' },
-          { role: 'hideOthers' },
-          { role: 'unhide' },
-          { type: 'separator' },
-          { role: 'quit' }
-        ]
-      })
     }
+  ]
 
-    const menu = Menu.buildFromTemplate(template)
-
-    const shortcutManager = createShortcutManager({
-      browserWindow,
-      electronMenubar
+  if (process.platform === 'darwin') {
+    template.unshift({
+      label: app.name,
+      submenu: [
+        { role: 'about' },
+        { type: 'separator' },
+        { role: 'services' },
+        { type: 'separator' },
+        { role: 'hide' },
+        { role: 'hideOthers' },
+        { role: 'unhide' },
+        { type: 'separator' },
+        { role: 'quit' }
+      ]
     })
+  }
 
-    const updateManager = createUpdateManager()
+  const menu = Menu.buildFromTemplate(template)
+  // Check if we need to set application menu
+  Menu.setApplicationMenu(menu)
 
-    setupTrayContextMenu({
-      tray,
-      electronMenubar,
-      menu,
-      urls: {
-        chatgpt: ModelUrl.ChatGPT,
-        deepseek: ModelUrl.DeepSeek,
-        grok: ModelUrl.Grok,
-        gemini: ModelUrl.Gemini,
-        qwen: ModelUrl.Qwen,
-        doubao: ModelUrl.Doubao
-      },
-      isMenubarReady: () => isMenubarReady,
-      getMainBrowserWindow: () =>
-        windowManager.getMainBrowserWindow(),
-      setMainBrowserWindow: (window) => {
-        windowManager.setMainBrowserWindow(window)
-      },
-      getCurrentShortcut: () =>
-        shortcutManager.getCurrentShortcut(),
-      setCurrentShortcut: (shortcut) => {
-        shortcutManager.setCurrentShortcut(shortcut)
-      },
-      withBrowserWindow: windowManager.withBrowserWindow,
-      updateManager
-    })
-
-    shortcutManager.registerToggleShortcut()
-    shortcutManager.registerIpcHandlers()
-
-    globalShortcut.register(
-      'CommandOrControl+Shift+I',
-      () => {
-        if (browserWindow && !browserWindow.isDestroyed()) {
-          browserWindow.webContents.toggleDevTools()
-        }
-      }
-    )
-
-    Menu.setApplicationMenu(menu)
-
-    // 打开开发工具
-    // browserWindow.webContents.openDevTools()
-
-    // 应用启动后默认显示窗口
-    await electronMenubar.showWindow()
-    if (process.platform === 'darwin') {
-      electronMenubar.app.show()
-    }
-    // 确保应用获得焦点（所有平台）
-    electronMenubar.app.focus()
+  const shortcutManager = createShortcutManager({
+    browserWindow,
+    windowManager
   })
 
-  registerWebContentsHandlers(electronMenubar)
+  const updateManager = createUpdateManager()
 
-  electronMenubar.on(
-    'after-show',
-    async ({ browserWindow }) => {
-      const userSetting = readUserSetting()
-      // 使用 ModelUrl 枚举映射简化 URL 获取逻辑
-      const modelUrlMap: Record<Model, string> = {
-        [Model.ChatGPT]: ModelUrl.ChatGPT,
-        [Model.DeepSeek]: ModelUrl.DeepSeek,
-        [Model.Grok]: ModelUrl.Grok,
-        [Model.Gemini]: ModelUrl.Gemini,
-        [Model.Qwen]: ModelUrl.Qwen,
-        [Model.Doubao]: ModelUrl.Doubao
+  setupTrayContextMenu({
+    tray,
+    windowManager,
+    menu,
+    urls: {
+      chatgpt: ModelUrl.ChatGPT,
+      deepseek: ModelUrl.DeepSeek,
+      grok: ModelUrl.Grok,
+      gemini: ModelUrl.Gemini,
+      qwen: ModelUrl.Qwen,
+      doubao: ModelUrl.Doubao
+    },
+    isMenubarReady: () => isMenubarReady,
+    getMainBrowserWindow: () =>
+      windowManager.getMainBrowserWindow(),
+    setMainBrowserWindow: (window) => {
+      windowManager.setMainBrowserWindow(window)
+    },
+    getCurrentShortcut: () =>
+      shortcutManager.getCurrentShortcut(),
+    setCurrentShortcut: (shortcut) => {
+      shortcutManager.setCurrentShortcut(shortcut)
+    },
+    withBrowserWindow: windowManager.withBrowserWindow,
+    updateManager
+  })
+
+  // Tray Event Handlers
+  tray.on('click', () => {
+    windowManager.toggleWindow()
+  })
+
+  tray.on('right-click', () => {
+    const contextMenu = (
+      tray as unknown as TrayWithContextMenu
+    )._contextMenu
+    if (contextMenu) {
+      tray.popUpContextMenu(contextMenu)
+    }
+  })
+
+  shortcutManager.registerToggleShortcut()
+  shortcutManager.registerIpcHandlers()
+
+  globalShortcut.register(
+    'CommandOrControl+Shift+I',
+    () => {
+      if (browserWindow && !browserWindow.isDestroyed()) {
+        browserWindow.webContents.toggleDevTools()
       }
-      const savedUrl =
-        userSetting.urls?.[userSetting.model] ||
-        modelUrlMap[userSetting.model]
-
-      browserWindow.webContents.send(
-        'model-changed',
-        userSetting.model,
-        savedUrl
-      )
     }
   )
+
+  registerWebContentsHandlers(windowManager)
+
+  windowManager.on('after-show', async () => {
+    const win = windowManager.getMainBrowserWindow()
+    if (!win) return
+
+    const userSetting = readUserSetting()
+    // 使用 ModelUrl 枚举映射简化 URL 获取逻辑
+    const modelUrlMap: Record<Model, string> = {
+      [Model.ChatGPT]: ModelUrl.ChatGPT,
+      [Model.DeepSeek]: ModelUrl.DeepSeek,
+      [Model.Grok]: ModelUrl.Grok,
+      [Model.Gemini]: ModelUrl.Gemini,
+      [Model.Qwen]: ModelUrl.Qwen,
+      [Model.Doubao]: ModelUrl.Doubao
+    }
+    const savedUrl =
+      userSetting.urls?.[userSetting.model] ||
+      modelUrlMap[userSetting.model]
+
+    win.webContents.send(
+      'model-changed',
+      userSetting.model,
+      savedUrl
+    )
+  })
+
+  // Initial show
+  await windowManager.showWindow()
+  if (process.platform === 'darwin') {
+    app.show()
+  }
+  app.focus()
 })
 
 app.on('window-all-closed', () => {

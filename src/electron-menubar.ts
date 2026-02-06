@@ -4,7 +4,8 @@ import {
   app,
   Rectangle,
   screen as electronScreen,
-  globalShortcut
+  globalShortcut,
+  Menu
 } from 'electron'
 
 import { EventEmitter } from 'events'
@@ -12,13 +13,48 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { WindowBehavior } from '@/constants'
 
+interface MenubarEvents {
+  ready: [ElectronMenubar]
+  createBrowserWindow: [ElectronMenubar]
+  afterCreateBrowserWindow: [ElectronMenubar]
+  show: [ElectronMenubar]
+  afterShow: [ElectronMenubar]
+  hide: [ElectronMenubar]
+  afterHide: [ElectronMenubar]
+  focusLost: [ElectronMenubar]
+  beforeLoad: [ElectronMenubar]
+  afterClose: [ElectronMenubar]
+}
+
+interface ElectronMenubarOptions {
+  activateWithApp?: boolean
+  dir: string
+  index: string | false
+  tooltip?: string
+  icon?: string | Electron.NativeImage
+  tray?: Tray
+  preloadWindow?: boolean
+  showDockIcon?: boolean
+  showOnRightClick?: boolean
+  browserWindow: Electron.BrowserWindowConstructorOptions
+  loadUrlOptions?: Electron.LoadURLOptions
+  showOnAllWorkspaces?: boolean
+}
+
+/**
+ * 带有上下文菜单的 Tray 接口
+ */
+interface TrayWithContextMenu extends Tray {
+  _contextMenu?: Menu
+}
+
 /**
  * @description 负责控制托盘图标、BrowserWindow 以及定位逻辑的菜单栏管理器。
  * @fires ElectronMenubar#ready
  * @fires ElectronMenubar#show
  * @fires ElectronMenubar#hide
  */
-export class ElectronMenubar extends EventEmitter<MenubarEvents> {
+export class ElectronMenubar extends EventEmitter {
   /**
    * @description 默认窗口高度
    */
@@ -504,7 +540,9 @@ export class ElectronMenubar extends EventEmitter<MenubarEvents> {
       }
 
       // 显示存储的上下文菜单
-      const contextMenu = (this.tray as any)._contextMenu
+      const contextMenu = (
+        this.tray as unknown as TrayWithContextMenu
+      )._contextMenu
       if (
         this.tray &&
         contextMenu &&

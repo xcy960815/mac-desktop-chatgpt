@@ -9,7 +9,14 @@ import {
   session
 } from 'electron'
 
-import { ElectronMenubar } from '@/electron-menubar'
+/**
+ * 带有上下文菜单的 Tray 接口
+ */
+interface TrayWithContextMenu extends Tray {
+  _contextMenu?: Menu
+}
+
+import { WindowManager } from '@/window-manager'
 import { showShortcutInputDialog } from '@/shortcut-input-dialog'
 import { showProxyInputDialog } from '@/proxy-input-dialog'
 import {
@@ -46,8 +53,8 @@ type WithBrowserWindowOptions = {
 export interface TrayContextMenuOptions {
   /** 系统托盘实例 */
   tray: Tray
-  /** Electron 菜单栏实例 */
-  electronMenubar: ElectronMenubar
+  /** 窗口管理器实例 */
+  windowManager: WindowManager
   /** 菜单实例 */
   menu: Menu
   /** 各模型的 URL 配置 */
@@ -86,12 +93,12 @@ export interface TrayContextMenuOptions {
 
 /**
  * 获取可用的浏览器窗口
- * @param {ElectronMenubar} electronMenubar - Electron 菜单栏实例
+ * @param {WindowManager} windowManager - 窗口管理器实例
  * @param {TrayContextMenuOptions['getMainBrowserWindow']} getMainBrowserWindow - 获取主浏览器窗口的函数
  * @returns {BrowserWindow | null} 可用的浏览器窗口，如果不存在则返回 null
  */
 const getAvailableBrowserWindow = (
-  electronMenubar: ElectronMenubar,
+  windowManager: WindowManager,
   getMainBrowserWindow: TrayContextMenuOptions['getMainBrowserWindow']
 ): BrowserWindow | null => {
   const mainBrowserWindow = getMainBrowserWindow()
@@ -102,7 +109,7 @@ const getAvailableBrowserWindow = (
     return mainBrowserWindow
   }
 
-  const menubarWindow = electronMenubar.browserWindow
+  const menubarWindow = windowManager.getMainBrowserWindow()
   if (menubarWindow && !menubarWindow.isDestroyed()) {
     return menubarWindow
   }
@@ -133,7 +140,7 @@ const MODEL_TO_URL_KEY: Record<
 export const setupTrayContextMenu = (
   options: TrayContextMenuOptions
 ) => {
-  const { tray, electronMenubar, urls } = options
+  const { tray, windowManager, urls } = options
 
   const waitForWindowLoad = async (
     targetWindow: BrowserWindow
@@ -217,7 +224,7 @@ export const setupTrayContextMenu = (
           behavior !== WindowBehavior.AutoHide,
         windowBehavior: behavior
       })
-      electronMenubar.setWindowBehavior(behavior)
+      windowManager.setWindowBehavior(behavior)
       updateContextMenu()
     }
 
@@ -250,7 +257,7 @@ export const setupTrayContextMenu = (
           newUserSetting.urls?.[model] || urls[urlKey]
 
         getAvailableBrowserWindow(
-          electronMenubar,
+          windowManager,
           options.getMainBrowserWindow
         )?.webContents.send(
           'model-changed',
@@ -384,7 +391,7 @@ export const setupTrayContextMenu = (
 
             let browserWindow =
               getAvailableBrowserWindow(
-                electronMenubar,
+                windowManager,
                 options.getMainBrowserWindow
               ) || null
             if (
@@ -392,7 +399,7 @@ export const setupTrayContextMenu = (
               browserWindow.isDestroyed()
             ) {
               try {
-                if (!electronMenubar.tray) {
+                if (!tray) {
                   dialog.showMessageBox({
                     type: 'error',
                     title: getTrayMenuText(
@@ -413,12 +420,12 @@ export const setupTrayContextMenu = (
                   return
                 }
 
-                await electronMenubar.showWindow()
+                await windowManager.showWindow()
                 await delay(200)
 
                 for (let i = 0; i < 5; i++) {
                   browserWindow =
-                    electronMenubar.browserWindow ||
+                    windowManager.getMainBrowserWindow() ||
                     options.getMainBrowserWindow()
                   if (
                     browserWindow &&
@@ -439,7 +446,7 @@ export const setupTrayContextMenu = (
                 }
               } catch {
                 browserWindow =
-                  electronMenubar.browserWindow ||
+                  windowManager.getMainBrowserWindow() ||
                   options.getMainBrowserWindow()
               }
 
@@ -469,9 +476,9 @@ export const setupTrayContextMenu = (
 
             if (!browserWindow.isVisible()) {
               try {
-                await electronMenubar.showWindow()
+                await windowManager.showWindow()
                 browserWindow =
-                  electronMenubar.browserWindow ||
+                  windowManager.getMainBrowserWindow() ||
                   options.getMainBrowserWindow()
                 if (
                   browserWindow &&
@@ -511,7 +518,7 @@ export const setupTrayContextMenu = (
             await waitForWindowLoad(browserWindow)
 
             browserWindow =
-              electronMenubar.browserWindow ||
+              windowManager.getMainBrowserWindow() ||
               options.getMainBrowserWindow()
             if (
               !browserWindow ||
@@ -542,7 +549,7 @@ export const setupTrayContextMenu = (
             let input: string | null = null
             try {
               input = await showShortcutInputDialog(
-                electronMenubar,
+                windowManager,
                 options.getMainBrowserWindow(),
                 savedShortcut,
                 menuLanguage
@@ -596,23 +603,13 @@ export const setupTrayContextMenu = (
                 () => {
                   const menubarWindow =
                     getAvailableBrowserWindow(
-                      electronMenubar,
+                      windowManager,
                       options.getMainBrowserWindow
                     )
                   if (!menubarWindow) {
                     return
                   }
-                  const menubarVisible =
-                    menubarWindow.isVisible()
-                  if (menubarVisible) {
-                    electronMenubar.hideWindow()
-                  } else {
-                    electronMenubar.showWindow()
-                    if (process.platform === 'darwin') {
-                      electronMenubar.app.show()
-                    }
-                    electronMenubar.app.focus()
-                  }
+                  windowManager.toggleWindow()
                 }
               )
 
@@ -642,23 +639,13 @@ export const setupTrayContextMenu = (
                     () => {
                       const menubarWindow =
                         getAvailableBrowserWindow(
-                          electronMenubar,
+                          windowManager,
                           options.getMainBrowserWindow
                         )
                       if (!menubarWindow) {
                         return
                       }
-                      const menubarVisible =
-                        menubarWindow.isVisible()
-                      if (menubarVisible) {
-                        electronMenubar.hideWindow()
-                      } else {
-                        electronMenubar.showWindow()
-                        if (process.platform === 'darwin') {
-                          electronMenubar.app.show()
-                        }
-                        electronMenubar.app.focus()
-                      }
+                      windowManager.toggleWindow()
                     }
                   )
                 }
@@ -711,23 +698,13 @@ export const setupTrayContextMenu = (
                     () => {
                       const menubarWindow =
                         getAvailableBrowserWindow(
-                          electronMenubar,
+                          windowManager,
                           options.getMainBrowserWindow
                         )
                       if (!menubarWindow) {
                         return
                       }
-                      const menubarVisible =
-                        menubarWindow.isVisible()
-                      if (menubarVisible) {
-                        electronMenubar.hideWindow()
-                      } else {
-                        electronMenubar.showWindow()
-                        if (process.platform === 'darwin') {
-                          electronMenubar.app.show()
-                        }
-                        electronMenubar.app.focus()
-                      }
+                      windowManager.toggleWindow()
                     }
                   )
 
@@ -780,7 +757,7 @@ export const setupTrayContextMenu = (
             }
           } catch (error) {
             const browserWindow = getAvailableBrowserWindow(
-              options.electronMenubar,
+              options.windowManager,
               options.getMainBrowserWindow
             )
             dialog.showMessageBox(
@@ -826,7 +803,7 @@ export const setupTrayContextMenu = (
 
             let browserWindow =
               getAvailableBrowserWindow(
-                electronMenubar,
+                windowManager,
                 options.getMainBrowserWindow
               ) || null
 
@@ -835,10 +812,10 @@ export const setupTrayContextMenu = (
               !browserWindow ||
               browserWindow.isDestroyed()
             ) {
-              await electronMenubar.showWindow()
+              await windowManager.showWindow()
               await delay(200)
               browserWindow =
-                electronMenubar.browserWindow ||
+                windowManager.getMainBrowserWindow() ||
                 options.getMainBrowserWindow()
             }
 
@@ -873,7 +850,7 @@ export const setupTrayContextMenu = (
             let input: string | null = null
             try {
               input = await showProxyInputDialog(
-                electronMenubar,
+                windowManager,
                 options.getMainBrowserWindow(),
                 savedProxy,
                 menuLanguage
@@ -1065,7 +1042,7 @@ export const setupTrayContextMenu = (
         label: t('checkForUpdates'),
         click: async () => {
           const browserWindow = getAvailableBrowserWindow(
-            electronMenubar,
+            windowManager,
             options.getMainBrowserWindow
           )
           await options.updateManager.checkForUpdates(
@@ -1088,7 +1065,8 @@ export const setupTrayContextMenu = (
     // tray.setContextMenu(contextMenu)
 
     // 存储上下文菜单，供右键事件处理程序使用
-    ;(tray as any)._contextMenu = contextMenu
+    ;(tray as unknown as TrayWithContextMenu)._contextMenu =
+      contextMenu
   }
 
   updateContextMenu()

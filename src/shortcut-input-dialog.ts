@@ -8,7 +8,7 @@ import {
   screen
 } from 'electron'
 
-import { ElectronMenubar } from '@/electron-menubar'
+import { WindowManager } from '@/window-manager'
 import { MenuLanguage } from '@/constants'
 import {
   TrayMenuMessageKey,
@@ -17,13 +17,13 @@ import {
 
 /**
  * 显示快捷键输入对话框
- * @param {ElectronMenubar} electronMenubar - Electron 菜单栏实例
+ * @param {WindowManager} windowManager - 窗口管理器实例
  * @param {BrowserWindow} parentWindow - 父窗口实例
  * @param {string} currentShortcut - 当前快捷键字符串
  * @returns {Promise<string | null>} 返回用户输入的快捷键字符串，如果取消则返回 null
  */
 export function showShortcutInputDialog(
-  electronMenubar: ElectronMenubar,
+  windowManager: WindowManager,
   parentWindow: BrowserWindow,
   currentShortcut: string,
   language: MenuLanguage
@@ -34,7 +34,7 @@ export function showShortcutInputDialog(
       return
     }
 
-    electronMenubar.disableAutoHide()
+    windowManager.disableAutoHide()
 
     let parentBounds: Electron.Rectangle
     try {
@@ -297,7 +297,7 @@ export function showShortcutInputDialog(
       }
       isResolved = true
       cleanupIpcListener()
-      electronMenubar.enableAutoHide()
+      windowManager.enableAutoHide()
       resolve(value)
     }
 
