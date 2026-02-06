@@ -81,10 +81,6 @@ export default async function createRendererConfig(
       chunkSizeWarningLimit: 1000,
       rollupOptions: {
         output: {
-          // 代码分割优化
-          manualChunks: {
-            vendor: ['electron']
-          },
           // 压缩输出
           compact: true
         },
