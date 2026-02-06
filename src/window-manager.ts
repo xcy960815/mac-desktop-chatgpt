@@ -5,8 +5,6 @@ import {
   Rectangle
 } from 'electron'
 import { EventEmitter } from 'events'
-import { WindowBehavior } from '@/constants'
-// import { delay } from '@/utils/common'
 
 /**
  * 浏览器窗口操作选项
@@ -39,28 +37,17 @@ export interface WindowManager extends EventEmitter {
     options?: WithBrowserWindowOptions
   ): Promise<T | null>
 
-  // Window Control logic
+  // 窗口控制逻辑
   showWindow(): Promise<void>
   hideWindow(): void
   toggleWindow(trayBounds?: Rectangle): Promise<void>
-  setWindowBehavior(behavior: WindowBehavior): void
-  isWindowLocked(): boolean
+  setAlwaysOnTop(alwaysOnTop: boolean): void
   bringWindowToFront(): Promise<void>
-
-  // Auto-hide control
-  disableAutoHide(): void
-  enableAutoHide(): void
 }
 
 export const createWindowManager = (): WindowManager => {
   const eventEmitter = new EventEmitter()
   let mainBrowserWindow: BrowserWindow | null = null
-  let windowBehavior: WindowBehavior =
-    WindowBehavior.AutoHide
-  let lockWindow = false
-  let autoHideDisabled = false
-  let blurTimeout: NodeJS.Timeout | null = null
-  const isWindows = process.platform === 'win32'
 
   // Helper to emit typed events
   const emit = (
@@ -77,17 +64,12 @@ export const createWindowManager = (): WindowManager => {
   const registerEscShortcut = () => {
     unregisterEscShortcut()
     globalShortcut.register('esc', () => {
+      // 如果需要，允许使用 Esc 关闭；如果标准应用不需要则移除
+      // 目前保留作为实用功能
       if (mainBrowserWindow?.isVisible()) {
         hideWindow()
       }
     })
-  }
-
-  const clearPendingBlurTimeout = () => {
-    if (blurTimeout) {
-      clearTimeout(blurTimeout)
-      blurTimeout = null
-    }
   }
 
   const hideWindow = () => {
@@ -99,26 +81,14 @@ export const createWindowManager = (): WindowManager => {
     emit('hide')
     mainBrowserWindow.hide()
     emit('after-hide')
-    if (blurTimeout) {
-      clearTimeout(blurTimeout)
-      blurTimeout = null
-    }
   }
 
   const showWindow = async (): Promise<void> => {
     if (!mainBrowserWindow) return
 
-    // 如果窗口已存在且可见，并且处于锁定在桌面模式，则不做任何操作
-    if (
-      mainBrowserWindow.isVisible() &&
-      windowBehavior === WindowBehavior.LockOnDesktop
-    ) {
-      return
-    }
-
     emit('show')
 
-    // Standard show logic
+    // 标准显示逻辑
     mainBrowserWindow.center()
     mainBrowserWindow.restore()
     mainBrowserWindow.focus()
@@ -131,10 +101,6 @@ export const createWindowManager = (): WindowManager => {
     if (!mainBrowserWindow) return
 
     if (mainBrowserWindow.isVisible()) {
-      if (lockWindow && !mainBrowserWindow.isFocused()) {
-        await bringWindowToFront()
-        return
-      }
       hideWindow()
     } else {
       await showWindow()
@@ -145,32 +111,14 @@ export const createWindowManager = (): WindowManager => {
     }
   }
 
-  const setWindowBehavior = (behavior: WindowBehavior) => {
-    windowBehavior = behavior
-    const wasLocked = lockWindow
-    lockWindow = behavior !== WindowBehavior.AutoHide
-
-    if (!lockWindow && wasLocked && !autoHideDisabled) {
-      autoHideDisabled = false
-    }
-
-    if (lockWindow) {
-      clearPendingBlurTimeout()
-    }
-
-    applyWindowBehaviorToWindow()
-  }
-
-  const applyWindowBehaviorToWindow = () => {
+  const setAlwaysOnTop = (alwaysOnTop: boolean) => {
     if (
       !mainBrowserWindow ||
       mainBrowserWindow.isDestroyed()
     )
       return
 
-    const shouldAlwaysOnTop =
-      windowBehavior === WindowBehavior.AlwaysOnTop
-    if (shouldAlwaysOnTop) {
+    if (alwaysOnTop) {
       mainBrowserWindow.setAlwaysOnTop(true, 'floating')
     } else {
       mainBrowserWindow.setAlwaysOnTop(false)
@@ -191,7 +139,7 @@ export const createWindowManager = (): WindowManager => {
       return
     }
 
-    // Try moveTop for macOS
+    // 尝试在 macOS 上使用 moveTop
     const movableWindow = mainBrowserWindow as any
     if (typeof movableWindow.moveTop === 'function') {
       try {
@@ -208,34 +156,19 @@ export const createWindowManager = (): WindowManager => {
     }
   }
 
-  // --- Window Listeners Setup ---
+  // --- 窗口监听器设置 ---
   const registerWindowListeners = (win: BrowserWindow) => {
-    win.on('blur', () => {
-      unregisterEscShortcut()
-
-      clearPendingBlurTimeout()
-
-      if (lockWindow) {
-        emit('focus-lost')
-        return
-      }
-
-      if (autoHideDisabled) return
-
-      const blurHideDelay = isWindows ? 150 : 100
-      blurTimeout = setTimeout(() => {
-        hideWindow()
-      }, blurHideDelay)
-    })
-
     win.on('focus', () => {
       registerEscShortcut()
     })
 
-    // Clean up on close
+    win.on('blur', () => {
+      unregisterEscShortcut()
+    })
+
+    // 关闭时清理
     win.on('closed', () => {
       unregisterEscShortcut()
-      clearPendingBlurTimeout()
       mainBrowserWindow = null
     })
   }
@@ -246,7 +179,8 @@ export const createWindowManager = (): WindowManager => {
     mainBrowserWindow = window
     if (window) {
       registerWindowListeners(window)
-      applyWindowBehaviorToWindow()
+      // 我们不在这里自动应用 alwaysOnTop，因为不再在 WindowManager 中存储状态
+      // 预期 main.ts 会进行初始设置
     }
   }
 
@@ -258,9 +192,6 @@ export const createWindowManager = (): WindowManager => {
       ) {
         return mainBrowserWindow
       }
-      // Logic to recreate window could go here, but for now we expect main.ts to handle creation
-      // or we can trigger an event to request creation?
-      // For this refactor, let's assume valid instance is managed via setMainBrowserWindow
       return null
     }
 
@@ -268,7 +199,6 @@ export const createWindowManager = (): WindowManager => {
     task: (win: BrowserWindow) => T | Promise<T>,
     options?: WithBrowserWindowOptions
   ): Promise<T | null> => {
-    // Simplified version of original logic
     const win = await ensureBrowserWindow()
     if (win && !win.isDestroyed()) {
       try {
@@ -280,7 +210,7 @@ export const createWindowManager = (): WindowManager => {
     return null
   }
 
-  // Return the object with mixins
+  // 返回带有 mixin 的对象
   const instance = Object.assign(eventEmitter, {
     getMainBrowserWindow: () => mainBrowserWindow,
     setMainBrowserWindow,
@@ -289,16 +219,8 @@ export const createWindowManager = (): WindowManager => {
     showWindow,
     hideWindow,
     toggleWindow,
-    setWindowBehavior,
-    isWindowLocked: () => lockWindow,
-    bringWindowToFront,
-    disableAutoHide: () => {
-      autoHideDisabled = true
-      clearPendingBlurTimeout()
-    },
-    enableAutoHide: () => {
-      autoHideDisabled = false
-    }
+    setAlwaysOnTop,
+    bringWindowToFront
   })
 
   return instance as WindowManager

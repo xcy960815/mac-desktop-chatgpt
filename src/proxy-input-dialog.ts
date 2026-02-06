@@ -34,8 +34,6 @@ export function showProxyInputDialog(
       return
     }
 
-    windowManager.disableAutoHide()
-
     let parentBounds: Electron.Rectangle
     try {
       parentBounds = parentWindow.getBounds()
@@ -240,7 +238,7 @@ export function showProxyInputDialog(
       }
       isResolved = true
       cleanupIpcListener()
-      windowManager.enableAutoHide()
+
       resolve(value)
     }
 

@@ -34,8 +34,6 @@ export function showShortcutInputDialog(
       return
     }
 
-    windowManager.disableAutoHide()
-
     let parentBounds: Electron.Rectangle
     try {
       parentBounds = parentWindow.getBounds()
@@ -297,7 +295,7 @@ export function showShortcutInputDialog(
       }
       isResolved = true
       cleanupIpcListener()
-      windowManager.enableAutoHide()
+
       resolve(value)
     }
 

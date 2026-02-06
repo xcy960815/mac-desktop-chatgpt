@@ -16,9 +16,6 @@
     "paths": {
       "*": ["node_modules/*"],
       "@/*": ["src/*"],
-      "electron-positioner": ["types/electron-positioner.d.ts"],
-
-      "electron-menubar":["./src/electron-menubar.ts"]
     }
   }
 }
