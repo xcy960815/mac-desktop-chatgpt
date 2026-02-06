@@ -50,6 +50,7 @@ export type TrayMenuMessageKey =
   | 'proxySetErrorMessagePrefix'
   | 'windowDestroyedError'
   | 'reloadWindowError'
+  | 'showInDock'
 
 const MENU_MESSAGES: Record<
   MenuLanguage,
@@ -60,6 +61,7 @@ const MENU_MESSAGES: Record<
     reload: 'Reload',
     openInBrowser: 'Open in browser',
     autoLaunchOnStartup: 'Auto-launch on startup',
+    showInDock: 'Show in Dock',
     windowBehavior: 'Window behavior',
     windowAutoHide: 'Auto hide',
     windowLockOnDesktop: 'Lock on desktop',
@@ -120,6 +122,7 @@ const MENU_MESSAGES: Record<
     reload: '重新加载',
     openInBrowser: '在浏览器中打开',
     autoLaunchOnStartup: '开机自启',
+    showInDock: '在程序坞显示',
     windowBehavior: '窗口行为',
     windowAutoHide: '自动隐藏',
     windowLockOnDesktop: '锁定在桌面',
