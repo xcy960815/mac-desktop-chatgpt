@@ -6,6 +6,7 @@
 :root {
   /* 布局变量 */
   --traffic-light-offset: 28px;
+  /* --traffic-light-offset: 0px; */
   --actual-height: 100vh;
   
   /* 主题色 */
@@ -63,6 +64,19 @@ body {
   height: calc(var(--actual-height) - var(--traffic-light-offset));
   display: inline-flex !important;
 }
+
+/* 标题栏拖拽区域 */
+.titlebar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: var(--traffic-light-offset);
+  -webkit-app-region: drag;
+  z-index: 9999;
+  cursor: move;
+}
+
 
 /* 公共遮罩层样式 */
 .webview-loading,
