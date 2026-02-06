@@ -13,11 +13,15 @@ import {
   // checkProxy,
   // fixGoogleLogin
 } from '@/utils/common'
-import { createWindowManager } from '@/window-manager'
+import {
+  createWindowManager,
+  WindowManager
+} from '@/window-manager'
 import { createShortcutManager } from '@/shortcut-manager'
 import { initializeLastVisitedUrlTracking } from '@/url-tracker'
 import { registerWebContentsHandlers } from '@/webview-handlers'
 import { createUpdateManager } from '@/utils/update-manager'
+import { readUserSetting } from '@/utils/user-setting'
 
 import {
   app,
@@ -27,8 +31,6 @@ import {
   Menu,
   BrowserWindow
 } from 'electron'
-
-import { readUserSetting } from '@/utils/user-setting'
 
 /**
  * 带有上下文菜单的 Tray 接口
@@ -59,6 +61,7 @@ app.commandLine.appendSwitch(
 
 // 标记 ready 事件是否已触发
 let isMenubarReady = false
+let windowManager: WindowManager | null = null
 
 app.on(
   'certificate-error',
@@ -106,7 +109,7 @@ app.on('ready', async () => {
   })
 
   // 创建窗口管理器
-  const windowManager = createWindowManager()
+  windowManager = createWindowManager()
 
   // 创建浏览器窗口
   const browserWindow = new BrowserWindow({
@@ -116,9 +119,12 @@ app.on('ready', async () => {
     height: MAIN_WINDOW_HEIGHT,
     useContentSize: true,
     show: false, // 初始状态隐藏
-    frame: false, // 无边框以支持自定义 UI
-    titleBarStyle: 'hidden', // 在 macOS 上显示红绿灯
+    // titleBarStyle: 'hidden', // 在 macOS 上显示红绿灯
+    titleBarStyle: 'hiddenInset', // 在 macOS 上显示红绿灯
     trafficLightPosition: { x: 10, y: 6 }, // 调整红绿灯位置避免与内容重叠
+    ...(process.platform !== 'darwin'
+      ? { titleBarOverlay: true }
+      : {}),
     // 为自定义 UI 设置窗口属性
     // 确保无边框窗口以适配自定义设计
     webPreferences: {
@@ -140,11 +146,6 @@ app.on('ready', async () => {
   })
 
   browserWindow.loadURL(indexUrl)
-
-  // 设置独立的任务栏图标行为？
-  // 之前的代码：
-  // if (process.platform === 'darwin') { app.dock.hide() }
-  // else if (process.platform === 'linux') { browserWindow.setSkipTaskbar(true) }
 
   if (process.platform === 'darwin') {
     const dockIcon = nativeImage.createFromPath(
@@ -316,6 +317,7 @@ app.on('will-quit', () => {
 })
 
 app.on('before-quit', () => {
-  const windowManager = createWindowManager()
-  windowManager.setWillQuit(true)
+  if (windowManager) {
+    windowManager.setWillQuit(true)
+  }
 })
