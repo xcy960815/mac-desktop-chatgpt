@@ -1,7 +1,7 @@
 import { app, shell, WebContents } from 'electron'
 import contextMenu from 'electron-context-menu'
 
-import { ElectronMenubar } from '@/electron-menubar'
+import { WindowManager } from '@/window-manager'
 import { ModelUrl } from '@/constants'
 import {
   readUserSetting,
@@ -69,12 +69,12 @@ const registerNavigationListeners = (
 /**
  * 注册加载失败处理器，处理 WebView 加载失败的情况
  * @param {WebContents} webContents - WebContents 实例
- * @param {ElectronMenubar} electronMenubar - Electron 菜单栏实例
+ * @param {WindowManager} windowManager - 窗口管理器实例
  * @returns {void}
  */
 const registerLoadFailureHandler = (
   webContents: WebContents,
-  electronMenubar: ElectronMenubar
+  windowManager: WindowManager
 ) => {
   webContents.on(
     'did-fail-load',
@@ -102,10 +102,9 @@ const registerLoadFailureHandler = (
         errorMessages[errorCode.toString()] ||
         `加载失败: ${errorDescription} (错误码: ${errorCode})`
 
-      electronMenubar.browserWindow?.webContents.send(
-        'load-error',
-        errorMessage
-      )
+      windowManager
+        .getMainBrowserWindow()
+        ?.webContents.send('load-error', errorMessage)
 
       if (errorCode === -7) {
         setTimeout(() => {
@@ -165,11 +164,11 @@ let commandLineSwitchAppended = false
 
 /**
  * 注册 macOS 隐藏处理器
- * @param {ElectronMenubar} electronMenubar - Electron 菜单栏实例
+ * @param {WindowManager} windowManager - 窗口管理器实例
  * @returns {void}
  */
 const registerMacHideHandler = (
-  electronMenubar: ElectronMenubar
+  windowManager: WindowManager
 ) => {
   if (
     process.platform !== 'darwin' ||
@@ -178,25 +177,24 @@ const registerMacHideHandler = (
     return
   }
 
-  electronMenubar.on(
-    'after-hide',
-    ({ app: menubarApp }) => {
-      menubarApp.hide()
+  windowManager.on('after-hide', () => {
+    if (process.platform === 'darwin') {
+      app.hide()
     }
-  )
+  })
 
   macHideHandlerRegistered = true
 }
 
 /**
  * 注册 WebContents 处理器，包括导航监听、加载失败处理、输入快捷键等
- * @param {ElectronMenubar} electronMenubar - Electron 菜单栏实例
+ * @param {WindowManager} windowManager - 窗口管理器实例
  * @returns {void}
  */
 export const registerWebContentsHandlers = (
-  electronMenubar: ElectronMenubar
+  windowManager: WindowManager
 ) => {
-  registerMacHideHandler(electronMenubar)
+  registerMacHideHandler(windowManager)
 
   // 只调用一次 commandLine.appendSwitch
   if (!commandLineSwitchAppended) {
@@ -212,7 +210,7 @@ export const registerWebContentsHandlers = (
       return
     }
 
-    registerLoadFailureHandler(webContents, electronMenubar)
+    registerLoadFailureHandler(webContents, windowManager)
     registerNavigationListeners(webContents)
 
     webContents.setWindowOpenHandler(({ url }) => {

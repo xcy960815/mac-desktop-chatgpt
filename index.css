@@ -8,49 +8,16 @@ body {
   /* background-color: #eeeeee; */
 }
 
+
 /* 
- * 实际高度 = 窗口高度 - 三角箭头高度
+ * 实际高度 = 窗口高度
  */
 :root {
-  --actual-height: calc(100vh - 12px);
+  --actual-height: 100vh;
 }
 
 .container {
   position: relative;
-  padding: 12px 0 0 0;
-}
-/* 
- * 三角箭头
- */
-.triangle {
-  height: 0;
-  width: 0;
-  border-width: 0 8px 12px 8px;
-  border-style: solid;
-  border-color: transparent transparent #eeeeee transparent;
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  transition: left 0.3s ease-out, border-color 0.3s ease-out;
-}
-
-@media (prefers-color-scheme: dark) {
-  .triangle {
-    border-color: transparent transparent #1a1a1a transparent;
-  }
-}
-
-/* 
- * Windows 平台样式，隐藏三角箭头
- */
-.platform-win32 .triangle {
-  display: none;
-}
-/* 
- * Windows 平台样式，隐藏容器顶部边距
- */
-.platform-win32.container {
   padding: 0;
 }
 
@@ -60,7 +27,7 @@ body {
   height: 100vh;
   margin: 0 auto;
   position: relative;
-  border-radius: 8px;
+  border-radius: 0;
   overflow: hidden;
 }
 
@@ -71,15 +38,6 @@ body {
   width: 100%;
   height: var(--actual-height);
   display: inline-flex !important;
-}
-
-/* Windows 平台样式 */
-.platform-win32 {
-  --actual-height: 100vh;
-}
-
-.platform-win32 .webview-box {
-  border-radius: 0;
 }
 
 .webview-loading {

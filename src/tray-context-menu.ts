@@ -9,7 +9,14 @@ import {
   session
 } from 'electron'
 
-import { ElectronMenubar } from '@/electron-menubar'
+/**
+ * 带有上下文菜单的 Tray 接口
+ */
+interface TrayWithContextMenu extends Tray {
+  _contextMenu?: Menu
+}
+
+import { WindowManager } from '@/window-manager'
 import { showShortcutInputDialog } from '@/shortcut-input-dialog'
 import { showProxyInputDialog } from '@/proxy-input-dialog'
 import {
@@ -46,8 +53,8 @@ type WithBrowserWindowOptions = {
 export interface TrayContextMenuOptions {
   /** 系统托盘实例 */
   tray: Tray
-  /** Electron 菜单栏实例 */
-  electronMenubar: ElectronMenubar
+  /** 窗口管理器实例 */
+  windowManager: WindowManager
   /** 菜单实例 */
   menu: Menu
   /** 各模型的 URL 配置 */
@@ -86,12 +93,12 @@ export interface TrayContextMenuOptions {
 
 /**
  * 获取可用的浏览器窗口
- * @param {ElectronMenubar} electronMenubar - Electron 菜单栏实例
+ * @param {WindowManager} windowManager - 窗口管理器实例
  * @param {TrayContextMenuOptions['getMainBrowserWindow']} getMainBrowserWindow - 获取主浏览器窗口的函数
  * @returns {BrowserWindow | null} 可用的浏览器窗口，如果不存在则返回 null
  */
 const getAvailableBrowserWindow = (
-  electronMenubar: ElectronMenubar,
+  windowManager: WindowManager,
   getMainBrowserWindow: TrayContextMenuOptions['getMainBrowserWindow']
 ): BrowserWindow | null => {
   const mainBrowserWindow = getMainBrowserWindow()
@@ -102,7 +109,7 @@ const getAvailableBrowserWindow = (
     return mainBrowserWindow
   }
 
-  const menubarWindow = electronMenubar.browserWindow
+  const menubarWindow = windowManager.getMainBrowserWindow()
   if (menubarWindow && !menubarWindow.isDestroyed()) {
     return menubarWindow
   }
@@ -133,7 +140,7 @@ const MODEL_TO_URL_KEY: Record<
 export const setupTrayContextMenu = (
   options: TrayContextMenuOptions
 ) => {
-  const { tray, electronMenubar, urls } = options
+  const { tray, windowManager, urls } = options
 
   const waitForWindowLoad = async (
     targetWindow: BrowserWindow
@@ -195,8 +202,14 @@ export const setupTrayContextMenu = (
         updateContextMenu()
       } catch (error) {
         dialog.showErrorBox(
-          '开机启动设置失败',
-          '请稍后再试或手动到系统设置中修改。'
+          getTrayMenuText(
+            'autoLaunchErrorTitle',
+            menuLanguage
+          ),
+          getTrayMenuText(
+            'autoLaunchErrorMessage',
+            menuLanguage
+          )
         )
       }
     }
@@ -211,7 +224,7 @@ export const setupTrayContextMenu = (
           behavior !== WindowBehavior.AutoHide,
         windowBehavior: behavior
       })
-      electronMenubar.setWindowBehavior(behavior)
+      windowManager.setWindowBehavior(behavior)
       updateContextMenu()
     }
 
@@ -244,7 +257,7 @@ export const setupTrayContextMenu = (
           newUserSetting.urls?.[model] || urls[urlKey]
 
         getAvailableBrowserWindow(
-          electronMenubar,
+          windowManager,
           options.getMainBrowserWindow
         )?.webContents.send(
           'model-changed',
@@ -378,7 +391,7 @@ export const setupTrayContextMenu = (
 
             let browserWindow =
               getAvailableBrowserWindow(
-                electronMenubar,
+                windowManager,
                 options.getMainBrowserWindow
               ) || null
             if (
@@ -386,23 +399,33 @@ export const setupTrayContextMenu = (
               browserWindow.isDestroyed()
             ) {
               try {
-                if (!electronMenubar.tray) {
+                if (!tray) {
                   dialog.showMessageBox({
                     type: 'error',
-                    title: '错误',
-                    message:
-                      '应用程序未完全初始化，请稍后再试',
-                    buttons: ['确定']
+                    title: getTrayMenuText(
+                      'errorTitle',
+                      menuLanguage
+                    ),
+                    message: getTrayMenuText(
+                      'appNotReadyMessage',
+                      menuLanguage
+                    ),
+                    buttons: [
+                      getTrayMenuText(
+                        'confirm',
+                        menuLanguage
+                      )
+                    ]
                   })
                   return
                 }
 
-                await electronMenubar.showWindow()
+                await windowManager.showWindow()
                 await delay(200)
 
                 for (let i = 0; i < 5; i++) {
                   browserWindow =
-                    electronMenubar.browserWindow ||
+                    windowManager.getMainBrowserWindow() ||
                     options.getMainBrowserWindow()
                   if (
                     browserWindow &&
@@ -423,7 +446,7 @@ export const setupTrayContextMenu = (
                 }
               } catch {
                 browserWindow =
-                  electronMenubar.browserWindow ||
+                  windowManager.getMainBrowserWindow() ||
                   options.getMainBrowserWindow()
               }
 
@@ -433,9 +456,17 @@ export const setupTrayContextMenu = (
               ) {
                 dialog.showMessageBox({
                   type: 'error',
-                  title: '错误',
-                  message: '窗口未准备好，请稍后再试',
-                  buttons: ['确定']
+                  title: getTrayMenuText(
+                    'errorTitle',
+                    menuLanguage
+                  ),
+                  message: getTrayMenuText(
+                    'windowNotReadyMessage',
+                    menuLanguage
+                  ),
+                  buttons: [
+                    getTrayMenuText('confirm', menuLanguage)
+                  ]
                 })
                 return
               }
@@ -445,9 +476,9 @@ export const setupTrayContextMenu = (
 
             if (!browserWindow.isVisible()) {
               try {
-                await electronMenubar.showWindow()
+                await windowManager.showWindow()
                 browserWindow =
-                  electronMenubar.browserWindow ||
+                  windowManager.getMainBrowserWindow() ||
                   options.getMainBrowserWindow()
                 if (
                   browserWindow &&
@@ -469,9 +500,17 @@ export const setupTrayContextMenu = (
             ) {
               dialog.showMessageBox({
                 type: 'error',
-                title: '错误',
-                message: '窗口未准备好，请稍后再试',
-                buttons: ['确定']
+                title: getTrayMenuText(
+                  'errorTitle',
+                  menuLanguage
+                ),
+                message: getTrayMenuText(
+                  'windowNotReadyMessage',
+                  menuLanguage
+                ),
+                buttons: [
+                  getTrayMenuText('confirm', menuLanguage)
+                ]
               })
               return
             }
@@ -479,7 +518,7 @@ export const setupTrayContextMenu = (
             await waitForWindowLoad(browserWindow)
 
             browserWindow =
-              electronMenubar.browserWindow ||
+              windowManager.getMainBrowserWindow() ||
               options.getMainBrowserWindow()
             if (
               !browserWindow ||
@@ -487,9 +526,17 @@ export const setupTrayContextMenu = (
             ) {
               dialog.showMessageBox({
                 type: 'error',
-                title: '错误',
-                message: '窗口未准备好，请稍后再试',
-                buttons: ['确定']
+                title: getTrayMenuText(
+                  'errorTitle',
+                  menuLanguage
+                ),
+                message: getTrayMenuText(
+                  'windowNotReadyMessage',
+                  menuLanguage
+                ),
+                buttons: [
+                  getTrayMenuText('confirm', menuLanguage)
+                ]
               })
               return
             }
@@ -502,16 +549,25 @@ export const setupTrayContextMenu = (
             let input: string | null = null
             try {
               input = await showShortcutInputDialog(
-                electronMenubar,
-                browserWindow,
-                savedShortcut
+                windowManager,
+                options.getMainBrowserWindow(),
+                savedShortcut,
+                menuLanguage
               )
             } catch (error) {
               dialog.showMessageBox({
                 type: 'error',
-                title: '错误',
-                message: '显示对话框失败，请稍后再试',
-                buttons: ['确定']
+                title: getTrayMenuText(
+                  'errorTitle',
+                  menuLanguage
+                ),
+                message: getTrayMenuText(
+                  'dialogShowErrorMessage',
+                  menuLanguage
+                ),
+                buttons: [
+                  getTrayMenuText('confirm', menuLanguage)
+                ]
               })
               return
             }
@@ -521,9 +577,17 @@ export const setupTrayContextMenu = (
               if (!shortcut || shortcut.trim() === '') {
                 dialog.showMessageBox(browserWindow, {
                   type: 'error',
-                  title: '设置失败',
-                  message: '快捷键不能为空',
-                  buttons: ['确定']
+                  title: getTrayMenuText(
+                    'settingFailedTitle',
+                    menuLanguage
+                  ),
+                  message: getTrayMenuText(
+                    'shortcutEmptyMessage',
+                    menuLanguage
+                  ),
+                  buttons: [
+                    getTrayMenuText('confirm', menuLanguage)
+                  ]
                 })
                 return
               }
@@ -539,23 +603,13 @@ export const setupTrayContextMenu = (
                 () => {
                   const menubarWindow =
                     getAvailableBrowserWindow(
-                      electronMenubar,
+                      windowManager,
                       options.getMainBrowserWindow
                     )
                   if (!menubarWindow) {
                     return
                   }
-                  const menubarVisible =
-                    menubarWindow.isVisible()
-                  if (menubarVisible) {
-                    electronMenubar.hideWindow()
-                  } else {
-                    electronMenubar.showWindow()
-                    if (process.platform === 'darwin') {
-                      electronMenubar.app.show()
-                    }
-                    electronMenubar.app.focus()
-                  }
+                  windowManager.toggleWindow()
                 }
               )
 
@@ -568,9 +622,14 @@ export const setupTrayContextMenu = (
                 options.setCurrentShortcut(shortcut)
                 dialog.showMessageBox(browserWindow, {
                   type: 'info',
-                  title: '设置成功',
-                  message: `快捷键已设置为: ${shortcut}`,
-                  buttons: ['确定']
+                  title: getTrayMenuText(
+                    'settingSuccessTitle',
+                    menuLanguage
+                  ),
+                  message: `${getTrayMenuText('shortcutSetSuccessMessagePrefix', menuLanguage)}${shortcut}`,
+                  buttons: [
+                    getTrayMenuText('confirm', menuLanguage)
+                  ]
                 })
                 updateContextMenu()
               } else {
@@ -580,42 +639,50 @@ export const setupTrayContextMenu = (
                     () => {
                       const menubarWindow =
                         getAvailableBrowserWindow(
-                          electronMenubar,
+                          windowManager,
                           options.getMainBrowserWindow
                         )
                       if (!menubarWindow) {
                         return
                       }
-                      const menubarVisible =
-                        menubarWindow.isVisible()
-                      if (menubarVisible) {
-                        electronMenubar.hideWindow()
-                      } else {
-                        electronMenubar.showWindow()
-                        if (process.platform === 'darwin') {
-                          electronMenubar.app.show()
-                        }
-                        electronMenubar.app.focus()
-                      }
+                      windowManager.toggleWindow()
                     }
                   )
                 }
                 dialog.showMessageBox(browserWindow, {
                   type: 'error',
-                  title: '设置失败',
-                  message:
-                    '快捷键已被占用或格式不正确，请尝试其他快捷键',
-                  buttons: ['确定']
+                  title: getTrayMenuText(
+                    'settingFailedTitle',
+                    menuLanguage
+                  ),
+                  message: getTrayMenuText(
+                    'shortcutConflictMessage',
+                    menuLanguage
+                  ),
+                  buttons: [
+                    getTrayMenuText('confirm', menuLanguage)
+                  ]
                 })
               }
             } else {
               const resetResult =
                 await dialog.showMessageBox(browserWindow, {
                   type: 'question',
-                  title: '重置快捷键',
-                  message:
-                    '未输入快捷键，是否将快捷键重置为默认值 CommandOrControl+g？',
-                  buttons: ['是', '否'],
+                  title: getTrayMenuText(
+                    'shortcutResetConfirmTitle',
+                    menuLanguage
+                  ),
+                  message: getTrayMenuText(
+                    'shortcutResetConfirmMessage',
+                    menuLanguage
+                  ),
+                  buttons: [
+                    getTrayMenuText(
+                      'confirm',
+                      menuLanguage
+                    ),
+                    getTrayMenuText('cancel', menuLanguage)
+                  ],
                   cancelId: 1
                 })
               if (resetResult.response === 0) {
@@ -631,23 +698,13 @@ export const setupTrayContextMenu = (
                     () => {
                       const menubarWindow =
                         getAvailableBrowserWindow(
-                          electronMenubar,
+                          windowManager,
                           options.getMainBrowserWindow
                         )
                       if (!menubarWindow) {
                         return
                       }
-                      const menubarVisible =
-                        menubarWindow.isVisible()
-                      if (menubarVisible) {
-                        electronMenubar.hideWindow()
-                      } else {
-                        electronMenubar.showWindow()
-                        if (process.platform === 'darwin') {
-                          electronMenubar.app.show()
-                        }
-                        electronMenubar.app.focus()
-                      }
+                      windowManager.toggleWindow()
                     }
                   )
 
@@ -662,38 +719,66 @@ export const setupTrayContextMenu = (
                   )
                   dialog.showMessageBox(browserWindow, {
                     type: 'info',
-                    title: '设置成功',
-                    message:
-                      '快捷键已重置为默认值: CommandOrControl+g',
-                    buttons: ['确定']
+                    title: getTrayMenuText(
+                      'settingSuccessTitle',
+                      menuLanguage
+                    ),
+                    message: getTrayMenuText(
+                      'shortcutResetSuccessMessage',
+                      menuLanguage
+                    ),
+                    buttons: [
+                      getTrayMenuText(
+                        'confirm',
+                        menuLanguage
+                      )
+                    ]
                   })
                 } else {
                   dialog.showMessageBox(browserWindow, {
                     type: 'error',
-                    title: '设置失败',
-                    message:
-                      '无法注册默认快捷键，请尝试其他快捷键',
-                    buttons: ['确定']
+                    title: getTrayMenuText(
+                      'settingFailedTitle',
+                      menuLanguage
+                    ),
+                    message: getTrayMenuText(
+                      'shortcutResetErrorMessage',
+                      menuLanguage
+                    ),
+                    buttons: [
+                      getTrayMenuText(
+                        'confirm',
+                        menuLanguage
+                      )
+                    ]
                   })
                 }
               }
             }
           } catch (error) {
             const browserWindow = getAvailableBrowserWindow(
-              options.electronMenubar,
+              options.windowManager,
               options.getMainBrowserWindow
             )
             dialog.showMessageBox(
               browserWindow || undefined,
               {
                 type: 'error',
-                title: '错误',
+                title: getTrayMenuText(
+                  'errorTitle',
+                  menuLanguage
+                ),
                 message:
-                  '设置快捷键时发生错误: ' +
+                  getTrayMenuText(
+                    'shortcutSetErrorMessagePrefix',
+                    menuLanguage
+                  ) +
                   (error instanceof Error
                     ? error.message
                     : String(error)),
-                buttons: ['确定']
+                buttons: [
+                  getTrayMenuText('confirm', menuLanguage)
+                ]
               }
             )
           }
@@ -718,7 +803,7 @@ export const setupTrayContextMenu = (
 
             let browserWindow =
               getAvailableBrowserWindow(
-                electronMenubar,
+                windowManager,
                 options.getMainBrowserWindow
               ) || null
 
@@ -727,10 +812,10 @@ export const setupTrayContextMenu = (
               !browserWindow ||
               browserWindow.isDestroyed()
             ) {
-              await electronMenubar.showWindow()
+              await windowManager.showWindow()
               await delay(200)
               browserWindow =
-                electronMenubar.browserWindow ||
+                windowManager.getMainBrowserWindow() ||
                 options.getMainBrowserWindow()
             }
 
@@ -740,9 +825,17 @@ export const setupTrayContextMenu = (
             ) {
               dialog.showMessageBox({
                 type: 'error',
-                title: '错误',
-                message: '窗口未准备好，请稍后再试',
-                buttons: ['确定']
+                title: getTrayMenuText(
+                  'errorTitle',
+                  menuLanguage
+                ),
+                message: getTrayMenuText(
+                  'windowNotReadyMessage',
+                  menuLanguage
+                ),
+                buttons: [
+                  getTrayMenuText('confirm', menuLanguage)
+                ]
               })
               return
             }
@@ -757,9 +850,10 @@ export const setupTrayContextMenu = (
             let input: string | null = null
             try {
               input = await showProxyInputDialog(
-                electronMenubar,
-                browserWindow,
-                savedProxy
+                windowManager,
+                options.getMainBrowserWindow(),
+                savedProxy,
+                menuLanguage
               )
             } catch (error) {
               dialog.showMessageBox({
@@ -799,11 +893,21 @@ export const setupTrayContextMenu = (
                 ) {
                   dialog.showMessageBox(browserWindow, {
                     type: 'error',
-                    title: '格式错误',
-                    message:
-                      '代理地址格式不正确。\n\n示例:\nhttp://127.0.0.1:7890\n127.0.0.1:7890',
-                    buttons: ['确定'],
-                    icon: electronMenubar.icon
+                    title: getTrayMenuText(
+                      'formatErrorTitle',
+                      menuLanguage
+                    ),
+                    message: getTrayMenuText(
+                      'proxyFormatErrorMessage',
+                      menuLanguage
+                    ),
+                    buttons: [
+                      getTrayMenuText(
+                        'confirm',
+                        menuLanguage
+                      )
+                    ],
+                    defaultId: 0
                   })
                   return
                 }
@@ -835,17 +939,29 @@ export const setupTrayContextMenu = (
               // 提示重启生效
               dialog.showMessageBox(browserWindow, {
                 type: 'info',
-                title: '设置成功',
-                message:
-                  '代理设置已保存，请重启应用以生效。',
-                buttons: ['确定']
+                title: getTrayMenuText(
+                  'settingSuccessTitle',
+                  menuLanguage
+                ),
+                message: getTrayMenuText(
+                  'proxySavedMessage',
+                  menuLanguage
+                ),
+                buttons: [
+                  getTrayMenuText('confirm', menuLanguage)
+                ]
               })
             }
           } catch (error) {
-            dialog.showErrorBox(
-              '错误',
-              '设置代理时发生错误: ' + String(error)
-            )
+            if (options.isMenubarReady()) {
+              dialog.showErrorBox(
+                getTrayMenuText('errorTitle', menuLanguage),
+                getTrayMenuText(
+                  'proxySetErrorMessagePrefix',
+                  menuLanguage
+                ) + String(error)
+              )
+            }
           }
         }
       },
@@ -884,7 +1000,12 @@ export const setupTrayContextMenu = (
           await options.withBrowserWindow(
             (win) => {
               if (win.isDestroyed()) {
-                throw new Error('窗口已销毁')
+                throw new Error(
+                  getTrayMenuText(
+                    'windowDestroyedError',
+                    menuLanguage
+                  )
+                )
               }
 
               const currentModel = newUserSetting.model
@@ -909,8 +1030,10 @@ export const setupTrayContextMenu = (
               )
             },
             {
-              onFailureMessage:
-                '无法重新加载窗口，请稍后重试'
+              onFailureMessage: getTrayMenuText(
+                'reloadWindowError',
+                menuLanguage
+              )
             }
           )
         }
@@ -919,7 +1042,7 @@ export const setupTrayContextMenu = (
         label: t('checkForUpdates'),
         click: async () => {
           const browserWindow = getAvailableBrowserWindow(
-            electronMenubar,
+            windowManager,
             options.getMainBrowserWindow
           )
           await options.updateManager.checkForUpdates(
@@ -942,7 +1065,8 @@ export const setupTrayContextMenu = (
     // tray.setContextMenu(contextMenu)
 
     // 存储上下文菜单，供右键事件处理程序使用
-    ;(tray as any)._contextMenu = contextMenu
+    ;(tray as unknown as TrayWithContextMenu)._contextMenu =
+      contextMenu
   }
 
   updateContextMenu()

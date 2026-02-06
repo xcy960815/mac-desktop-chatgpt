@@ -21,14 +21,7 @@ declare global {
       onLoadError: (
         callback: (errorMessage: string) => void
       ) => void
-      /**
-       * 箭头位置更新回调
-       * @param {(offset: number) => void} callback
-       * @returns {void}
-       */
-      onArrowPositionUpdate: (
-        callback: (offset: number) => void
-      ) => void
+
       /**
        * 平台
        * @returns {string}
@@ -172,16 +165,6 @@ retryButton?.addEventListener('click', () => {
 
 window.electronAPI.onModelChanged(setWebviewSrc)
 window.electronAPI.onLoadError(showError)
-window.electronAPI.onArrowPositionUpdate((offset) => {
-  const triangle = document.querySelector(
-    '.triangle'
-  ) as HTMLDivElement | null
-  if (!triangle) {
-    return
-  }
-  const clampedOffset = Math.max(0, offset)
-  triangle.style.left = `${clampedOffset}px`
-})
 
 /**
  * 根据平台为 body 添加 class
