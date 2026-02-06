@@ -8,7 +8,7 @@ import {
   screen
 } from 'electron'
 
-import { ElectronMenubar } from '@/electron-menubar'
+import { WindowManager } from '@/window-manager'
 import { MenuLanguage } from '@/constants'
 import {
   TrayMenuMessageKey,
@@ -17,13 +17,13 @@ import {
 
 /**
  * 显示代理输入对话框
- * @param {ElectronMenubar} electronMenubar - Electron 菜单栏实例
+ * @param {WindowManager} windowManager - 窗口管理器实例
  * @param {BrowserWindow} parentWindow - 父窗口实例
  * @param {string} currentProxy - 当前代理字符串
  * @returns {Promise<string | null>} 返回用户输入的代理字符串，如果取消则返回 null
  */
 export function showProxyInputDialog(
-  electronMenubar: ElectronMenubar,
+  windowManager: WindowManager,
   parentWindow: BrowserWindow,
   currentProxy: string,
   language: MenuLanguage
@@ -34,7 +34,7 @@ export function showProxyInputDialog(
       return
     }
 
-    electronMenubar.disableAutoHide()
+    windowManager.disableAutoHide()
 
     let parentBounds: Electron.Rectangle
     try {
@@ -240,7 +240,7 @@ export function showProxyInputDialog(
       }
       isResolved = true
       cleanupIpcListener()
-      electronMenubar.enableAutoHide()
+      windowManager.enableAutoHide()
       resolve(value)
     }
 

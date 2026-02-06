@@ -4,7 +4,7 @@ import {
   ipcMain
 } from 'electron'
 
-import { ElectronMenubar } from '@/electron-menubar'
+import { WindowManager } from '@/window-manager'
 import {
   readUserSetting,
   writeUserSetting
@@ -45,20 +45,20 @@ export interface ShortcutManager {
 interface ShortcutManagerOptions {
   /** 浏览器窗口实例 */
   browserWindow: BrowserWindow
-  /** Electron 菜单栏实例 */
-  electronMenubar: ElectronMenubar
+  /** 窗口管理器实例 */
+  windowManager: WindowManager
 }
 
 /**
  * 创建快捷键管理器
  * @param {ShortcutManagerOptions} options - 快捷键管理器配置选项
  * @param {BrowserWindow} options.browserWindow - 浏览器窗口实例
- * @param {ElectronMenubar} options.electronMenubar - Electron 菜单栏实例
+ * @param {WindowManager} options.windowManager - 窗口管理器实例
  * @returns {ShortcutManager} 快捷键管理器实例
  */
 export const createShortcutManager = ({
   browserWindow,
-  electronMenubar
+  windowManager
 }: ShortcutManagerOptions): ShortcutManager => {
   let currentShortcut: string | null = null
 
@@ -67,24 +67,7 @@ export const createShortcutManager = ({
    * @returns {void}
    */
   const toggleWindow = () => {
-    const menubarVisible = browserWindow.isVisible()
-    if (menubarVisible) {
-      if (
-        electronMenubar.isWindowLocked() &&
-        !browserWindow.isFocused()
-      ) {
-        void electronMenubar.bringWindowToFront()
-        return
-      }
-      electronMenubar.hideWindow()
-      return
-    }
-
-    electronMenubar.showWindow()
-    if (process.platform === 'darwin') {
-      electronMenubar.app.show()
-    }
-    electronMenubar.app.focus()
+    windowManager.toggleWindow()
   }
 
   /**
