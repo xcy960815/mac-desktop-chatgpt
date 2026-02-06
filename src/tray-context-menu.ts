@@ -333,6 +333,27 @@ export const setupTrayContextMenu = (
           }
         }
       },
+      {
+        label: t('showInDock'),
+        type: 'checkbox',
+        checked: !!userSetting.showInDock,
+        click: () => {
+          const current = readUserSetting()
+          const newValue = !current.showInDock
+          writeUserSetting({
+            ...current,
+            showInDock: newValue
+          })
+          if (process.platform === 'darwin') {
+            if (newValue) {
+              app.dock.show()
+            } else {
+              app.dock.hide()
+            }
+          }
+          updateContextMenu()
+        }
+      },
       { type: 'separator' },
       {
         label: t('windowBehavior'),

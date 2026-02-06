@@ -33,7 +33,8 @@ const DEFAULTSETTING: UserSetting = {
   lockWindowOnBlur: false,
   windowBehavior: WindowBehavior.AutoHide,
   menuLanguage: MenuLanguage.Chinese,
-  proxy: undefined
+  proxy: undefined,
+  showInDock: false
 }
 /**
  * 位于 SUBPATH 目录中的配置文件名称
@@ -62,6 +63,7 @@ export interface UserSetting {
   windowBehavior?: WindowBehavior // 窗口行为模式
   menuLanguage?: MenuLanguage // 托盘菜单语言
   proxy?: string // 代理设置，例如 socks5://127.0.0.1:7897
+  showInDock?: boolean // 是否在程序坞中显示图标
 }
 
 /**

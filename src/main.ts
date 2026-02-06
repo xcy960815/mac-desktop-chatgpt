@@ -38,6 +38,9 @@ interface TrayWithContextMenu extends Tray {
   _contextMenu?: Menu
 }
 
+// 设置应用名称，这会影响 Dock Hover Title
+app.setName(TOOLTIP)
+
 app.commandLine.appendSwitch('ignore-certificate-errors')
 app.commandLine.appendSwitch(
   'disable-blink-features',
@@ -140,8 +143,16 @@ app.on('ready', async () => {
   // else if (process.platform === 'linux') { browserWindow.setSkipTaskbar(true) }
 
   if (process.platform === 'darwin') {
-    app.dock.hide()
+    const dockIcon = nativeImage.createFromPath(
+      path.join(appPath, 'images', 'icon.png')
+    )
+    app.dock.setIcon(dockIcon)
+
+    if (!userSetting.showInDock) {
+      app.dock.hide()
+    }
   } else if (process.platform === 'linux') {
+    // Linux behavior could also check this setting potentially, but for now focus on Mac as requested
     browserWindow.setSkipTaskbar(true)
   }
 
