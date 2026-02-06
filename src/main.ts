@@ -314,3 +314,8 @@ app.on('window-all-closed', () => {
 app.on('will-quit', () => {
   globalShortcut.unregisterAll()
 })
+
+app.on('before-quit', () => {
+  const windowManager = createWindowManager()
+  windowManager.setWillQuit(true)
+})
