@@ -114,19 +114,10 @@ app.on('ready', async () => {
   // 创建浏览器窗口
   const browserWindow = new BrowserWindow({
     icon: image,
-    transparent: true,
     width: MAIN_WINDOW_WIDTH,
     height: MAIN_WINDOW_HEIGHT,
     useContentSize: true,
     show: false, // 初始状态隐藏
-    // titleBarStyle: 'hidden', // 在 macOS 上显示红绿灯
-    titleBarStyle: 'hiddenInset', // 在 macOS 上显示红绿灯
-    trafficLightPosition: { x: 10, y: 6 }, // 调整红绿灯位置避免与内容重叠
-    ...(process.platform !== 'darwin'
-      ? { titleBarOverlay: true }
-      : {}),
-    // 为自定义 UI 设置窗口属性
-    // 确保无边框窗口以适配自定义设计
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       // 启用webview标签
