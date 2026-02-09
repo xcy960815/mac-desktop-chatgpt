@@ -5,8 +5,6 @@
 
 :root {
   /* 布局变量 */
-  --traffic-light-offset: 28px;
-  /* --traffic-light-offset: 0px; */
   --actual-height: 100vh;
   
   /* 主题色 */
@@ -58,10 +56,9 @@ body {
 /* WebView 容器 */
 .webview {
   position: absolute;
-  top: var(--traffic-light-offset);
   left: 0;
   width: 100%;
-  height: calc(var(--actual-height) - var(--traffic-light-offset));
+  height: calc(var(--actual-height));
   display: inline-flex !important;
 }
 
@@ -71,7 +68,6 @@ body {
   top: 0;
   left: 0;
   width: 100%;
-  height: var(--traffic-light-offset);
   -webkit-app-region: drag;
   z-index: 9999;
   cursor: move;
