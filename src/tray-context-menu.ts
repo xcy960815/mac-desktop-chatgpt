@@ -277,7 +277,6 @@ export const setupTrayContextMenu = (
             checked: isGemini,
             click: createModelSwitchHandler(Model.Gemini)
           },
-          { type: 'separator' },
           {
             label: Model.DeepSeek,
             type: 'radio',

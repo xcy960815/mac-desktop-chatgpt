@@ -43,6 +43,7 @@ export interface WindowManager extends EventEmitter {
   toggleWindow(trayBounds?: Rectangle): Promise<void>
   setAlwaysOnTop(alwaysOnTop: boolean): void
   bringWindowToFront(): Promise<void>
+  setWillQuit(quit: boolean): void
 }
 
 export const createWindowManager = (): WindowManager => {
@@ -156,6 +157,12 @@ export const createWindowManager = (): WindowManager => {
     }
   }
 
+  let willQuit = false
+
+  const setWillQuit = (quit: boolean) => {
+    willQuit = quit
+  }
+
   // --- 窗口监听器设置 ---
   const registerWindowListeners = (win: BrowserWindow) => {
     win.on('focus', () => {
@@ -164,6 +171,14 @@ export const createWindowManager = (): WindowManager => {
 
     win.on('blur', () => {
       unregisterEscShortcut()
+    })
+
+    win.on('close', (event) => {
+      if (!willQuit && process.platform === 'darwin') {
+        event.preventDefault()
+        hideWindow()
+      }
+      // 非 macOS 或正在退出时，允许窗口关闭
     })
 
     // 关闭时清理
@@ -220,7 +235,8 @@ export const createWindowManager = (): WindowManager => {
     hideWindow,
     toggleWindow,
     setAlwaysOnTop,
-    bringWindowToFront
+    bringWindowToFront,
+    setWillQuit
   })
 
   return instance as WindowManager
