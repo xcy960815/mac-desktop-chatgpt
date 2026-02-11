@@ -5,7 +5,6 @@
 
 :root {
   /* 布局变量 */
-  --traffic-light-offset: 28px;
   --actual-height: 100vh;
   
   /* 主题色 */
@@ -57,12 +56,13 @@ body {
 /* WebView 容器 */
 .webview {
   position: absolute;
-  top: var(--traffic-light-offset);
   left: 0;
   width: 100%;
-  height: calc(var(--actual-height) - var(--traffic-light-offset));
+  height: calc(var(--actual-height));
   display: inline-flex !important;
 }
+
+
 
 /* 公共遮罩层样式 */
 .webview-loading,

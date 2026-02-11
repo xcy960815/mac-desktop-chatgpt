@@ -3,12 +3,12 @@
 
 <head>
     <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src *;">
     <title>ChatHub Desktop</title>
     <link rel="stylesheet" href="./index.css">
 </head>
 
 <body class="container">
-
     <div class="webview-box">
         <div class="webview-loading" id="webview-loading">
             <div class="spinner">
@@ -25,7 +25,7 @@
             <button class="retry-button" id="retry-button">重试</button>
         </div>
         <webview class="webview" id="webview-container"
-            autosize="on" allowpopups
+            autosize="on"
             webpreferences="contextIsolation=yes, nodeIntegration=no, disableBlinkFeatures=AutomationControlled"></webview>
     </div>
     <script type="module" src="src/renderer.ts"></script>
