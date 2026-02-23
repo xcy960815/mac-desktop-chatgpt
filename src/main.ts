@@ -8,11 +8,7 @@ import {
   MAIN_WINDOW_WIDTH,
   MAIN_WINDOW_HEIGHT
 } from '@/constants'
-import {
-  resolveMainIndexUrl
-  // checkProxy,
-  // fixGoogleLogin
-} from '@/utils/common'
+import { resolveMainIndexUrl } from '@/utils/common'
 import {
   createWindowManager,
   WindowManager
@@ -86,9 +82,6 @@ app.on('ready', async () => {
     )
   }
 
-  // checkProxy()
-
-  // fixGoogleLogin()
   const appPath = app.getAppPath()
   /**
    * @desc 创建菜单栏图标
