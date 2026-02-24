@@ -33,15 +33,6 @@ import {
 import { UpdateManager } from '@/utils/update-manager'
 
 /**
- * 浏览器窗口操作选项
- * @typedef {Object} WithBrowserWindowOptions
- */
-type WithBrowserWindowOptions = {
-  /** 失败时的错误消息（可选） */
-  onFailureMessage?: string
-}
-
-/**
  * 托盘上下文菜单配置选项
  * @interface TrayContextMenuOptions
  */
@@ -79,8 +70,7 @@ export interface TrayContextMenuOptions {
   setCurrentShortcut(shortcut: string | null): void
   /** 在浏览器窗口上执行任务 */
   withBrowserWindow<T>(
-    task: (win: BrowserWindow) => T | Promise<T>,
-    options?: WithBrowserWindowOptions
+    task: (win: BrowserWindow) => T | Promise<T>
   ): Promise<T | null>
   /** 更新管理器 */
   updateManager: UpdateManager
@@ -974,45 +964,37 @@ export const setupTrayContextMenu = (
         // accelerator: 'CommandOrControl+R',
         click: async () => {
           const newUserSetting = resetUserUrls()
-          await options.withBrowserWindow(
-            (win) => {
-              if (win.isDestroyed()) {
-                throw new Error(
-                  getTrayMenuText(
-                    'windowDestroyedError',
-                    menuLanguage
-                  )
+          await options.withBrowserWindow((win) => {
+            if (win.isDestroyed()) {
+              throw new Error(
+                getTrayMenuText(
+                  'windowDestroyedError',
+                  menuLanguage
                 )
-              }
-
-              const currentModel = newUserSetting.model
-
-              const modelUrlMap: Record<Model, string> = {
-                [Model.ChatGPT]: ModelUrl.ChatGPT,
-                [Model.DeepSeek]: ModelUrl.DeepSeek,
-                [Model.Grok]: ModelUrl.Grok,
-                [Model.Gemini]: ModelUrl.Gemini,
-                [Model.Qwen]: ModelUrl.Qwen,
-                [Model.Doubao]: ModelUrl.Doubao
-              }
-
-              const defaultUrl =
-                newUserSetting.urls?.[currentModel] ||
-                modelUrlMap[currentModel]
-
-              win.webContents.send(
-                'model-changed',
-                currentModel,
-                defaultUrl
-              )
-            },
-            {
-              onFailureMessage: getTrayMenuText(
-                'reloadWindowError',
-                menuLanguage
               )
             }
-          )
+
+            const currentModel = newUserSetting.model
+
+            const modelUrlMap: Record<Model, string> = {
+              [Model.ChatGPT]: ModelUrl.ChatGPT,
+              [Model.DeepSeek]: ModelUrl.DeepSeek,
+              [Model.Grok]: ModelUrl.Grok,
+              [Model.Gemini]: ModelUrl.Gemini,
+              [Model.Qwen]: ModelUrl.Qwen,
+              [Model.Doubao]: ModelUrl.Doubao
+            }
+
+            const defaultUrl =
+              newUserSetting.urls?.[currentModel] ||
+              modelUrlMap[currentModel]
+
+            win.webContents.send(
+              'model-changed',
+              currentModel,
+              defaultUrl
+            )
+          })
         }
       },
       {
