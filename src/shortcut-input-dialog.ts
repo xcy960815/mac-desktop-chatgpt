@@ -17,13 +17,11 @@ import {
 
 /**
  * 显示快捷键输入对话框
- * @param {WindowManager} windowManager - 窗口管理器实例
  * @param {BrowserWindow} parentWindow - 父窗口实例
  * @param {string} currentShortcut - 当前快捷键字符串
  * @returns {Promise<string | null>} 返回用户输入的快捷键字符串，如果取消则返回 null
  */
 export function showShortcutInputDialog(
-  windowManager: WindowManager,
   parentWindow: BrowserWindow,
   currentShortcut: string,
   language: MenuLanguage
