@@ -196,7 +196,6 @@ app.on('ready', async () => {
   Menu.setApplicationMenu(menu)
 
   const shortcutManager = createShortcutManager({
-    browserWindow,
     windowManager
   })
 
