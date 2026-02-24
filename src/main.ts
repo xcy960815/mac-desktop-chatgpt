@@ -62,11 +62,11 @@ let windowManager: WindowManager | null = null
 app.on(
   'certificate-error',
   (
-    event,
-    webContents,
-    url,
-    error,
-    certificate,
+    _event,
+    _webContents,
+    _url,
+    _error,
+    _certificate,
     callback
   ) => {
     callback(true)

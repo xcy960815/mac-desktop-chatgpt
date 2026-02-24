@@ -8,7 +8,6 @@ import {
   screen
 } from 'electron'
 
-import { WindowManager } from '@/window-manager'
 import { MenuLanguage } from '@/constants'
 import {
   TrayMenuMessageKey,
