@@ -8,7 +8,6 @@ import {
   screen
 } from 'electron'
 
-import { WindowManager } from '@/window-manager'
 import { MenuLanguage } from '@/constants'
 import {
   TrayMenuMessageKey,
@@ -17,13 +16,11 @@ import {
 
 /**
  * 显示代理输入对话框
- * @param {WindowManager} windowManager - 窗口管理器实例
  * @param {BrowserWindow} parentWindow - 父窗口实例
  * @param {string} currentProxy - 当前代理字符串
  * @returns {Promise<string | null>} 返回用户输入的代理字符串，如果取消则返回 null
  */
 export function showProxyInputDialog(
-  windowManager: WindowManager,
   parentWindow: BrowserWindow,
   currentProxy: string,
   language: MenuLanguage

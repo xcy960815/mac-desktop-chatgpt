@@ -101,7 +101,10 @@ export const createWindowManager = (): WindowManager => {
   const toggleWindow = async () => {
     if (!mainBrowserWindow) return
 
-    if (mainBrowserWindow.isVisible()) {
+    if (
+      mainBrowserWindow.isVisible() &&
+      mainBrowserWindow.isFocused()
+    ) {
       hideWindow()
     } else {
       await showWindow()

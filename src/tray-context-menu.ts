@@ -528,8 +528,7 @@ export const setupTrayContextMenu = (
             let input: string | null = null
             try {
               input = await showShortcutInputDialog(
-                windowManager,
-                options.getMainBrowserWindow(),
+                options.getMainBrowserWindow() as BrowserWindow,
                 savedShortcut,
                 menuLanguage
               )
@@ -829,8 +828,7 @@ export const setupTrayContextMenu = (
             let input: string | null = null
             try {
               input = await showProxyInputDialog(
-                windowManager,
-                options.getMainBrowserWindow(),
+                options.getMainBrowserWindow() as BrowserWindow,
                 savedProxy,
                 menuLanguage
               )
