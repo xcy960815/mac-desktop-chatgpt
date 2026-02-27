@@ -510,11 +510,6 @@ export const setupTrayContextMenu = (
               return
             }
 
-            if (!browserWindow.isVisible()) {
-              browserWindow.show()
-              await delay(100)
-            }
-
             // 打开对话框前临时取消注册快捷键，避免录入时触发
             const currentShortcutBeforeDialog =
               options.getCurrentShortcut()
@@ -898,11 +893,6 @@ export const setupTrayContextMenu = (
             }
 
             await waitForWindowLoad(browserWindow)
-
-            if (!browserWindow.isVisible()) {
-              browserWindow.show()
-              await delay(100)
-            }
 
             let input: string | null = null
             try {
