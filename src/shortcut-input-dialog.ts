@@ -8,8 +8,11 @@ import {
   screen
 } from 'electron'
 
-import { WindowManager } from '@/window-manager'
 import { MenuLanguage } from '@/constants'
+import {
+  readUserSetting,
+  writeUserSetting
+} from '@/utils/user-setting'
 import {
   TrayMenuMessageKey,
   getTrayMenuText
@@ -17,13 +20,11 @@ import {
 
 /**
  * 显示快捷键输入对话框
- * @param {WindowManager} windowManager - 窗口管理器实例
  * @param {BrowserWindow} parentWindow - 父窗口实例
  * @param {string} currentShortcut - 当前快捷键字符串
  * @returns {Promise<string | null>} 返回用户输入的快捷键字符串，如果取消则返回 null
  */
 export function showShortcutInputDialog(
-  windowManager: WindowManager,
   parentWindow: BrowserWindow,
   currentShortcut: string,
   language: MenuLanguage
@@ -50,7 +51,7 @@ export function showShortcutInputDialog(
     }
 
     const dialogWidth = 400
-    const dialogHeight = 200
+    const dialogHeight = 350
     const x = Math.round(
       parentBounds.x +
         (parentBounds.width - dialogWidth) / 2
@@ -103,6 +104,28 @@ export function showShortcutInputDialog(
     const t = (key: TrayMenuMessageKey) =>
       getTrayMenuText(key, language)
 
+    const shortcutHistory =
+      readUserSetting().shortcutHistory || []
+    const historyHtml = shortcutHistory.length
+      ? shortcutHistory
+          .map(
+            (shortcut: string) => `
+      <div class="history-item" data-shortcut="${shortcut}">
+        <span class="history-item-text">${shortcut}</span>
+        <div class="history-actions">
+          <span class="icon-btn use-btn" title="一键使用">
+            <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>
+          </span>
+          <span class="icon-btn del-btn" title="删除">
+            <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+          </span>
+        </div>
+      </div>
+    `
+          )
+          .join('')
+      : '<div class="empty-history">暂无历史记录</div>'
+
     const html = `
 <!DOCTYPE html>
 <html>
@@ -131,7 +154,7 @@ export function showShortcutInputDialog(
       background: #ffffff;
     }
     .input-group {
-      margin-bottom: 16px;
+      margin-bottom: 8px;
     }
     .shortcut-display {
       width: 100%;
@@ -145,6 +168,11 @@ export function showShortcutInputDialog(
       min-height: 32px;
       display: flex;
       align-items: center;
+    }
+    .hint {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
     }
     .buttons {
       display: flex;
@@ -174,14 +202,69 @@ export function showShortcutInputDialog(
     .btn-ok:hover {
       background: #0056b3;
     }
+    .history-list {
+      flex: 1;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-top: 4px;
+      display: flex;
+      flex-direction: column;
+      background: #fafafa;
+    }
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      border-bottom: 1px solid #ddd;
+    }
+    .history-item:last-child {
+      border-bottom: none;
+    }
+    .history-item-text {
+      font-size: 13px;
+      color: #333;
+      word-break: break-all;
+    }
+    .history-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .icon-btn {
+      cursor: pointer;
+      opacity: 0.6;
+      transition: opacity 0.2s;
+      display: flex;
+      align-items: center;
+      color: #666;
+    }
+    .icon-btn:hover {
+      opacity: 1;
+      color: #007AFF;
+    }
+    .icon-btn.del-btn:hover {
+      color: #ff3b30;
+    }
+    .empty-history {
+      padding: 12px;
+      font-size: 12px;
+      color: #999;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="input-group">
       <div id="shortcut-display" class="shortcut-display"></div>
+      <div class="hint">${t('shortcutPlaceholder')}</div>
+    </div>
+    <div class="history-list">
+      ${historyHtml}
     </div>
     <div class="buttons">
+      <button class="btn-cancel" id="clear-btn" style="margin-right: auto;">${t('clear')}</button>
       <button class="btn-cancel" id="cancel-btn">${t('cancel')}</button>
       <button class="btn-ok" id="ok-btn">${t('confirm')}</button>
     </div>
@@ -190,6 +273,7 @@ export function showShortcutInputDialog(
     const display = document.getElementById('shortcut-display');
     const okBtn = document.getElementById('ok-btn');
     const cancelBtn = document.getElementById('cancel-btn');
+    const clearBtn = document.getElementById('clear-btn');
 
     let currentValue = ${JSON.stringify(initialShortcut)};
 
@@ -260,6 +344,34 @@ export function showShortcutInputDialog(
 
     renderDisplay();
 
+    clearBtn.addEventListener('click', () => {
+      currentValue = '';
+      renderDisplay();
+    });
+
+    // 一键使用
+    document.querySelectorAll('.use-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const item = e.currentTarget.closest('.history-item');
+        const shortcut = item.getAttribute('data-shortcut');
+        currentValue = shortcut;
+        window.electronAPI?.sendShortcutInput(currentValue);
+      });
+    });
+
+    // 删除历史
+    document.querySelectorAll('.del-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const item = e.currentTarget.closest('.history-item');
+        const shortcut = item.getAttribute('data-shortcut');
+        window.electronAPI?.deleteShortcutHistory(shortcut);
+        item.remove();
+        if (document.querySelectorAll('.history-item').length === 0) {
+          document.querySelector('.history-list').innerHTML = '<div class="empty-history">暂无历史记录</div>';
+        }
+      });
+    });
+
     okBtn.addEventListener('click', () => {
       const value = (currentValue || '').trim();
       window.electronAPI?.sendShortcutInput(value);
@@ -280,12 +392,40 @@ export function showShortcutInputDialog(
     )
 
     const CHANNEL = 'shortcut-input-response'
+    const DELETE_CHANNEL = 'delete-shortcut-history'
     let isResolved = false
+
+    const handleShortcutResponse = (
+      _event: Electron.IpcMainEvent,
+      value: string | null
+    ) => {
+      if (isResolved) return
+      finalize(value)
+      closeWindowSafely()
+    }
+
+    const handleDeleteShortcutHistory = (
+      _event: Electron.IpcMainEvent,
+      shortcut: string
+    ) => {
+      const currentSetting = readUserSetting()
+      const newHistory = (
+        currentSetting.shortcutHistory || []
+      ).filter((s) => s !== shortcut)
+      writeUserSetting({
+        ...currentSetting,
+        shortcutHistory: newHistory
+      })
+    }
 
     const cleanupIpcListener = () => {
       ipcMain.removeListener(
         CHANNEL,
         handleShortcutResponse
+      )
+      ipcMain.removeListener(
+        DELETE_CHANNEL,
+        handleDeleteShortcutHistory
       )
     }
 
@@ -307,18 +447,8 @@ export function showShortcutInputDialog(
       }, 50)
     }
 
-    const handleShortcutResponse = (
-      _event: Electron.IpcMainEvent,
-      value: string | null
-    ) => {
-      if (isResolved) {
-        return
-      }
-      finalize(value)
-      closeWindowSafely()
-    }
-
     ipcMain.on(CHANNEL, handleShortcutResponse)
+    ipcMain.on(DELETE_CHANNEL, handleDeleteShortcutHistory)
 
     inputWindow.once('closed', () => {
       if (!isResolved) {

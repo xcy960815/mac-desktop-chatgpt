@@ -159,9 +159,6 @@ const registerInputShortcuts = (
 /** macOS 隐藏处理器是否已注册 */
 let macHideHandlerRegistered = false
 
-/** commandLine.appendSwitch 是否已调用 */
-const commandLineSwitchAppended = false
-
 /**
  * 注册 macOS 隐藏处理器
  * @param {WindowManager} windowManager - 窗口管理器实例

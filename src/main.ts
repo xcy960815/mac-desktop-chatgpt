@@ -8,11 +8,7 @@ import {
   MAIN_WINDOW_WIDTH,
   MAIN_WINDOW_HEIGHT
 } from '@/constants'
-import {
-  resolveMainIndexUrl
-  // checkProxy,
-  // fixGoogleLogin
-} from '@/utils/common'
+import { resolveMainIndexUrl } from '@/utils/common'
 import {
   createWindowManager,
   WindowManager
@@ -66,11 +62,11 @@ let windowManager: WindowManager | null = null
 app.on(
   'certificate-error',
   (
-    event,
-    webContents,
-    url,
-    error,
-    certificate,
+    _event,
+    _webContents,
+    _url,
+    _error,
+    _certificate,
     callback
   ) => {
     callback(true)
@@ -86,9 +82,6 @@ app.on('ready', async () => {
     )
   }
 
-  // checkProxy()
-
-  // fixGoogleLogin()
   const appPath = app.getAppPath()
   /**
    * @desc 创建菜单栏图标
@@ -203,7 +196,6 @@ app.on('ready', async () => {
   Menu.setApplicationMenu(menu)
 
   const shortcutManager = createShortcutManager({
-    browserWindow,
     windowManager
   })
 
