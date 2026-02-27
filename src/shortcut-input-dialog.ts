@@ -18,6 +18,8 @@ import {
   getTrayMenuText
 } from '@/i18n/tray-menu'
 
+let activeDialogWindow: BrowserWindow | null = null
+
 /**
  * 显示快捷键输入对话框
  * @param {BrowserWindow} parentWindow - 父窗口实例
@@ -29,6 +31,19 @@ export function showShortcutInputDialog(
   currentShortcut: string,
   language: MenuLanguage
 ): Promise<string | null> {
+  // 如果窗口已存在，直接激活并返回（这里 Promise 处于未决状态直到窗口实际关闭，或者我们可以直接 focus 它）
+  if (
+    activeDialogWindow &&
+    !activeDialogWindow.isDestroyed()
+  ) {
+    if (activeDialogWindow.isMinimized())
+      activeDialogWindow.restore()
+    activeDialogWindow.focus()
+    return new Promise((_resolve, _reject) => {
+      // 故意保持 pending 状态，因为旧的对话框 Promise 仍在等待用户输入
+    })
+  }
+
   return new Promise((resolve, reject) => {
     if (!parentWindow || parentWindow.isDestroyed()) {
       reject(new Error('父窗口无效'))
@@ -99,6 +114,8 @@ export function showShortcutInputDialog(
       show: false
     })
 
+    activeDialogWindow = inputWindow
+
     const initialShortcut = (currentShortcut ?? '').trim()
 
     const t = (key: TrayMenuMessageKey) =>
@@ -162,7 +179,6 @@ export function showShortcutInputDialog(
       border: 1px solid #ddd;
       border-radius: 4px;
       font-size: 14px;
-      font-family: monospace;
       background: #fafafa;
       color: #333;
       min-height: 32px;
@@ -451,6 +467,7 @@ export function showShortcutInputDialog(
     ipcMain.on(DELETE_CHANNEL, handleDeleteShortcutHistory)
 
     inputWindow.once('closed', () => {
+      activeDialogWindow = null
       if (!isResolved) {
         finalize(null)
       } else {
@@ -459,11 +476,6 @@ export function showShortcutInputDialog(
     })
 
     inputWindow.once('ready-to-show', () => {
-      if (parentWindow && !parentWindow.isDestroyed()) {
-        if (!parentWindow.isVisible()) {
-          parentWindow.show()
-        }
-      }
       inputWindow.show()
       inputWindow.focus()
     })

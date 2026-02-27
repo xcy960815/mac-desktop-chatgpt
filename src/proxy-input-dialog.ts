@@ -24,11 +24,26 @@ import {
  * @param {string} currentProxy - 当前代理字符串
  * @returns {Promise<string | null>} 返回用户输入的代理字符串，如果取消则返回 null
  */
+let activeProxyDialogWindow: BrowserWindow | null = null
+
 export function showProxyInputDialog(
   parentWindow: BrowserWindow,
-  currentProxy: string,
+  currentProxy: string | null,
   language: MenuLanguage
 ): Promise<string | null> {
+  // 如果窗口已存在，直接激活并返回（返回一个永远挂起的 Promise，因为原有的 Promise 仍在处理）
+  if (
+    activeProxyDialogWindow &&
+    !activeProxyDialogWindow.isDestroyed()
+  ) {
+    if (activeProxyDialogWindow.isMinimized())
+      activeProxyDialogWindow.restore()
+    activeProxyDialogWindow.focus()
+    return new Promise((_resolve, _reject) => {
+      // 故意保持 pending 状态，因为旧的对话框 Promise 仍在等待用户输入
+    })
+  }
+
   return new Promise((resolve, reject) => {
     if (!parentWindow || parentWindow.isDestroyed()) {
       reject(new Error('父窗口无效'))
@@ -95,6 +110,8 @@ export function showProxyInputDialog(
       title: getTrayMenuText('proxyDialogTitle', language),
       show: false
     })
+
+    activeProxyDialogWindow = inputWindow
 
     const initialProxy = (currentProxy ?? '').trim()
 
@@ -386,6 +403,7 @@ export function showProxyInputDialog(
     ipcMain.on(DELETE_CHANNEL, handleDeleteProxyHistory)
 
     inputWindow.once('closed', () => {
+      activeProxyDialogWindow = null
       if (!isResolved) {
         finalize(null)
       } else {
@@ -394,11 +412,6 @@ export function showProxyInputDialog(
     })
 
     inputWindow.once('ready-to-show', () => {
-      if (parentWindow && !parentWindow.isDestroyed()) {
-        if (!parentWindow.isVisible()) {
-          parentWindow.show()
-        }
-      }
       inputWindow.show()
       inputWindow.focus()
     })
