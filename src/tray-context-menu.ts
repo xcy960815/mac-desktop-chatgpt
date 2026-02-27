@@ -358,158 +358,6 @@ export const setupTrayContextMenu = (
               }
             }
 
-            let browserWindow =
-              getAvailableBrowserWindow(
-                windowManager,
-                options.getMainBrowserWindow
-              ) || null
-            if (
-              !browserWindow ||
-              browserWindow.isDestroyed()
-            ) {
-              try {
-                if (!tray) {
-                  dialog.showMessageBox({
-                    type: 'error',
-                    title: getTrayMenuText(
-                      'errorTitle',
-                      menuLanguage
-                    ),
-                    message: getTrayMenuText(
-                      'appNotReadyMessage',
-                      menuLanguage
-                    ),
-                    buttons: [
-                      getTrayMenuText(
-                        'confirm',
-                        menuLanguage
-                      )
-                    ]
-                  })
-                  return
-                }
-
-                await windowManager.showWindow()
-                await delay(200)
-
-                for (let i = 0; i < 5; i++) {
-                  browserWindow =
-                    windowManager.getMainBrowserWindow() ||
-                    options.getMainBrowserWindow()
-                  if (
-                    browserWindow &&
-                    !browserWindow.isDestroyed()
-                  ) {
-                    break
-                  }
-                  await delay(100)
-                }
-
-                if (
-                  browserWindow &&
-                  !browserWindow.isDestroyed()
-                ) {
-                  options.setMainBrowserWindow(
-                    browserWindow
-                  )
-                }
-              } catch {
-                browserWindow =
-                  windowManager.getMainBrowserWindow() ||
-                  options.getMainBrowserWindow()
-              }
-
-              if (
-                !browserWindow ||
-                browserWindow.isDestroyed()
-              ) {
-                dialog.showMessageBox({
-                  type: 'error',
-                  title: getTrayMenuText(
-                    'errorTitle',
-                    menuLanguage
-                  ),
-                  message: getTrayMenuText(
-                    'windowNotReadyMessage',
-                    menuLanguage
-                  ),
-                  buttons: [
-                    getTrayMenuText('confirm', menuLanguage)
-                  ]
-                })
-                return
-              }
-
-              await waitForWindowLoad(browserWindow)
-            }
-
-            if (!browserWindow.isVisible()) {
-              try {
-                await windowManager.showWindow()
-                browserWindow =
-                  windowManager.getMainBrowserWindow() ||
-                  options.getMainBrowserWindow()
-                if (
-                  browserWindow &&
-                  !browserWindow.isDestroyed()
-                ) {
-                  options.setMainBrowserWindow(
-                    browserWindow
-                  )
-                }
-                await delay(300)
-              } catch {
-                // 忽略在显示窗口时的瞬时错误，后续校验会提示用户
-              }
-            }
-
-            if (
-              !browserWindow ||
-              browserWindow.isDestroyed()
-            ) {
-              dialog.showMessageBox({
-                type: 'error',
-                title: getTrayMenuText(
-                  'errorTitle',
-                  menuLanguage
-                ),
-                message: getTrayMenuText(
-                  'windowNotReadyMessage',
-                  menuLanguage
-                ),
-                buttons: [
-                  getTrayMenuText('confirm', menuLanguage)
-                ]
-              })
-              return
-            }
-
-            await waitForWindowLoad(browserWindow)
-
-            browserWindow =
-              windowManager.getMainBrowserWindow() ||
-              options.getMainBrowserWindow()
-            if (
-              !browserWindow ||
-              browserWindow.isDestroyed()
-            ) {
-              dialog.showMessageBox({
-                type: 'error',
-                title: getTrayMenuText(
-                  'errorTitle',
-                  menuLanguage
-                ),
-                message: getTrayMenuText(
-                  'windowNotReadyMessage',
-                  menuLanguage
-                ),
-                buttons: [
-                  getTrayMenuText('confirm', menuLanguage)
-                ]
-              })
-              return
-            }
-
             // 打开对话框前临时取消注册快捷键，避免录入时触发
             const currentShortcutBeforeDialog =
               options.getCurrentShortcut()
@@ -581,7 +429,7 @@ export const setupTrayContextMenu = (
             if (input && input.trim()) {
               const shortcut = input.trim()
               if (!shortcut || shortcut.trim() === '') {
-                dialog.showMessageBox(browserWindow, {
+                dialog.showMessageBox({
                   type: 'error',
                   title: getTrayMenuText(
                     'settingFailedTitle',
@@ -644,7 +492,7 @@ export const setupTrayContextMenu = (
                   shortcutHistory: newHistory
                 })
                 options.setCurrentShortcut(shortcut)
-                dialog.showMessageBox(browserWindow, {
+                dialog.showMessageBox({
                   type: 'info',
                   title: getTrayMenuText(
                     'settingSuccessTitle',
@@ -674,7 +522,7 @@ export const setupTrayContextMenu = (
                     }
                   )
                 }
-                dialog.showMessageBox(browserWindow, {
+                dialog.showMessageBox({
                   type: 'error',
                   title: getTrayMenuText(
                     'settingFailedTitle',
@@ -691,7 +539,7 @@ export const setupTrayContextMenu = (
               }
             } else {
               const resetResult =
-                await dialog.showMessageBox(browserWindow, {
+                await dialog.showMessageBox({
                   type: 'question',
                   title: getTrayMenuText(
                     'shortcutResetConfirmTitle',
@@ -738,7 +586,7 @@ export const setupTrayContextMenu = (
                   options.setCurrentShortcut(
                     'CommandOrControl+g'
                   )
-                  dialog.showMessageBox(browserWindow, {
+                  dialog.showMessageBox({
                     type: 'info',
                     title: getTrayMenuText(
                       'settingSuccessTitle',
@@ -771,7 +619,7 @@ export const setupTrayContextMenu = (
                       }
                     )
                   }
-                  dialog.showMessageBox(browserWindow, {
+                  dialog.showMessageBox({
                     type: 'error',
                     title: getTrayMenuText(
                       'settingFailedTitle',
@@ -853,47 +701,6 @@ export const setupTrayContextMenu = (
               }
             }
 
-            let browserWindow =
-              getAvailableBrowserWindow(
-                windowManager,
-                options.getMainBrowserWindow
-              ) || null
-
-            // 确保窗口准备好
-            if (
-              !browserWindow ||
-              browserWindow.isDestroyed()
-            ) {
-              await windowManager.showWindow()
-              await delay(200)
-              browserWindow =
-                windowManager.getMainBrowserWindow() ||
-                options.getMainBrowserWindow()
-            }
-
-            if (
-              !browserWindow ||
-              browserWindow.isDestroyed()
-            ) {
-              dialog.showMessageBox({
-                type: 'error',
-                title: getTrayMenuText(
-                  'errorTitle',
-                  menuLanguage
-                ),
-                message: getTrayMenuText(
-                  'windowNotReadyMessage',
-                  menuLanguage
-                ),
-                buttons: [
-                  getTrayMenuText('confirm', menuLanguage)
-                ]
-              })
-              return
-            }
-
-            await waitForWindowLoad(browserWindow)
-
             let input: string | null = null
             try {
               input = await showProxyInputDialog(
@@ -932,7 +739,7 @@ export const setupTrayContextMenu = (
                   !proxyRegex.test(proxy) &&
                   !simpleProxyRegex.test(proxy)
                 ) {
-                  dialog.showMessageBox(browserWindow, {
+                  dialog.showMessageBox({
                     type: 'error',
                     title: getTrayMenuText(
                       'formatErrorTitle',
@@ -989,7 +796,7 @@ export const setupTrayContextMenu = (
               }
 
               // 提示重启生效
-              dialog.showMessageBox(browserWindow, {
+              dialog.showMessageBox({
                 type: 'info',
                 title: getTrayMenuText(
                   'settingSuccessTitle',

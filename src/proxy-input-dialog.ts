@@ -27,7 +27,7 @@ import {
 let activeProxyDialogWindow: BrowserWindow | null = null
 
 export function showProxyInputDialog(
-  parentWindow: BrowserWindow,
+  parentWindow: BrowserWindow | null,
   currentProxy: string | null,
   language: MenuLanguage
 ): Promise<string | null> {
@@ -45,13 +45,15 @@ export function showProxyInputDialog(
   }
 
   return new Promise((resolve, reject) => {
-    if (!parentWindow || parentWindow.isDestroyed()) {
-      reject(new Error('父窗口无效'))
-      return
-    }
-
     let parentBounds: Electron.Rectangle
     try {
+      if (
+        !parentWindow ||
+        parentWindow.isDestroyed() ||
+        !parentWindow.isVisible()
+      ) {
+        throw new Error('No valid parent window')
+      }
       parentBounds = parentWindow.getBounds()
     } catch {
       const primaryDisplay = screen.getPrimaryDisplay()

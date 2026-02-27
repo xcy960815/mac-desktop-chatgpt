@@ -27,7 +27,7 @@ let activeDialogWindow: BrowserWindow | null = null
  * @returns {Promise<string | null>} 返回用户输入的快捷键字符串，如果取消则返回 null
  */
 export function showShortcutInputDialog(
-  parentWindow: BrowserWindow,
+  parentWindow: BrowserWindow | null,
   currentShortcut: string,
   language: MenuLanguage
 ): Promise<string | null> {
@@ -45,13 +45,15 @@ export function showShortcutInputDialog(
   }
 
   return new Promise((resolve, reject) => {
-    if (!parentWindow || parentWindow.isDestroyed()) {
-      reject(new Error('父窗口无效'))
-      return
-    }
-
     let parentBounds: Electron.Rectangle
     try {
+      if (
+        !parentWindow ||
+        parentWindow.isDestroyed() ||
+        !parentWindow.isVisible()
+      ) {
+        throw new Error('No valid parent window')
+      }
       parentBounds = parentWindow.getBounds()
     } catch {
       const primaryDisplay = screen.getPrimaryDisplay()
