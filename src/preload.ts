@@ -67,6 +67,18 @@ interface ElectronAPI {
    */
   sendProxyInput: (value: string | null) => void
   /**
+   * 删除代理历史
+   * @param {string} proxyUrl - 代理地址
+   * @returns {void}
+   */
+  deleteProxyHistory: (proxyUrl: string) => void
+  /**
+   * 删除快捷键历史
+   * @param {string} shortcut - 快捷键字符串
+   * @returns {void}
+   */
+  deleteShortcutHistory: (shortcut: string) => void
+  /**
    * 当前运行平台
    * @type {string}
    */
@@ -122,6 +134,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   sendProxyInput: (value: string | null) => {
     ipcRenderer.send('proxy-input-response', value)
+  },
+  deleteProxyHistory: (proxyUrl: string) => {
+    ipcRenderer.send('delete-proxy-history', proxyUrl)
+  },
+  deleteShortcutHistory: (shortcut: string) => {
+    ipcRenderer.send('delete-shortcut-history', shortcut)
   },
   platform: process.platform
 } as ElectronAPI)

@@ -7,14 +7,6 @@ import {
 import { EventEmitter } from 'events'
 
 /**
- * 浏览器窗口操作选项
- */
-export type WithBrowserWindowOptions = {
-  /** 失败时的错误消息（可选） */
-  onFailureMessage?: string
-}
-
-/**
  * 窗口管理器事件
  */
 export interface WindowManagerEvents {
@@ -33,8 +25,7 @@ export interface WindowManager extends EventEmitter {
   setMainBrowserWindow(window: BrowserWindow | null): void
   ensureBrowserWindow(): Promise<BrowserWindow | null>
   withBrowserWindow<T>(
-    task: (win: BrowserWindow) => T | Promise<T>,
-    options?: WithBrowserWindowOptions
+    task: (win: BrowserWindow) => T | Promise<T>
   ): Promise<T | null>
 
   // 窗口控制逻辑
@@ -101,7 +92,10 @@ export const createWindowManager = (): WindowManager => {
   const toggleWindow = async () => {
     if (!mainBrowserWindow) return
 
-    if (mainBrowserWindow.isVisible()) {
+    if (
+      mainBrowserWindow.isVisible() &&
+      mainBrowserWindow.isFocused()
+    ) {
       hideWindow()
     } else {
       await showWindow()
@@ -211,8 +205,7 @@ export const createWindowManager = (): WindowManager => {
     }
 
   const withBrowserWindow = async <T>(
-    task: (win: BrowserWindow) => T | Promise<T>,
-    options?: WithBrowserWindowOptions
+    task: (win: BrowserWindow) => T | Promise<T>
   ): Promise<T | null> => {
     const win = await ensureBrowserWindow()
     if (win && !win.isDestroyed()) {

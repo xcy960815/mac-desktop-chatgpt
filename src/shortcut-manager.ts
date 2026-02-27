@@ -1,8 +1,4 @@
-import {
-  BrowserWindow,
-  globalShortcut,
-  ipcMain
-} from 'electron'
+import { globalShortcut, ipcMain } from 'electron'
 
 import { WindowManager } from '@/window-manager'
 import {
@@ -43,8 +39,6 @@ export interface ShortcutManager {
  * @interface ShortcutManagerOptions
  */
 interface ShortcutManagerOptions {
-  /** 浏览器窗口实例 */
-  browserWindow: BrowserWindow
   /** 窗口管理器实例 */
   windowManager: WindowManager
 }
@@ -52,12 +46,10 @@ interface ShortcutManagerOptions {
 /**
  * 创建快捷键管理器
  * @param {ShortcutManagerOptions} options - 快捷键管理器配置选项
- * @param {BrowserWindow} options.browserWindow - 浏览器窗口实例
  * @param {WindowManager} options.windowManager - 窗口管理器实例
  * @returns {ShortcutManager} 快捷键管理器实例
  */
 export const createShortcutManager = ({
-  browserWindow,
   windowManager
 }: ShortcutManagerOptions): ShortcutManager => {
   let currentShortcut: string | null = null
