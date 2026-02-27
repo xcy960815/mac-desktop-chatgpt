@@ -483,6 +483,24 @@ export function showShortcutInputDialog(
     })
 
     inputWindow.on('close', () => {
+      // macOS 焦点防止穿透唤回主窗口的 Hack
+      // 如果弹框关闭前，父窗口是可见的，macOS 会自动将焦点给父窗口使其跳到前台
+      // 我们在关闭瞬间暂时隐匿主窗口，迫使 macOS 把焦点还给上一个 App，100ms 后再静默恢复主窗口的可见性
+      if (
+        process.platform === 'darwin' &&
+        parentWindow &&
+        !parentWindow.isDestroyed() &&
+        parentWindow.isVisible() &&
+        !parentWindow.isFocused()
+      ) {
+        parentWindow.hide()
+        setTimeout(() => {
+          if (parentWindow && !parentWindow.isDestroyed()) {
+            parentWindow.showInactive()
+          }
+        }, 100)
+      }
+
       if (!isResolved) {
         finalize(null)
       }
