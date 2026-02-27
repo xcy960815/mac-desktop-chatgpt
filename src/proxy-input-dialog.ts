@@ -419,6 +419,24 @@ export function showProxyInputDialog(
     })
 
     inputWindow.on('close', () => {
+      // macOS 焦点防止穿透唤回主窗口的 Hack
+      // 如果弹框关闭前，父窗口是可见的且由于我们点击的是托盘，主窗未被 focused
+      // 我们在关闭前隐匿主窗口，迫使 macOS 把焦点还给上一个 App，一会再去恢复
+      if (
+        process.platform === 'darwin' &&
+        parentWindow &&
+        !parentWindow.isDestroyed() &&
+        parentWindow.isVisible() &&
+        !parentWindow.isFocused()
+      ) {
+        parentWindow.hide()
+        setTimeout(() => {
+          if (parentWindow && !parentWindow.isDestroyed()) {
+            parentWindow.showInactive()
+          }
+        }, 100)
+      }
+
       if (!isResolved) {
         finalize(null)
       }
