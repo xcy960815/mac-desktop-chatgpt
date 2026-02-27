@@ -205,6 +205,7 @@ jobs:
             artifacts/**/*.zip
           draft: false
           prerelease: ${{ contains(github.ref, '-') || contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+          generate_release_notes: true
 
       - name: Sync version and merge to main
         run: |
