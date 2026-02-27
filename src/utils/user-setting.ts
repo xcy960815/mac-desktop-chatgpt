@@ -1,7 +1,11 @@
 import fsSync from 'fs'
 import path from 'path'
 import { app } from 'electron'
-import { MenuLanguage, Model, ModelUrl } from '@/constants'
+import {
+  MenuLanguage,
+  Model,
+  ModelUrl
+} from '@/utils/constants'
 
 /**
  * Electron userData 目录下用于保存设置的子目录

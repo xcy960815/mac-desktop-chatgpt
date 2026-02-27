@@ -1,4 +1,4 @@
-import { Model, ModelUrl } from '@/constants'
+import { Model, ModelUrl } from '@/utils/constants'
 
 export {}
 

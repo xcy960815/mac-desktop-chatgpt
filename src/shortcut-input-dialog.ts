@@ -8,7 +8,7 @@ import {
   screen
 } from 'electron'
 
-import { MenuLanguage } from '@/constants'
+import { MenuLanguage } from '@/utils/constants'
 import {
   readUserSetting,
   writeUserSetting

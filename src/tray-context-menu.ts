@@ -25,7 +25,11 @@ import {
   writeUserSetting
 } from '@/utils/user-setting'
 import { delay } from '@/utils/common'
-import { MenuLanguage, Model, ModelUrl } from '@/constants'
+import {
+  MenuLanguage,
+  Model,
+  ModelUrl
+} from '@/utils/constants'
 import {
   getTrayMenuText,
   TrayMenuMessageKey
@@ -370,7 +374,7 @@ export const setupTrayContextMenu = (
             let input: string | null = null
             try {
               input = await showShortcutInputDialog(
-                options.getMainBrowserWindow() as BrowserWindow,
+                null,
                 savedShortcut,
                 menuLanguage
               )
@@ -704,7 +708,7 @@ export const setupTrayContextMenu = (
             let input: string | null = null
             try {
               input = await showProxyInputDialog(
-                options.getMainBrowserWindow() as BrowserWindow,
+                null,
                 savedProxy,
                 menuLanguage
               )
