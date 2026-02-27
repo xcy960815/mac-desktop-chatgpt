@@ -10,6 +10,10 @@ import {
 
 import { MenuLanguage } from '@/constants'
 import {
+  readUserSetting,
+  writeUserSetting
+} from '@/utils/user-setting'
+import {
   TrayMenuMessageKey,
   getTrayMenuText
 } from '@/i18n/tray-menu'
@@ -47,7 +51,7 @@ export function showProxyInputDialog(
     }
 
     const dialogWidth = 400
-    const dialogHeight = 200
+    const dialogHeight = 350
     const x = Math.round(
       parentBounds.x +
         (parentBounds.width - dialogWidth) / 2
@@ -96,6 +100,28 @@ export function showProxyInputDialog(
 
     const t = (key: TrayMenuMessageKey) =>
       getTrayMenuText(key, language)
+
+    const proxyHistory =
+      readUserSetting().proxyHistory || []
+    const historyHtml = proxyHistory.length
+      ? proxyHistory
+          .map(
+            (url: string) => `
+      <div class="history-item" data-url="${url}">
+        <span class="history-item-text">${url}</span>
+        <div class="history-actions">
+          <span class="icon-btn use-btn" title="一键使用">
+            <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>
+          </span>
+          <span class="icon-btn del-btn" title="删除">
+            <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+          </span>
+        </div>
+      </div>
+    `
+          )
+          .join('')
+      : '<div class="empty-history">暂无历史记录</div>'
 
     const html = `
 <!DOCTYPE html>
@@ -174,6 +200,56 @@ export function showProxyInputDialog(
     .btn-ok:hover {
       background: #0056b3;
     }
+    .history-list {
+      flex: 1;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-top: 4px;
+      display: flex;
+      flex-direction: column;
+      background: #fafafa;
+    }
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      border-bottom: 1px solid #ddd;
+    }
+    .history-item:last-child {
+      border-bottom: none;
+    }
+    .history-item-text {
+      font-size: 13px;
+      color: #333;
+      word-break: break-all;
+    }
+    .history-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .icon-btn {
+      cursor: pointer;
+      opacity: 0.6;
+      transition: opacity 0.2s;
+      display: flex;
+      align-items: center;
+      color: #666;
+    }
+    .icon-btn:hover {
+      opacity: 1;
+      color: #007AFF;
+    }
+    .icon-btn.del-btn:hover {
+      color: #ff3b30;
+    }
+    .empty-history {
+      padding: 12px;
+      font-size: 12px;
+      color: #999;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -182,7 +258,11 @@ export function showProxyInputDialog(
       <input type="text" id="proxy-input" class="proxy-input" placeholder="${t('proxyPlaceholder')}" value="${initialProxy}">
       <div class="hint">${t('proxyHint')}</div>
     </div>
+    <div class="history-list">
+      ${historyHtml}
+    </div>
     <div class="buttons">
+      <button class="btn-cancel" id="clear-btn" style="margin-right: auto;">${t('clear')}</button>
       <button class="btn-cancel" id="cancel-btn">${t('cancel')}</button>
       <button class="btn-ok" id="ok-btn">${t('confirm')}</button>
     </div>
@@ -191,6 +271,7 @@ export function showProxyInputDialog(
     const input = document.getElementById('proxy-input');
     const okBtn = document.getElementById('ok-btn');
     const cancelBtn = document.getElementById('cancel-btn');
+    const clearBtn = document.getElementById('clear-btn');
 
     input.focus();
     input.select();
@@ -201,6 +282,32 @@ export function showProxyInputDialog(
       } else if (e.key === 'Escape') {
         cancelBtn.click();
       }
+    });
+
+    clearBtn.addEventListener('click', () => {
+      input.value = '';
+      input.focus();
+    });
+
+    document.querySelectorAll('.use-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const item = e.currentTarget.closest('.history-item');
+        const url = item.getAttribute('data-url');
+        input.value = url;
+        okBtn.click();
+      });
+    });
+
+    document.querySelectorAll('.del-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const item = e.currentTarget.closest('.history-item');
+        const url = item.getAttribute('data-url');
+        window.electronAPI?.deleteProxyHistory(url);
+        item.remove();
+        if (document.querySelectorAll('.history-item').length === 0) {
+          document.querySelector('.history-list').innerHTML = '<div class="empty-history">暂无历史记录</div>';
+        }
+      });
     });
 
     okBtn.addEventListener('click', () => {
@@ -223,10 +330,38 @@ export function showProxyInputDialog(
     )
 
     const CHANNEL = 'proxy-input-response'
+    const DELETE_CHANNEL = 'delete-proxy-history'
     let isResolved = false
+
+    const handleProxyResponse = (
+      _event: Electron.IpcMainEvent,
+      value: string | null
+    ) => {
+      if (isResolved) return
+      finalize(value)
+      closeWindowSafely()
+    }
+
+    const handleDeleteProxyHistory = (
+      _event: Electron.IpcMainEvent,
+      proxyUrl: string
+    ) => {
+      const currentSetting = readUserSetting()
+      const newHistory = (
+        currentSetting.proxyHistory || []
+      ).filter((p) => p !== proxyUrl)
+      writeUserSetting({
+        ...currentSetting,
+        proxyHistory: newHistory
+      })
+    }
 
     const cleanupIpcListener = () => {
       ipcMain.removeListener(CHANNEL, handleProxyResponse)
+      ipcMain.removeListener(
+        DELETE_CHANNEL,
+        handleDeleteProxyHistory
+      )
     }
 
     const finalize = (value: string | null) => {
@@ -247,18 +382,8 @@ export function showProxyInputDialog(
       }, 50)
     }
 
-    const handleProxyResponse = (
-      _event: Electron.IpcMainEvent,
-      value: string | null
-    ) => {
-      if (isResolved) {
-        return
-      }
-      finalize(value)
-      closeWindowSafely()
-    }
-
     ipcMain.on(CHANNEL, handleProxyResponse)
+    ipcMain.on(DELETE_CHANNEL, handleDeleteProxyHistory)
 
     inputWindow.once('closed', () => {
       if (!isResolved) {

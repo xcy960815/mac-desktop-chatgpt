@@ -28,6 +28,8 @@ const DEFAULTSETTING: UserSetting = {
   alwaysOnTop: false,
   menuLanguage: MenuLanguage.Chinese,
   proxy: undefined,
+  proxyHistory: [],
+  shortcutHistory: [],
   showInDock: false
 }
 /**
@@ -56,6 +58,8 @@ export interface UserSetting {
   alwaysOnTop?: boolean // 是否始终置顶
   menuLanguage?: MenuLanguage // 托盘菜单语言
   proxy?: string // 代理设置，例如 socks5://127.0.0.1:7897
+  proxyHistory?: string[] // 代理历史记录
+  shortcutHistory?: string[] // 快捷键历史记录
   showInDock?: boolean // 是否在程序坞中显示图标
 }
 

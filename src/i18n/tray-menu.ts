@@ -20,6 +20,7 @@ export type TrayMenuMessageKey =
   | 'proxyDialogTitle'
   | 'proxyPlaceholder'
   | 'proxyHint'
+  | 'clear'
   | 'cancel'
   | 'confirm'
   | 'shortcutDialogTitle'
@@ -72,6 +73,7 @@ const MENU_MESSAGES: Record<
     proxyPlaceholder: 'e.g. socks5://127.0.0.1:7897',
     proxyHint:
       'Format: protocol://IP:port (Empty to disable)',
+    clear: 'Clear',
     cancel: 'Cancel',
     confirm: 'Confirm',
     shortcutDialogTitle: 'Set Shortcut',
@@ -129,6 +131,7 @@ const MENU_MESSAGES: Record<
     proxyDialogTitle: '设置代理',
     proxyPlaceholder: '例如: socks5://127.0.0.1:7897',
     proxyHint: '格式: 协议://IP:端口 (留空则禁用代理)',
+    clear: '清空',
     cancel: '取消',
     confirm: '确定',
     shortcutDialogTitle: '设置快捷键',
