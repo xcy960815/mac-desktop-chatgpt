@@ -196,6 +196,20 @@ app.on('ready', async () => {
             { type: 'separator' },
             { role: 'quit' }
           ]
+        },
+        {
+          label: 'Edit',
+          submenu: [
+            { role: 'undo' },
+            { role: 'redo' },
+            { type: 'separator' },
+            { role: 'cut' },
+            { role: 'copy' },
+            { role: 'paste' },
+            { role: 'pasteAndMatchStyle' },
+            { role: 'delete' },
+            { role: 'selectAll' }
+          ]
         }
       ]
     const menu = Menu.buildFromTemplate(template)
@@ -203,41 +217,38 @@ app.on('ready', async () => {
   } else {
     // Windows/Linux 隐藏菜单栏
     Menu.setApplicationMenu(null)
-  }
 
-  // 通过 before-input-event 实现跨平台快捷键支持
-  browserWindow.webContents.on(
-    'before-input-event',
-    (event, input) => {
-      const modifier =
-        process.platform === 'darwin'
-          ? input.meta
-          : input.control
-      if (!modifier) return
+    // 通过 before-input-event 在 Windows/Linux 手动实现快捷键支持
+    // 因为这部分平台隐藏了顶部菜单栏，没有系统原生的 Edit 支持
+    browserWindow.webContents.on(
+      'before-input-event',
+      (event, input) => {
+        if (!input.control) return
 
-      switch (input.key.toLowerCase()) {
-        case 'c':
-          browserWindow.webContents.copy()
-          break
-        case 'v':
-          browserWindow.webContents.paste()
-          break
-        case 'x':
-          browserWindow.webContents.cut()
-          break
-        case 'a':
-          browserWindow.webContents.selectAll()
-          break
-        case 'z':
-          if (input.shift) {
-            browserWindow.webContents.redo()
-          } else {
-            browserWindow.webContents.undo()
-          }
-          break
+        switch (input.key.toLowerCase()) {
+          case 'c':
+            browserWindow.webContents.copy()
+            break
+          case 'v':
+            browserWindow.webContents.paste()
+            break
+          case 'x':
+            browserWindow.webContents.cut()
+            break
+          case 'a':
+            browserWindow.webContents.selectAll()
+            break
+          case 'z':
+            if (input.shift) {
+              browserWindow.webContents.redo()
+            } else {
+              browserWindow.webContents.undo()
+            }
+            break
+        }
       }
-    }
-  )
+    )
+  }
 
   const shortcutManager = createShortcutManager({
     windowManager
