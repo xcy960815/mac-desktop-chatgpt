@@ -27,6 +27,11 @@ jobs:
             platform: win32
             arch: x64
             build-command: make:win
+          # Linux builds
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+            build-command: make:linux
 
     steps:
       - name: Checkout code
@@ -86,6 +91,9 @@ jobs:
               # 如果还没找到，尝试查找所有 darwin zip
               ARTIFACT=$(find out/make/zip -name "*darwin*.zip" -type f 2>/dev/null | head -1)
             fi
+          elif [ "${{ matrix.platform }}" == "linux" ]; then
+            # Linux: 查找 deb 文件
+            ARTIFACT=$(find out/make/deb -name "*.deb" -type f 2>/dev/null | head -1)
           else
             # Windows: 优先查找包含版本号的完整文件名
             ARTIFACT=$(find out/make/zip -name "*win32-x64-${VERSION}.zip" -type f 2>/dev/null | head -1)
@@ -183,6 +191,7 @@ jobs:
             - **macOS (Intel)**: desktop-chatgpt-darwin-x64-${{ steps.get_version.outputs.version }}.zip
             - **macOS (Apple Silicon)**: desktop-chatgpt-darwin-arm64-${{ steps.get_version.outputs.version }}.zip
             - **Windows (x64)**: desktop-chatgpt-win32-x64-${{ steps.get_version.outputs.version }}.zip
+            - **Linux (x64)**: chathub-desktop_${{ steps.get_version.outputs.version }}_amd64.deb
             
             ### 📋 安装说明
 
@@ -196,6 +205,11 @@ jobs:
             2. 运行 `Desktop ChatGPT.exe`
             3. 首次运行可能需要允许通过 Windows Defender 防火墙
 
+            #### Linux (Ubuntu/Debian)
+            1. 下载 `.deb` 安装包
+            2. 双击安装或在终端运行 `sudo dpkg -i chathub-desktop_${{ steps.get_version.outputs.version }}_amd64.deb`
+            3. 如果有依赖问题，请运行 `sudo apt-get install -f`
+
             ---
 
             **构建信息：**
@@ -203,6 +217,7 @@ jobs:
             - 提交: ${{ github.sha }}
           files: |
             artifacts/**/*.zip
+            artifacts/**/*.deb
           draft: false
           prerelease: ${{ contains(github.ref, '-') || contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
           generate_release_notes: true
