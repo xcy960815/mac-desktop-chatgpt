@@ -92,5 +92,10 @@
     "extends": [
       "@commitlint/config-conventional"
     ]
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron"
+    ]
   }
 }
