@@ -1,4 +1,4 @@
-import { MenuLanguage } from '@/constants'
+import { MenuLanguage } from '@/utils/constants'
 
 /**
  * 托盘菜单消息键类型

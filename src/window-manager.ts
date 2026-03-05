@@ -5,6 +5,7 @@ import {
   Rectangle
 } from 'electron'
 import { EventEmitter } from 'events'
+import { CustomBrowserWindow } from '@/utils/constants'
 
 /**
  * 窗口管理器事件
@@ -135,7 +136,8 @@ export const createWindowManager = (): WindowManager => {
     }
 
     // 尝试在 macOS 上使用 moveTop
-    const movableWindow = mainBrowserWindow as any
+    const movableWindow =
+      mainBrowserWindow as CustomBrowserWindow
     if (typeof movableWindow.moveTop === 'function') {
       try {
         movableWindow.moveTop()
