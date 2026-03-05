@@ -157,43 +157,65 @@ app.on('ready', async () => {
 
   initializeLastVisitedUrlTracking(browserWindow)
 
-  const template: Electron.MenuItemConstructorOptions[] = [
-    {
-      label: 'Edit',
-      submenu: [
-        { role: 'undo' },
-        { role: 'redo' },
-        { type: 'separator' },
-        { role: 'cut' },
-        { role: 'copy' },
-        { role: 'paste' },
-        { role: 'pasteAndMatchStyle' },
-        { role: 'delete' },
-        { role: 'selectAll' }
-      ]
-    }
-  ]
-
+  // macOS 保留系统应用菜单（关于、退出等），非 macOS 平台隐藏菜单栏
   if (process.platform === 'darwin') {
-    template.unshift({
-      label: app.name,
-      submenu: [
-        { role: 'about' },
-        { type: 'separator' },
-        { role: 'services' },
-        { type: 'separator' },
-        { role: 'hide' },
-        { role: 'hideOthers' },
-        { role: 'unhide' },
-        { type: 'separator' },
-        { role: 'quit' }
+    const template: Electron.MenuItemConstructorOptions[] =
+      [
+        {
+          label: app.name,
+          submenu: [
+            { role: 'about' },
+            { type: 'separator' },
+            { role: 'services' },
+            { type: 'separator' },
+            { role: 'hide' },
+            { role: 'hideOthers' },
+            { role: 'unhide' },
+            { type: 'separator' },
+            { role: 'quit' }
+          ]
+        }
       ]
-    })
+    const menu = Menu.buildFromTemplate(template)
+    Menu.setApplicationMenu(menu)
+  } else {
+    // Windows/Linux 隐藏菜单栏
+    Menu.setApplicationMenu(null)
   }
 
-  const menu = Menu.buildFromTemplate(template)
-  // 检查是否需要设置应用程序菜单
-  Menu.setApplicationMenu(menu)
+  // 通过 before-input-event 实现跨平台快捷键支持
+  browserWindow.webContents.on(
+    'before-input-event',
+    (event, input) => {
+      const modifier =
+        process.platform === 'darwin'
+          ? input.meta
+          : input.control
+      if (!modifier) return
+
+      switch (input.key.toLowerCase()) {
+        case 'c':
+          browserWindow.webContents.copy()
+          break
+        case 'v':
+          browserWindow.webContents.paste()
+          break
+        case 'x':
+          browserWindow.webContents.cut()
+          break
+        case 'a':
+          browserWindow.webContents.selectAll()
+          break
+        case 'z':
+          if (input.shift) {
+            browserWindow.webContents.redo()
+          } else {
+            browserWindow.webContents.undo()
+          }
+          break
+      }
+    }
+  )
 
   const shortcutManager = createShortcutManager({
     windowManager
@@ -204,7 +226,6 @@ app.on('ready', async () => {
   setupTrayContextMenu({
     tray,
     windowManager,
-    menu,
     urls: {
       chatgpt: ModelUrl.ChatGPT,
       deepseek: ModelUrl.DeepSeek,
