@@ -8,7 +8,7 @@ import {
   screen
 } from 'electron'
 
-import { MenuLanguage } from '@/constants'
+import { MenuLanguage } from '@/utils/constants'
 import {
   readUserSetting,
   writeUserSetting
@@ -18,6 +18,8 @@ import {
   getTrayMenuText
 } from '@/i18n/tray-menu'
 
+let activeDialogWindow: BrowserWindow | null = null
+
 /**
  * 显示快捷键输入对话框
  * @param {BrowserWindow} parentWindow - 父窗口实例
@@ -25,18 +27,33 @@ import {
  * @returns {Promise<string | null>} 返回用户输入的快捷键字符串，如果取消则返回 null
  */
 export function showShortcutInputDialog(
-  parentWindow: BrowserWindow,
+  parentWindow: BrowserWindow | null,
   currentShortcut: string,
   language: MenuLanguage
 ): Promise<string | null> {
-  return new Promise((resolve, reject) => {
-    if (!parentWindow || parentWindow.isDestroyed()) {
-      reject(new Error('父窗口无效'))
-      return
-    }
+  // 如果窗口已存在，直接激活并返回（这里 Promise 处于未决状态直到窗口实际关闭，或者我们可以直接 focus 它）
+  if (
+    activeDialogWindow &&
+    !activeDialogWindow.isDestroyed()
+  ) {
+    if (activeDialogWindow.isMinimized())
+      activeDialogWindow.restore()
+    activeDialogWindow.focus()
+    return new Promise((_resolve, _reject) => {
+      // 故意保持 pending 状态，因为旧的对话框 Promise 仍在等待用户输入
+    })
+  }
 
+  return new Promise((resolve, reject) => {
     let parentBounds: Electron.Rectangle
     try {
+      if (
+        !parentWindow ||
+        parentWindow.isDestroyed() ||
+        !parentWindow.isVisible()
+      ) {
+        throw new Error('No valid parent window')
+      }
       parentBounds = parentWindow.getBounds()
     } catch {
       const primaryDisplay = screen.getPrimaryDisplay()
@@ -98,6 +115,8 @@ export function showShortcutInputDialog(
       ),
       show: false
     })
+
+    activeDialogWindow = inputWindow
 
     const initialShortcut = (currentShortcut ?? '').trim()
 
@@ -162,7 +181,6 @@ export function showShortcutInputDialog(
       border: 1px solid #ddd;
       border-radius: 4px;
       font-size: 14px;
-      font-family: monospace;
       background: #fafafa;
       color: #333;
       min-height: 32px;
@@ -451,6 +469,7 @@ export function showShortcutInputDialog(
     ipcMain.on(DELETE_CHANNEL, handleDeleteShortcutHistory)
 
     inputWindow.once('closed', () => {
+      activeDialogWindow = null
       if (!isResolved) {
         finalize(null)
       } else {
@@ -459,16 +478,29 @@ export function showShortcutInputDialog(
     })
 
     inputWindow.once('ready-to-show', () => {
-      if (parentWindow && !parentWindow.isDestroyed()) {
-        if (!parentWindow.isVisible()) {
-          parentWindow.show()
-        }
-      }
       inputWindow.show()
       inputWindow.focus()
     })
 
     inputWindow.on('close', () => {
+      // macOS 焦点防止穿透唤回主窗口的 Hack
+      // 如果弹框关闭前，父窗口是可见的，macOS 会自动将焦点给父窗口使其跳到前台
+      // 我们在关闭瞬间暂时隐匿主窗口，迫使 macOS 把焦点还给上一个 App，100ms 后再静默恢复主窗口的可见性
+      if (
+        process.platform === 'darwin' &&
+        parentWindow &&
+        !parentWindow.isDestroyed() &&
+        parentWindow.isVisible() &&
+        !parentWindow.isFocused()
+      ) {
+        parentWindow.hide()
+        setTimeout(() => {
+          if (parentWindow && !parentWindow.isDestroyed()) {
+            parentWindow.showInactive()
+          }
+        }, 100)
+      }
+
       if (!isResolved) {
         finalize(null)
       }

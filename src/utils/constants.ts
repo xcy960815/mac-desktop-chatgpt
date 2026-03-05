@@ -63,3 +63,12 @@ export const MAIN_WINDOW_HEIGHT = 768
  */
 export const CHROME_USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+
+import { BrowserWindow } from 'electron'
+
+/**
+ * 自定义浏览器窗口类型，补充 macOS 特有方法
+ */
+export type CustomBrowserWindow = BrowserWindow & {
+  moveTop?: () => void
+}

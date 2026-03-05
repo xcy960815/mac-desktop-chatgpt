@@ -2,7 +2,7 @@ import { app, shell, WebContents } from 'electron'
 import contextMenu from 'electron-context-menu'
 
 import { WindowManager } from '@/window-manager'
-import { ModelUrl } from '@/constants'
+import { ModelUrl } from '@/utils/constants'
 import {
   readUserSetting,
   writeUserSetting,

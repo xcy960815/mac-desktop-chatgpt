@@ -7,14 +7,14 @@ import {
   Model,
   MAIN_WINDOW_WIDTH,
   MAIN_WINDOW_HEIGHT
-} from '@/constants'
+} from '@/utils/constants'
 import { resolveMainIndexUrl } from '@/utils/common'
 import {
   createWindowManager,
   WindowManager
 } from '@/window-manager'
 import { createShortcutManager } from '@/shortcut-manager'
-import { initializeLastVisitedUrlTracking } from '@/url-tracker'
+import { initializeLastVisitedUrlTracking } from '@/utils/url-tracker'
 import { registerWebContentsHandlers } from '@/webview-handlers'
 import { createUpdateManager } from '@/utils/update-manager'
 import { readUserSetting } from '@/utils/user-setting'
