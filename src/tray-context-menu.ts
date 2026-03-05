@@ -106,17 +106,6 @@ export const setupTrayContextMenu = (
             )
           },
           {
-            label: Model.DeepSeek,
-            type: 'radio',
-            checked: isDeepSeek,
-            click: createModelSwitchHandler(
-              Model.DeepSeek,
-              options,
-              updateContextMenu,
-              options.urls
-            )
-          },
-          {
             label: Model.Grok,
             type: 'radio',
             checked: isGrok,
@@ -133,6 +122,17 @@ export const setupTrayContextMenu = (
             checked: isGemini,
             click: createModelSwitchHandler(
               Model.Gemini,
+              options,
+              updateContextMenu,
+              options.urls
+            )
+          },
+          {
+            label: Model.DeepSeek,
+            type: 'radio',
+            checked: isDeepSeek,
+            click: createModelSwitchHandler(
+              Model.DeepSeek,
               options,
               updateContextMenu,
               options.urls

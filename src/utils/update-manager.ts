@@ -6,7 +6,7 @@ import {
   MessageBoxOptions,
   net
 } from 'electron'
-
+import { getAppIcon } from '@/utils/common'
 /**
  * GitHub Release 接口定义
  */
@@ -172,6 +172,7 @@ export class UpdateManager {
     const message = `发现新版本 ${newVersion}（当前版本：${currentVersion}）\n\n请前往 GitHub 下载最新版本安装。`
 
     const options: MessageBoxOptions = {
+      icon: getAppIcon(),
       type: 'info',
       title: '发现新版本',
       message,
@@ -208,6 +209,7 @@ export class UpdateManager {
     const message = '当前已是最新版本'
     if (window && !window.isDestroyed()) {
       dialog.showMessageBox(window, {
+        icon: getAppIcon(),
         type: 'info',
         title: '检查更新',
         message,
@@ -215,6 +217,7 @@ export class UpdateManager {
       })
     } else {
       dialog.showMessageBox({
+        icon: getAppIcon(),
         type: 'info',
         title: '检查更新',
         message,
@@ -233,6 +236,7 @@ export class UpdateManager {
     const message = `检查更新失败：${errorMessage}`
     if (window && !window.isDestroyed()) {
       dialog.showMessageBox(window, {
+        icon: getAppIcon(),
         type: 'error',
         title: '检查更新失败',
         message,
@@ -240,6 +244,7 @@ export class UpdateManager {
       })
     } else {
       dialog.showMessageBox({
+        icon: getAppIcon(),
         type: 'error',
         title: '检查更新失败',
         message,

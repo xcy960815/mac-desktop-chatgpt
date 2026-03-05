@@ -6,6 +6,7 @@ import {
 } from '@/utils/user-setting'
 import { TrayContextMenuOptions } from '@/tray-context-menu'
 import { getTrayMenuText } from '@/i18n/tray-menu'
+import { getAppIcon } from '@/utils/common'
 import {
   Model,
   ModelUrl,
@@ -37,13 +38,19 @@ export const handleAutoLaunchToggle = (
     })
     updateContextMenu()
   } catch (error) {
-    dialog.showErrorBox(
-      getTrayMenuText('autoLaunchErrorTitle', menuLanguage),
-      getTrayMenuText(
+    dialog.showMessageBox({
+      icon: getAppIcon(),
+      type: 'error',
+      title: getTrayMenuText(
+        'autoLaunchErrorTitle',
+        menuLanguage
+      ),
+      message: getTrayMenuText(
         'autoLaunchErrorMessage',
         menuLanguage
-      )
-    )
+      ),
+      buttons: [getTrayMenuText('confirm', menuLanguage)]
+    })
   }
 }
 
