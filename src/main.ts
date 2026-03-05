@@ -28,13 +28,6 @@ import {
   BrowserWindow
 } from 'electron'
 
-/**
- * 带有上下文菜单的 Tray 接口
- */
-interface TrayWithContextMenu extends Tray {
-  _contextMenu?: Menu
-}
-
 // 设置应用名称，这会影响 Dock Hover Title
 app.setName(TOOLTIP)
 
@@ -254,14 +247,14 @@ app.on('ready', async () => {
     windowManager.toggleWindow()
   })
 
-  tray.on('right-click', () => {
-    const contextMenu = (
-      tray as unknown as TrayWithContextMenu
-    )._contextMenu
-    if (contextMenu) {
-      tray.popUpContextMenu(contextMenu)
-    }
-  })
+  if (process.platform !== 'linux') {
+    tray.on('right-click', () => {
+      const contextMenu = tray._contextMenu
+      if (contextMenu) {
+        tray.popUpContextMenu(contextMenu)
+      }
+    })
+  }
 
   shortcutManager.registerToggleShortcut()
   shortcutManager.registerIpcHandlers()

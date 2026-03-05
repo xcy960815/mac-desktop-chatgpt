@@ -21,13 +21,6 @@ import {
   handleQuit
 } from './handlers/system-handler'
 
-/**
- * 带有上下文菜单的 Tray 接口
- */
-interface TrayWithContextMenu extends Tray {
-  _contextMenu?: Menu
-}
-
 export interface TrayContextMenuOptions {
   /** 系统托盘实例 */
   tray: Tray
@@ -236,9 +229,13 @@ export const setupTrayContextMenu = (
       }
     ])
 
-    // 存储上下文菜单，供右键事件处理程序使用
-    ;(tray as unknown as TrayWithContextMenu)._contextMenu =
-      contextMenu
+    // Linux 使用 setContextMenu 直接绑定（AppIndicator 不支持 right-click 事件）
+    // macOS/Windows 存储菜单供右键事件处理程序使用
+    if (process.platform === 'linux') {
+      tray.setContextMenu(contextMenu)
+    } else {
+      tray._contextMenu = contextMenu
+    }
   }
 
   updateContextMenu()
