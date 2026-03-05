@@ -9,6 +9,14 @@ import {
   MODEL_TO_URL_KEY
 } from './utils'
 
+/**
+ * 创建模型切换处理函数
+ * @param {Model} model - 要切换的目标模型
+ * @param {TrayContextMenuOptions} options - 托盘上下文菜单配置选项
+ * @param {() => void} updateContextMenu - 更新上下文菜单的回调函数
+ * @param {TrayContextMenuOptions['urls']} urls - 各种模型的 URL 配置
+ * @returns {() => void} 模型切换处理函数
+ */
 export const createModelSwitchHandler = (
   model: Model,
   options: TrayContextMenuOptions,

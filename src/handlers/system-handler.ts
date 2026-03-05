@@ -13,6 +13,13 @@ import {
 } from '@/utils/constants'
 import { getAvailableBrowserWindow } from './utils'
 
+/**
+ * 处理开机自启切换
+ * @param {boolean} enabled - 是否启用开机自启（true 代表启用，false 代表禁用）
+ * @param {MenuLanguage} menuLanguage - 当前菜单语言
+ * @param {() => void} updateContextMenu - 更新上下文菜单的回调函数
+ * @returns {void}
+ */
 export const handleAutoLaunchToggle = (
   enabled: boolean,
   menuLanguage: MenuLanguage,
@@ -40,6 +47,12 @@ export const handleAutoLaunchToggle = (
   }
 }
 
+/**
+ * 处理窗口置顶切换
+ * @param {TrayContextMenuOptions} options - 托盘上下文菜单配置选项
+ * @param {() => void} updateContextMenu - 更新上下文菜单的回调函数
+ * @returns {void}
+ */
 export const handleAlwaysOnTopToggle = (
   options: TrayContextMenuOptions,
   updateContextMenu: () => void
@@ -54,6 +67,12 @@ export const handleAlwaysOnTopToggle = (
   updateContextMenu()
 }
 
+/**
+ * 处理菜单语言设定
+ * @param {MenuLanguage} language - 目标菜单语言类型
+ * @param {() => void} updateContextMenu - 更新上下文菜单的回调函数
+ * @returns {void}
+ */
 export const handleMenuLanguageChange = (
   language: MenuLanguage,
   updateContextMenu: () => void
@@ -69,6 +88,12 @@ export const handleMenuLanguageChange = (
   updateContextMenu()
 }
 
+/**
+ * 处理页面重新加载
+ * @param {TrayContextMenuOptions} options - 托盘上下文菜单配置选项
+ * @param {MenuLanguage} menuLanguage - 当前菜单语言
+ * @returns {Promise<void>} 重新加载 Promise
+ */
 export const handleReload = async (
   options: TrayContextMenuOptions,
   menuLanguage: MenuLanguage
@@ -107,6 +132,11 @@ export const handleReload = async (
   })
 }
 
+/**
+ * 处理检查更新
+ * @param {TrayContextMenuOptions} options - 托盘上下文菜单配置选项
+ * @returns {Promise<void>} 检查更新 Promise
+ */
 export const handleCheckForUpdates = async (
   options: TrayContextMenuOptions
 ) => {
@@ -117,6 +147,10 @@ export const handleCheckForUpdates = async (
   await options.updateManager.checkForUpdates(browserWindow)
 }
 
+/**
+ * 处理退出应用
+ * @returns {void}
+ */
 export const handleQuit = () => {
   resetUserUrls()
   app.quit()

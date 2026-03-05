@@ -9,10 +9,21 @@ import { getTrayMenuText } from '@/i18n/tray-menu'
 import { MenuLanguage } from '@/utils/constants'
 import { getAvailableBrowserWindow } from './utils'
 
-// 简单的 delay 函数，如果项目中已经有导出的 delay，最好引入那里的，这里临时声明或引入
+/**
+ * 延迟指定的时间
+ * @param {number} ms - 延迟的毫秒数
+ * @returns {Promise<unknown>} 延迟 Promise
+ */
 const delay = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms))
 
+/**
+ * 创建快捷键设置处理函数
+ * @param {TrayContextMenuOptions} options - 托盘上下文菜单配置选项
+ * @param {() => void} updateContextMenu - 更新上下文菜单的回调函数
+ * @param {MenuLanguage} menuLanguage - 当前菜单语言
+ * @returns {() => Promise<void>} 快捷键设置处理函数
+ */
 export const createShortcutHandler = (
   options: TrayContextMenuOptions,
   updateContextMenu: () => void,
