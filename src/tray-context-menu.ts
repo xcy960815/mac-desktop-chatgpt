@@ -1,4 +1,5 @@
 import { BrowserWindow, Menu, Tray } from 'electron'
+
 import { WindowManager } from '@/window-manager'
 import { readUserSetting } from '@/utils/user-setting'
 import { MenuLanguage, Model } from '@/utils/constants'
@@ -32,8 +33,7 @@ export interface TrayContextMenuOptions {
   tray: Tray
   /** 窗口管理器实例 */
   windowManager: WindowManager
-  /** 菜单实例 */
-  menu: Menu
+
   /** 各模型的 URL 配置 */
   urls: {
     chatgpt: string
