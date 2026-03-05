@@ -1,4 +1,14 @@
 import * as path from 'path'
+import { app, nativeImage, NativeImage } from 'electron'
+
+/**
+ * 获取项目自定义图标
+ * @returns {NativeImage} 项目图标的 NativeImage 实例
+ */
+export const getAppIcon = (): NativeImage =>
+  nativeImage.createFromPath(
+    path.join(app.getAppPath(), 'images', 'icon.png')
+  )
 
 /**
  * 延迟执行指定毫秒数
