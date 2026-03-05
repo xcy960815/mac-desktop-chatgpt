@@ -267,8 +267,24 @@ const config: ForgeConfig = {
       setupIcon: path.resolve(__dirname, 'images/icon.ico')
     }),
     new MakerZIP({}, ['darwin', 'win32']),
-    new MakerRpm({}),
-    new MakerDeb({})
+    new MakerRpm({
+      options: {
+        description:
+          'A cross-platform desktop application based on electron + vite + typescript.',
+        genericName: 'ChatHub Desktop',
+        icon: path.resolve(__dirname, 'images/icon.png'),
+        categories: ['Utility', 'Network']
+      }
+    }),
+    new MakerDeb({
+      options: {
+        description:
+          'A cross-platform desktop application based on electron + vite + typescript.',
+        genericName: 'ChatHub Desktop',
+        icon: path.resolve(__dirname, 'images/icon.png'),
+        categories: ['Utility', 'Network']
+      }
+    })
   ],
   hooks: {
     postMake: async () => {

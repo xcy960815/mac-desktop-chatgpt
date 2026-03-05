@@ -1,4 +1,5 @@
 import { BrowserWindow, Menu, Tray } from 'electron'
+
 import { WindowManager } from '@/window-manager'
 import { readUserSetting } from '@/utils/user-setting'
 import { MenuLanguage, Model } from '@/utils/constants'
@@ -32,8 +33,7 @@ export interface TrayContextMenuOptions {
   tray: Tray
   /** 窗口管理器实例 */
   windowManager: WindowManager
-  /** 菜单实例 */
-  menu: Menu
+
   /** 各模型的 URL 配置 */
   urls: {
     chatgpt: string
@@ -106,17 +106,6 @@ export const setupTrayContextMenu = (
             )
           },
           {
-            label: Model.DeepSeek,
-            type: 'radio',
-            checked: isDeepSeek,
-            click: createModelSwitchHandler(
-              Model.DeepSeek,
-              options,
-              updateContextMenu,
-              options.urls
-            )
-          },
-          {
             label: Model.Grok,
             type: 'radio',
             checked: isGrok,
@@ -133,6 +122,17 @@ export const setupTrayContextMenu = (
             checked: isGemini,
             click: createModelSwitchHandler(
               Model.Gemini,
+              options,
+              updateContextMenu,
+              options.urls
+            )
+          },
+          {
+            label: Model.DeepSeek,
+            type: 'radio',
+            checked: isDeepSeek,
+            click: createModelSwitchHandler(
+              Model.DeepSeek,
               options,
               updateContextMenu,
               options.urls
