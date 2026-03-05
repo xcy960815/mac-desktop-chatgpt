@@ -23,17 +23,11 @@ import {
   app,
   globalShortcut,
   nativeImage,
+  nativeTheme,
   Tray,
   Menu,
   BrowserWindow
 } from 'electron'
-
-/**
- * 带有上下文菜单的 Tray 接口
- */
-interface TrayWithContextMenu extends Tray {
-  _contextMenu?: Menu
-}
 
 // 设置应用名称，这会影响 Dock Hover Title
 app.setName(TOOLTIP)
@@ -83,18 +77,46 @@ app.on('ready', async () => {
   }
 
   const appPath = app.getAppPath()
+
+  /**
+   * 根据系统主题获取对应的托盘图标路径
+   */
+  const getTrayIconPath = () => {
+    // macOS 上使用 Template 图片，系统会自动处理深浅色适配
+    if (process.platform === 'darwin') {
+      return path.join(
+        appPath,
+        'images',
+        'gptIconTemplate.png'
+      )
+    }
+    // Windows/Linux 根据系统当前是否为深色模式，返回不同的图标
+    // 深色模式使用浅色图片，浅色模式使用深色图片
+    return nativeTheme.shouldUseDarkColors
+      ? path.join(appPath, 'images', 'gptIconLight.png')
+      : path.join(appPath, 'images', 'gptIconDark.png')
+  }
+
   /**
    * @desc 创建菜单栏图标
    * @type {Tray}
-   * @param {nativeImage} image - 图标
    */
   const image = nativeImage.createFromPath(
-    path.join(appPath, 'images', `gptIconTemplate.png`)
+    getTrayIconPath()
   )
 
   const tray = new Tray(image)
   tray.setToolTip(TOOLTIP)
   tray.setIgnoreDoubleClickEvents(true)
+
+  // 监听系统主题变化，动态更新托盘图标
+  if (process.platform !== 'darwin') {
+    nativeTheme.on('updated', () => {
+      tray.setImage(
+        nativeImage.createFromPath(getTrayIconPath())
+      )
+    })
+  }
 
   const indexUrl = resolveMainIndexUrl({
     devServerUrl: MAIN_WINDOW_VITE_DEV_SERVER_URL,
@@ -254,14 +276,14 @@ app.on('ready', async () => {
     windowManager.toggleWindow()
   })
 
-  tray.on('right-click', () => {
-    const contextMenu = (
-      tray as unknown as TrayWithContextMenu
-    )._contextMenu
-    if (contextMenu) {
-      tray.popUpContextMenu(contextMenu)
-    }
-  })
+  if (process.platform !== 'linux') {
+    tray.on('right-click', () => {
+      const contextMenu = tray._contextMenu
+      if (contextMenu) {
+        tray.popUpContextMenu(contextMenu)
+      }
+    })
+  }
 
   shortcutManager.registerToggleShortcut()
   shortcutManager.registerIpcHandlers()
