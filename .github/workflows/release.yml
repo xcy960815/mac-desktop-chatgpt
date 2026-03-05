@@ -77,7 +77,7 @@ jobs:
         shell: bash
         run: |
           # 查找构建产物，根据 forge.config.ts 的 normalizeZipOutputs，文件应该在 out/make/zip/ 根目录
-          # CI 环境会保留版本号，文件名格式：desktop-chatgpt-darwin-arm64-1.0.0.zip
+          # CI 环境会保留版本号，文件名格式：chathub-desktop-darwin-arm64-1.0.0.zip
           VERSION=${{ steps.get_version.outputs.version }}
           
           if [ "${{ matrix.platform }}" == "darwin" ]; then
@@ -188,9 +188,9 @@ jobs:
 
             ### 📥 下载
 
-            - **macOS (Intel)**: desktop-chatgpt-darwin-x64-${{ steps.get_version.outputs.version }}.zip
-            - **macOS (Apple Silicon)**: desktop-chatgpt-darwin-arm64-${{ steps.get_version.outputs.version }}.zip
-            - **Windows (x64)**: desktop-chatgpt-win32-x64-${{ steps.get_version.outputs.version }}.zip
+            - **macOS (Intel)**: chathub-desktop-darwin-x64-${{ steps.get_version.outputs.version }}.zip
+            - **macOS (Apple Silicon)**: chathub-desktop-darwin-arm64-${{ steps.get_version.outputs.version }}.zip
+            - **Windows (x64)**: chathub-desktop-win32-x64-${{ steps.get_version.outputs.version }}.zip
             - **Linux (x64)**: chathub-desktop_${{ steps.get_version.outputs.version }}_amd64.deb
             
             ### 📋 安装说明
