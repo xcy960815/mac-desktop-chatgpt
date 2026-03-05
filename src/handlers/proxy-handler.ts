@@ -7,6 +7,7 @@ import { TrayContextMenuOptions } from '@/tray-context-menu'
 import { showProxyInputDialog } from '@/proxy-input-dialog'
 import { getTrayMenuText } from '@/i18n/tray-menu'
 import { MenuLanguage } from '@/utils/constants'
+import { getAppIcon } from '@/utils/common'
 
 /**
  * 延迟指定的时间
@@ -50,6 +51,7 @@ export const createProxyHandler = (
         )
       } catch (error) {
         dialog.showMessageBox({
+          icon: getAppIcon(),
           type: 'error',
           title: '错误',
           message: '显示对话框失败，请稍后再试',
@@ -79,6 +81,7 @@ export const createProxyHandler = (
             !simpleProxyRegex.test(proxy)
           ) {
             dialog.showMessageBox({
+              icon: getAppIcon(),
               type: 'error',
               title: getTrayMenuText(
                 'formatErrorTitle',
@@ -132,6 +135,7 @@ export const createProxyHandler = (
 
         // 提示重启生效
         dialog.showMessageBox({
+          icon: getAppIcon(),
           type: 'info',
           title: getTrayMenuText(
             'settingSuccessTitle',
@@ -148,13 +152,22 @@ export const createProxyHandler = (
       }
     } catch (error) {
       if (options.isMenubarReady()) {
-        dialog.showErrorBox(
-          getTrayMenuText('errorTitle', menuLanguage),
-          getTrayMenuText(
-            'proxySetErrorMessagePrefix',
+        dialog.showMessageBox({
+          icon: getAppIcon(),
+          type: 'error',
+          title: getTrayMenuText(
+            'errorTitle',
             menuLanguage
-          ) + String(error)
-        )
+          ),
+          message:
+            getTrayMenuText(
+              'proxySetErrorMessagePrefix',
+              menuLanguage
+            ) + String(error),
+          buttons: [
+            getTrayMenuText('confirm', menuLanguage)
+          ]
+        })
       }
     }
   }

@@ -8,6 +8,7 @@ import { showShortcutInputDialog } from '@/shortcut-input-dialog'
 import { getTrayMenuText } from '@/i18n/tray-menu'
 import { MenuLanguage } from '@/utils/constants'
 import { getAvailableBrowserWindow } from './utils'
+import { getAppIcon } from '@/utils/common'
 
 /**
  * 延迟指定的时间
@@ -78,6 +79,7 @@ export const createShortcutHandler = (
           )
         }
         dialog.showMessageBox({
+          icon: getAppIcon(),
           type: 'error',
           title: getTrayMenuText(
             'errorTitle',
@@ -117,6 +119,7 @@ export const createShortcutHandler = (
         const shortcut = input.trim()
         if (!shortcut || shortcut.trim() === '') {
           dialog.showMessageBox({
+            icon: getAppIcon(),
             type: 'error',
             title: getTrayMenuText(
               'settingFailedTitle',
@@ -178,6 +181,7 @@ export const createShortcutHandler = (
           })
           options.setCurrentShortcut(shortcut)
           dialog.showMessageBox({
+            icon: getAppIcon(),
             type: 'info',
             title: getTrayMenuText(
               'settingSuccessTitle',
@@ -208,6 +212,7 @@ export const createShortcutHandler = (
             )
           }
           dialog.showMessageBox({
+            icon: getAppIcon(),
             type: 'error',
             title: getTrayMenuText(
               'settingFailedTitle',
@@ -224,6 +229,7 @@ export const createShortcutHandler = (
         }
       } else {
         const resetResult = await dialog.showMessageBox({
+          icon: getAppIcon(),
           type: 'question',
           title: getTrayMenuText(
             'shortcutResetConfirmTitle',
@@ -264,6 +270,7 @@ export const createShortcutHandler = (
             })
             options.setCurrentShortcut('CommandOrControl+g')
             dialog.showMessageBox({
+              icon: getAppIcon(),
               type: 'info',
               title: getTrayMenuText(
                 'settingSuccessTitle',
@@ -294,6 +301,7 @@ export const createShortcutHandler = (
               )
             }
             dialog.showMessageBox({
+              icon: getAppIcon(),
               type: 'error',
               title: getTrayMenuText(
                 'settingFailedTitle',
@@ -332,6 +340,7 @@ export const createShortcutHandler = (
         options.getMainBrowserWindow
       )
       dialog.showMessageBox(browserWindow || undefined, {
+        icon: getAppIcon(),
         type: 'error',
         title: getTrayMenuText('errorTitle', menuLanguage),
         message:
