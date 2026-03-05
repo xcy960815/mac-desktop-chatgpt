@@ -272,7 +272,8 @@ const config: ForgeConfig = {
         description:
           'A cross-platform desktop application based on electron + vite + typescript.',
         genericName: 'ChatHub Desktop',
-        icon: path.resolve(__dirname, 'images/icon.png')
+        icon: path.resolve(__dirname, 'images/icon.png'),
+        categories: ['Utility', 'Network']
       }
     }),
     new MakerDeb({
@@ -280,7 +281,8 @@ const config: ForgeConfig = {
         description:
           'A cross-platform desktop application based on electron + vite + typescript.',
         genericName: 'ChatHub Desktop',
-        icon: path.resolve(__dirname, 'images/icon.png')
+        icon: path.resolve(__dirname, 'images/icon.png'),
+        categories: ['Utility', 'Network']
       }
     })
   ],
