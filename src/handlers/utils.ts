@@ -5,6 +5,9 @@ import { TrayContextMenuOptions } from '@/tray-context-menu'
 
 /**
  * 获取可用的浏览器窗口
+ * @param {WindowManager} windowManager - 窗口管理器实例
+ * @param {TrayContextMenuOptions['getMainBrowserWindow']} getMainBrowserWindow - 获取主浏览器窗口的函数
+ * @returns {BrowserWindow | null} 可用的浏览器窗口或 null
  */
 export const getAvailableBrowserWindow = (
   windowManager: WindowManager,
