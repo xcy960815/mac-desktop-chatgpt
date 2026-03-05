@@ -222,6 +222,8 @@ const config: ForgeConfig = {
     icon: 'images/icon',
     // 应用程序的名称
     name: pkg.productName,
+    // 可执行文件的名称，解决 Linux 找不到二进制文件的问题
+    executableName: pkg.name,
     // 产品的版本
     appVersion: pkg.version,
     // 配置自动更新（electron-updater 会从 GitHub Releases 获取更新）
