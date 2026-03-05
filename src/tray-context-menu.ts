@@ -1,13 +1,24 @@
+import { BrowserWindow, Menu, Tray } from 'electron'
+import { WindowManager } from '@/window-manager'
+import { readUserSetting } from '@/utils/user-setting'
+import { MenuLanguage, Model } from '@/utils/constants'
 import {
-  app,
-  BrowserWindow,
-  dialog,
-  globalShortcut,
-  Menu,
-  shell,
-  Tray,
-  session
-} from 'electron'
+  getTrayMenuText,
+  TrayMenuMessageKey
+} from '@/i18n/tray-menu'
+import { UpdateManager } from '@/utils/update-manager'
+
+import { createModelSwitchHandler } from './handlers/model-handler'
+import { createShortcutHandler } from './handlers/shortcut-handler'
+import { createProxyHandler } from './handlers/proxy-handler'
+import {
+  handleAutoLaunchToggle,
+  handleAlwaysOnTopToggle,
+  handleMenuLanguageChange,
+  handleReload,
+  handleCheckForUpdates,
+  handleQuit
+} from './handlers/system-handler'
 
 /**
  * 带有上下文菜单的 Tray 接口
@@ -16,30 +27,6 @@ interface TrayWithContextMenu extends Tray {
   _contextMenu?: Menu
 }
 
-import { WindowManager } from '@/window-manager'
-import { showShortcutInputDialog } from '@/shortcut-input-dialog'
-import { showProxyInputDialog } from '@/proxy-input-dialog'
-import {
-  readUserSetting,
-  resetUserUrls,
-  writeUserSetting
-} from '@/utils/user-setting'
-import { delay } from '@/utils/common'
-import {
-  MenuLanguage,
-  Model,
-  ModelUrl
-} from '@/utils/constants'
-import {
-  getTrayMenuText,
-  TrayMenuMessageKey
-} from '@/i18n/tray-menu'
-import { UpdateManager } from '@/utils/update-manager'
-
-/**
- * 托盘上下文菜单配置选项
- * @interface TrayContextMenuOptions
- */
 export interface TrayContextMenuOptions {
   /** 系统托盘实例 */
   tray: Tray
@@ -49,17 +36,11 @@ export interface TrayContextMenuOptions {
   menu: Menu
   /** 各模型的 URL 配置 */
   urls: {
-    /** ChatGPT 模型 URL */
     chatgpt: string
-    /** DeepSeek 模型 URL */
     deepseek: string
-    /** Grok 模型 URL */
     grok: string
-    /** Gemini 模型 URL */
     gemini: string
-    /** Qwen 模型 URL */
     qwen: string
-    /** Doubao 模型 URL */
     doubao: string
   }
   /** 检查菜单栏是否已就绪 */
@@ -81,47 +62,6 @@ export interface TrayContextMenuOptions {
 }
 
 /**
- * 获取可用的浏览器窗口
- * @param {WindowManager} windowManager - 窗口管理器实例
- * @param {TrayContextMenuOptions['getMainBrowserWindow']} getMainBrowserWindow - 获取主浏览器窗口的函数
- * @returns {BrowserWindow | null} 可用的浏览器窗口，如果不存在则返回 null
- */
-const getAvailableBrowserWindow = (
-  windowManager: WindowManager,
-  getMainBrowserWindow: TrayContextMenuOptions['getMainBrowserWindow']
-): BrowserWindow | null => {
-  const mainBrowserWindow = getMainBrowserWindow()
-  if (
-    mainBrowserWindow &&
-    !mainBrowserWindow.isDestroyed()
-  ) {
-    return mainBrowserWindow
-  }
-
-  const menubarWindow = windowManager.getMainBrowserWindow()
-  if (menubarWindow && !menubarWindow.isDestroyed()) {
-    return menubarWindow
-  }
-
-  return null
-}
-
-/**
- * 模型名称到 URL 配置键的映射
- */
-const MODEL_TO_URL_KEY: Record<
-  Model,
-  keyof TrayContextMenuOptions['urls']
-> = {
-  [Model.ChatGPT]: 'chatgpt',
-  [Model.DeepSeek]: 'deepseek',
-  [Model.Grok]: 'grok',
-  [Model.Gemini]: 'gemini',
-  [Model.Qwen]: 'qwen',
-  [Model.Doubao]: 'doubao'
-}
-
-/**
  * 设置托盘上下文菜单
  * @param {TrayContextMenuOptions} options - 托盘上下文菜单配置选项
  * @returns {() => void} 返回构建上下文菜单的函数
@@ -129,125 +69,26 @@ const MODEL_TO_URL_KEY: Record<
 export const setupTrayContextMenu = (
   options: TrayContextMenuOptions
 ) => {
-  const { tray, windowManager, urls } = options
+  const { tray } = options
 
-  const waitForWindowLoad = async (
-    targetWindow: BrowserWindow
-  ) => {
-    await new Promise<void>((resolve) => {
-      if (targetWindow.webContents.isLoading()) {
-        const timeout = setTimeout(() => {
-          resolve()
-        }, 5000)
-        targetWindow.webContents.once(
-          'did-finish-load',
-          () => {
-            clearTimeout(timeout)
-            resolve()
-          }
-        )
-      } else {
-        resolve()
-      }
-    })
-  }
-
-  /**
-   * 构建并设置上下文菜单
-   */
-  const updateContextMenu = () => {
+  const updateContextMenu = async () => {
     const userSetting = readUserSetting()
-    const isChatGPT = userSetting.model === Model.ChatGPT
-    const isDeepSeek = userSetting.model === Model.DeepSeek
-    const isGrok = userSetting.model === Model.Grok
-    const isGemini = userSetting.model === Model.Gemini
-    const isQwen = userSetting.model === Model.Qwen
-    const isDoubao = userSetting.model === Model.Doubao
+    const currentModel = userSetting.model || Model.ChatGPT
+    const isChatGPT = currentModel === Model.ChatGPT
+    const isDeepSeek = currentModel === Model.DeepSeek
+    const isGrok = currentModel === Model.Grok
+    const isGemini = currentModel === Model.Gemini
+    const isQwen = currentModel === Model.Qwen
+    const isDoubao = currentModel === Model.Doubao
+
     const alwaysOnTop = !!userSetting.alwaysOnTop
-    const loginItemSettings = app.getLoginItemSettings()
     const isAutoLaunchEnabled =
-      loginItemSettings?.openAtLogin ??
       !!userSetting.autoLaunchOnStartup
 
     const menuLanguage =
       userSetting.menuLanguage ?? MenuLanguage.Chinese
     const t = (key: TrayMenuMessageKey) =>
       getTrayMenuText(key, menuLanguage)
-
-    const handleAutoLaunchToggle = (enabled: boolean) => {
-      try {
-        app.setLoginItemSettings({
-          openAtLogin: enabled,
-          openAsHidden: true
-        })
-        writeUserSetting({
-          ...userSetting,
-          autoLaunchOnStartup: enabled
-        })
-        updateContextMenu()
-      } catch (error) {
-        dialog.showErrorBox(
-          getTrayMenuText(
-            'autoLaunchErrorTitle',
-            menuLanguage
-          ),
-          getTrayMenuText(
-            'autoLaunchErrorMessage',
-            menuLanguage
-          )
-        )
-      }
-    }
-
-    const handleAlwaysOnTopToggle = () => {
-      const current = readUserSetting()
-      const newValue = !current.alwaysOnTop
-      writeUserSetting({
-        ...current,
-        alwaysOnTop: newValue
-      })
-      windowManager.setAlwaysOnTop(newValue)
-      updateContextMenu()
-    }
-
-    const handleMenuLanguageChange = (
-      language: MenuLanguage
-    ) => {
-      const latestSetting = readUserSetting()
-      if (latestSetting.menuLanguage === language) {
-        return
-      }
-      writeUserSetting({
-        ...latestSetting,
-        menuLanguage: language
-      })
-      updateContextMenu()
-    }
-
-    const createModelSwitchHandler = (model: Model) => {
-      return () => {
-        const userSetting = readUserSetting()
-        const newUserSetting = writeUserSetting({
-          ...userSetting,
-          model
-        })
-        updateContextMenu()
-
-        // 根据模型获取对应的 URL
-        const urlKey = MODEL_TO_URL_KEY[model]
-        const savedUrl =
-          newUserSetting.urls?.[model] || urls[urlKey]
-
-        getAvailableBrowserWindow(
-          windowManager,
-          options.getMainBrowserWindow
-        )?.webContents.send(
-          'model-changed',
-          newUserSetting.model,
-          savedUrl
-        )
-      }
-    }
 
     const contextMenu = Menu.buildFromTemplate([
       {
@@ -257,583 +98,103 @@ export const setupTrayContextMenu = (
             label: Model.ChatGPT,
             type: 'radio',
             checked: isChatGPT,
-            click: createModelSwitchHandler(Model.ChatGPT)
-          },
-          {
-            label: Model.Grok,
-            type: 'radio',
-            checked: isGrok,
-            click: createModelSwitchHandler(Model.Grok)
-          },
-          {
-            label: Model.Gemini,
-            type: 'radio',
-            checked: isGemini,
-            click: createModelSwitchHandler(Model.Gemini)
+            click: createModelSwitchHandler(
+              Model.ChatGPT,
+              options,
+              updateContextMenu,
+              options.urls
+            )
           },
           {
             label: Model.DeepSeek,
             type: 'radio',
             checked: isDeepSeek,
-            click: createModelSwitchHandler(Model.DeepSeek)
+            click: createModelSwitchHandler(
+              Model.DeepSeek,
+              options,
+              updateContextMenu,
+              options.urls
+            )
+          },
+          {
+            label: Model.Grok,
+            type: 'radio',
+            checked: isGrok,
+            click: createModelSwitchHandler(
+              Model.Grok,
+              options,
+              updateContextMenu,
+              options.urls
+            )
+          },
+          {
+            label: Model.Gemini,
+            type: 'radio',
+            checked: isGemini,
+            click: createModelSwitchHandler(
+              Model.Gemini,
+              options,
+              updateContextMenu,
+              options.urls
+            )
           },
           {
             label: Model.Qwen,
             type: 'radio',
             checked: isQwen,
-            click: createModelSwitchHandler(Model.Qwen)
+            click: createModelSwitchHandler(
+              Model.Qwen,
+              options,
+              updateContextMenu,
+              options.urls
+            )
           },
           {
             label: Model.Doubao,
             type: 'radio',
             checked: isDoubao,
-            click: createModelSwitchHandler(Model.Doubao)
+            click: createModelSwitchHandler(
+              Model.Doubao,
+              options,
+              updateContextMenu,
+              options.urls
+            )
           }
         ]
-      },
-      {
-        label: t('openInBrowser'),
-        // accelerator: 'CommandOrControl+O',
-        click: async () => {
-          if (isChatGPT) {
-            shell.openExternal(urls.chatgpt)
-          }
-          if (isDeepSeek) {
-            shell.openExternal(urls.deepseek)
-          }
-          if (isGrok) {
-            shell.openExternal(urls.grok)
-          }
-          if (isGemini) {
-            shell.openExternal(urls.gemini)
-          }
-          if (isQwen) {
-            shell.openExternal(urls.qwen)
-          }
-          if (isDoubao) {
-            shell.openExternal(urls.doubao)
-          }
-        }
-      },
-      {
-        label: t('showInDock'),
-        type: 'checkbox',
-        checked: !!userSetting.showInDock,
-        click: () => {
-          const current = readUserSetting()
-          const newValue = !current.showInDock
-          writeUserSetting({
-            ...current,
-            showInDock: newValue
-          })
-          if (process.platform === 'darwin') {
-            if (newValue) {
-              app.dock.show()
-            } else {
-              app.dock.hide()
-            }
-          }
-          updateContextMenu()
-        }
       },
       { type: 'separator' },
       {
         label: t('windowAlwaysOnTop'),
         type: 'checkbox',
         checked: alwaysOnTop,
-        click: handleAlwaysOnTopToggle
+        click: () =>
+          handleAlwaysOnTopToggle(
+            options,
+            updateContextMenu
+          )
       },
       {
         label: t('setShortcut'),
-        click: async () => {
-          try {
-            const userSetting = readUserSetting()
-            const savedShortcut =
-              userSetting.toggleShortcut ||
-              'CommandOrControl+g'
-
-            if (!options.isMenubarReady()) {
-              for (
-                let i = 0;
-                i < 20 && !options.isMenubarReady();
-                i++
-              ) {
-                await delay(100)
-              }
-            }
-
-            // 打开对话框前临时取消注册快捷键，避免录入时触发
-            const currentShortcutBeforeDialog =
-              options.getCurrentShortcut()
-            if (currentShortcutBeforeDialog) {
-              globalShortcut.unregister(
-                currentShortcutBeforeDialog
-              )
-            }
-
-            let input: string | null = null
-            try {
-              input = await showShortcutInputDialog(
-                null,
-                savedShortcut,
-                menuLanguage
-              )
-            } catch (error) {
-              // 出错时恢复快捷键
-              if (currentShortcutBeforeDialog) {
-                globalShortcut.register(
-                  currentShortcutBeforeDialog,
-                  () => {
-                    const menubarWindow =
-                      getAvailableBrowserWindow(
-                        windowManager,
-                        options.getMainBrowserWindow
-                      )
-                    if (!menubarWindow) return
-                    windowManager.toggleWindow()
-                  }
-                )
-              }
-              dialog.showMessageBox({
-                type: 'error',
-                title: getTrayMenuText(
-                  'errorTitle',
-                  menuLanguage
-                ),
-                message: getTrayMenuText(
-                  'dialogShowErrorMessage',
-                  menuLanguage
-                ),
-                buttons: [
-                  getTrayMenuText('confirm', menuLanguage)
-                ]
-              })
-              return
-            }
-
-            if (input === null) {
-              // 用户点击了取消，恢复原快捷键
-              if (currentShortcutBeforeDialog) {
-                globalShortcut.register(
-                  currentShortcutBeforeDialog,
-                  () => {
-                    const menubarWindow =
-                      getAvailableBrowserWindow(
-                        windowManager,
-                        options.getMainBrowserWindow
-                      )
-                    if (!menubarWindow) return
-                    windowManager.toggleWindow()
-                  }
-                )
-              }
-              return
-            }
-
-            if (input && input.trim()) {
-              const shortcut = input.trim()
-              if (!shortcut || shortcut.trim() === '') {
-                dialog.showMessageBox({
-                  type: 'error',
-                  title: getTrayMenuText(
-                    'settingFailedTitle',
-                    menuLanguage
-                  ),
-                  message: getTrayMenuText(
-                    'shortcutEmptyMessage',
-                    menuLanguage
-                  ),
-                  buttons: [
-                    getTrayMenuText('confirm', menuLanguage)
-                  ]
-                })
-                // 恢复原快捷键
-                if (currentShortcutBeforeDialog) {
-                  globalShortcut.register(
-                    currentShortcutBeforeDialog,
-                    () => {
-                      const menubarWindow =
-                        getAvailableBrowserWindow(
-                          windowManager,
-                          options.getMainBrowserWindow
-                        )
-                      if (!menubarWindow) return
-                      windowManager.toggleWindow()
-                    }
-                  )
-                }
-                return
-              }
-
-              // 快捷键已在对话框打开前取消注册，无需再次 unregister
-
-              const registered = globalShortcut.register(
-                shortcut,
-                () => {
-                  const menubarWindow =
-                    getAvailableBrowserWindow(
-                      windowManager,
-                      options.getMainBrowserWindow
-                    )
-                  if (!menubarWindow) {
-                    return
-                  }
-                  windowManager.toggleWindow()
-                }
-              )
-
-              if (registered) {
-                const currentSetting = readUserSetting()
-                const history =
-                  currentSetting.shortcutHistory || []
-                const newHistory = [
-                  shortcut,
-                  ...history.filter((s) => s !== shortcut)
-                ].slice(0, 10)
-                writeUserSetting({
-                  ...currentSetting,
-                  toggleShortcut: shortcut,
-                  shortcutHistory: newHistory
-                })
-                options.setCurrentShortcut(shortcut)
-                dialog.showMessageBox({
-                  type: 'info',
-                  title: getTrayMenuText(
-                    'settingSuccessTitle',
-                    menuLanguage
-                  ),
-                  message: `${getTrayMenuText('shortcutSetSuccessMessagePrefix', menuLanguage)}${shortcut}`,
-                  buttons: [
-                    getTrayMenuText('confirm', menuLanguage)
-                  ]
-                })
-                updateContextMenu()
-              } else {
-                // 注册新快捷键失败，恢复原快捷键
-                if (currentShortcutBeforeDialog) {
-                  globalShortcut.register(
-                    currentShortcutBeforeDialog,
-                    () => {
-                      const menubarWindow =
-                        getAvailableBrowserWindow(
-                          windowManager,
-                          options.getMainBrowserWindow
-                        )
-                      if (!menubarWindow) {
-                        return
-                      }
-                      windowManager.toggleWindow()
-                    }
-                  )
-                }
-                dialog.showMessageBox({
-                  type: 'error',
-                  title: getTrayMenuText(
-                    'settingFailedTitle',
-                    menuLanguage
-                  ),
-                  message: getTrayMenuText(
-                    'shortcutConflictMessage',
-                    menuLanguage
-                  ),
-                  buttons: [
-                    getTrayMenuText('confirm', menuLanguage)
-                  ]
-                })
-              }
-            } else {
-              const resetResult =
-                await dialog.showMessageBox({
-                  type: 'question',
-                  title: getTrayMenuText(
-                    'shortcutResetConfirmTitle',
-                    menuLanguage
-                  ),
-                  message: getTrayMenuText(
-                    'shortcutResetConfirmMessage',
-                    menuLanguage
-                  ),
-                  buttons: [
-                    getTrayMenuText(
-                      'confirm',
-                      menuLanguage
-                    ),
-                    getTrayMenuText('cancel', menuLanguage)
-                  ],
-                  cancelId: 1
-                })
-              if (resetResult.response === 0) {
-                // 快捷键已在对话框打开前取消注册，无需再次 unregister
-
-                const defaultRegistered =
-                  globalShortcut.register(
-                    'CommandOrControl+g',
-                    () => {
-                      const menubarWindow =
-                        getAvailableBrowserWindow(
-                          windowManager,
-                          options.getMainBrowserWindow
-                        )
-                      if (!menubarWindow) {
-                        return
-                      }
-                      windowManager.toggleWindow()
-                    }
-                  )
-
-                if (defaultRegistered) {
-                  const userSetting = readUserSetting()
-                  writeUserSetting({
-                    ...userSetting,
-                    toggleShortcut: 'CommandOrControl+g'
-                  })
-                  options.setCurrentShortcut(
-                    'CommandOrControl+g'
-                  )
-                  dialog.showMessageBox({
-                    type: 'info',
-                    title: getTrayMenuText(
-                      'settingSuccessTitle',
-                      menuLanguage
-                    ),
-                    message: getTrayMenuText(
-                      'shortcutResetSuccessMessage',
-                      menuLanguage
-                    ),
-                    buttons: [
-                      getTrayMenuText(
-                        'confirm',
-                        menuLanguage
-                      )
-                    ]
-                  })
-                } else {
-                  // 重置失败，恢复原快捷键
-                  if (currentShortcutBeforeDialog) {
-                    globalShortcut.register(
-                      currentShortcutBeforeDialog,
-                      () => {
-                        const menubarWindow =
-                          getAvailableBrowserWindow(
-                            windowManager,
-                            options.getMainBrowserWindow
-                          )
-                        if (!menubarWindow) return
-                        windowManager.toggleWindow()
-                      }
-                    )
-                  }
-                  dialog.showMessageBox({
-                    type: 'error',
-                    title: getTrayMenuText(
-                      'settingFailedTitle',
-                      menuLanguage
-                    ),
-                    message: getTrayMenuText(
-                      'shortcutResetErrorMessage',
-                      menuLanguage
-                    ),
-                    buttons: [
-                      getTrayMenuText(
-                        'confirm',
-                        menuLanguage
-                      )
-                    ]
-                  })
-                }
-              } else {
-                // 用户取消重置，恢复原快捷键
-                if (currentShortcutBeforeDialog) {
-                  globalShortcut.register(
-                    currentShortcutBeforeDialog,
-                    () => {
-                      const menubarWindow =
-                        getAvailableBrowserWindow(
-                          windowManager,
-                          options.getMainBrowserWindow
-                        )
-                      if (!menubarWindow) return
-                      windowManager.toggleWindow()
-                    }
-                  )
-                }
-              }
-            }
-          } catch (error) {
-            const browserWindow = getAvailableBrowserWindow(
-              options.windowManager,
-              options.getMainBrowserWindow
-            )
-            dialog.showMessageBox(
-              browserWindow || undefined,
-              {
-                type: 'error',
-                title: getTrayMenuText(
-                  'errorTitle',
-                  menuLanguage
-                ),
-                message:
-                  getTrayMenuText(
-                    'shortcutSetErrorMessagePrefix',
-                    menuLanguage
-                  ) +
-                  (error instanceof Error
-                    ? error.message
-                    : String(error)),
-                buttons: [
-                  getTrayMenuText('confirm', menuLanguage)
-                ]
-              }
-            )
-          }
-        }
+        click: createShortcutHandler(
+          options,
+          updateContextMenu,
+          menuLanguage
+        )
       },
       {
         label: t('setProxy'),
-        click: async () => {
-          try {
-            const userSetting = readUserSetting()
-            const savedProxy = userSetting.proxy || ''
-
-            if (!options.isMenubarReady()) {
-              for (
-                let i = 0;
-                i < 20 && !options.isMenubarReady();
-                i++
-              ) {
-                await delay(100)
-              }
-            }
-
-            let input: string | null = null
-            try {
-              input = await showProxyInputDialog(
-                null,
-                savedProxy,
-                menuLanguage
-              )
-            } catch (error) {
-              dialog.showMessageBox({
-                type: 'error',
-                title: '错误',
-                message: '显示对话框失败，请稍后再试',
-                buttons: ['确定']
-              })
-              return
-            }
-
-            if (input !== null) {
-              const proxy = input.trim()
-              const currentSetting = readUserSetting()
-
-              // 检查是否有变更
-              // 校验代理格式
-              if (proxy) {
-                // 支持的格式:
-                // 1. 协议://IP:端口 (http://127.0.0.1:7890)
-                // 2. IP:端口 (127.0.0.1:7890)
-                // 3. 域名:端口 (example.com:8080)
-                const proxyRegex =
-                  /^(?:(http|https|socks|socks4|socks5):\/\/)?(?:[\w-]+\.)+[\w-]+(?::\d+)?$/
-                // 简单的 IP:Port 校验
-                const simpleProxyRegex =
-                  /^([\w-]+\.)+[\w-]+:\d+$/
-
-                if (
-                  !proxyRegex.test(proxy) &&
-                  !simpleProxyRegex.test(proxy)
-                ) {
-                  dialog.showMessageBox({
-                    type: 'error',
-                    title: getTrayMenuText(
-                      'formatErrorTitle',
-                      menuLanguage
-                    ),
-                    message: getTrayMenuText(
-                      'proxyFormatErrorMessage',
-                      menuLanguage
-                    ),
-                    buttons: [
-                      getTrayMenuText(
-                        'confirm',
-                        menuLanguage
-                      )
-                    ],
-                    defaultId: 0
-                  })
-                  return
-                }
-              }
-
-              const history =
-                currentSetting.proxyHistory || []
-              let newHistory = history
-              if (proxy) {
-                newHistory = [
-                  proxy,
-                  ...history.filter((p) => p !== proxy)
-                ].slice(0, 10)
-              }
-
-              writeUserSetting({
-                ...currentSetting,
-                proxy: proxy || undefined,
-                proxyHistory: newHistory
-              })
-
-              // 应用代理设置
-              if (proxy) {
-                app.commandLine.appendSwitch(
-                  'proxy-server',
-                  proxy
-                )
-                // 立即应用到当前会话
-                await session.defaultSession.setProxy({
-                  proxyRules: proxy
-                })
-              } else {
-                app.commandLine.removeSwitch('proxy-server')
-                // 立即清除当前会话代理
-                await session.defaultSession.setProxy({
-                  proxyRules: ''
-                })
-              }
-
-              // 提示重启生效
-              dialog.showMessageBox({
-                type: 'info',
-                title: getTrayMenuText(
-                  'settingSuccessTitle',
-                  menuLanguage
-                ),
-                message: getTrayMenuText(
-                  'proxySavedMessage',
-                  menuLanguage
-                ),
-                buttons: [
-                  getTrayMenuText('confirm', menuLanguage)
-                ]
-              })
-            }
-          } catch (error) {
-            if (options.isMenubarReady()) {
-              dialog.showErrorBox(
-                getTrayMenuText('errorTitle', menuLanguage),
-                getTrayMenuText(
-                  'proxySetErrorMessagePrefix',
-                  menuLanguage
-                ) + String(error)
-              )
-            }
-          }
-        }
+        click: createProxyHandler(options, menuLanguage)
       },
       {
         label: t('autoLaunchOnStartup'),
         type: 'checkbox',
         checked: isAutoLaunchEnabled,
         click: (menuItem) =>
-          handleAutoLaunchToggle(Boolean(menuItem.checked))
+          handleAutoLaunchToggle(
+            Boolean(menuItem.checked),
+            menuLanguage,
+            updateContextMenu
+          )
       },
       {
         label: t('language'),
@@ -843,81 +204,37 @@ export const setupTrayContextMenu = (
             type: 'radio',
             checked: menuLanguage === MenuLanguage.English,
             click: () =>
-              handleMenuLanguageChange(MenuLanguage.English)
+              handleMenuLanguageChange(
+                MenuLanguage.English,
+                updateContextMenu
+              )
           },
           {
             label: t('languageChinese'),
             type: 'radio',
             checked: menuLanguage === MenuLanguage.Chinese,
             click: () =>
-              handleMenuLanguageChange(MenuLanguage.Chinese)
+              handleMenuLanguageChange(
+                MenuLanguage.Chinese,
+                updateContextMenu
+              )
           }
         ]
       },
       { type: 'separator' },
       {
         label: t('reload'),
-        // accelerator: 'CommandOrControl+R',
-        click: async () => {
-          const newUserSetting = resetUserUrls()
-          await options.withBrowserWindow((win) => {
-            if (win.isDestroyed()) {
-              throw new Error(
-                getTrayMenuText(
-                  'windowDestroyedError',
-                  menuLanguage
-                )
-              )
-            }
-
-            const currentModel = newUserSetting.model
-
-            const modelUrlMap: Record<Model, string> = {
-              [Model.ChatGPT]: ModelUrl.ChatGPT,
-              [Model.DeepSeek]: ModelUrl.DeepSeek,
-              [Model.Grok]: ModelUrl.Grok,
-              [Model.Gemini]: ModelUrl.Gemini,
-              [Model.Qwen]: ModelUrl.Qwen,
-              [Model.Doubao]: ModelUrl.Doubao
-            }
-
-            const defaultUrl =
-              newUserSetting.urls?.[currentModel] ||
-              modelUrlMap[currentModel]
-
-            win.webContents.send(
-              'model-changed',
-              currentModel,
-              defaultUrl
-            )
-          })
-        }
+        click: () => handleReload(options, menuLanguage)
       },
       {
         label: t('checkForUpdates'),
-        click: async () => {
-          const browserWindow = getAvailableBrowserWindow(
-            windowManager,
-            options.getMainBrowserWindow
-          )
-          await options.updateManager.checkForUpdates(
-            browserWindow
-          )
-        }
+        click: () => handleCheckForUpdates(options)
       },
       {
         label: t('quit'),
-        // accelerator: 'CommandOrControl+Q',
-        click: () => {
-          resetUserUrls()
-          app.quit()
-        }
+        click: () => handleQuit()
       }
     ])
-
-    // 不自动设置上下文菜单，而是通过主进程中的右键事件处理程序显示
-    // 这样可以确保左键点击只控制窗口显示，右键点击显示菜单
-    // tray.setContextMenu(contextMenu)
 
     // 存储上下文菜单，供右键事件处理程序使用
     ;(tray as unknown as TrayWithContextMenu)._contextMenu =
