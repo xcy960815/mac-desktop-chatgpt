@@ -2,10 +2,19 @@ import {
   BrowserWindow,
   app,
   globalShortcut,
-  Rectangle
+  Rectangle,
+  nativeTheme,
+  nativeImage
 } from 'electron'
 import { EventEmitter } from 'events'
-import { CustomBrowserWindow } from '@/utils/constants'
+import * as path from 'path'
+import {
+  CustomBrowserWindow,
+  MAIN_WINDOW_WIDTH,
+  MAIN_WINDOW_HEIGHT
+} from '@/utils/constants'
+import { resolveMainIndexUrl } from '@/utils/common'
+import { readUserSetting } from '@/utils/user-setting'
 
 /**
  * 窗口管理器事件
@@ -28,6 +37,9 @@ export interface WindowManager extends EventEmitter {
   withBrowserWindow<T>(
     task: (win: BrowserWindow) => T | Promise<T>
   ): Promise<T | null>
+
+  // 窗口创建逻辑
+  createMainWindow(): Promise<BrowserWindow>
 
   // 窗口控制逻辑
   showWindow(): Promise<void>
@@ -195,6 +207,85 @@ export const createWindowManager = (): WindowManager => {
     }
   }
 
+  const createMainWindow =
+    async (): Promise<BrowserWindow> => {
+      const appPath = app.getAppPath()
+
+      const indexUrl = resolveMainIndexUrl({
+        devServerUrl: MAIN_WINDOW_VITE_DEV_SERVER_URL,
+        rendererDir: __dirname
+      })
+
+      const preloadPath = path.join(__dirname, 'preload.js')
+
+      const iconPath =
+        process.platform === 'darwin'
+          ? path.join(
+              appPath,
+              'images',
+              'gptIconTemplate.png'
+            )
+          : nativeTheme.shouldUseDarkColors
+            ? path.join(
+                appPath,
+                'images',
+                'gptIconLight.png'
+              )
+            : path.join(
+                appPath,
+                'images',
+                'gptIconDark.png'
+              )
+
+      const browserWindow = new BrowserWindow({
+        icon: nativeImage.createFromPath(iconPath),
+        width: MAIN_WINDOW_WIDTH,
+        height: MAIN_WINDOW_HEIGHT,
+        useContentSize: true,
+        show: false, // 初始状态隐藏
+        webPreferences: {
+          preload: preloadPath,
+          webviewTag: true,
+          contextIsolation: true,
+          nodeIntegration: false,
+          sandbox: false
+        }
+      })
+
+      browserWindow.once('ready-to-show', async () => {
+        await showWindow()
+        if (process.platform === 'darwin') {
+          app.show()
+        }
+        app.focus()
+      })
+
+      browserWindow.loadURL(indexUrl)
+
+      const userSetting = readUserSetting()
+
+      if (process.platform === 'darwin') {
+        const dockIcon = nativeImage.createFromPath(
+          path.join(appPath, 'images', 'icon.png')
+        )
+        app.dock.setIcon(dockIcon)
+
+        if (!userSetting.showInDock) {
+          app.dock.hide()
+        }
+      } else if (process.platform === 'linux') {
+        browserWindow.setSkipTaskbar(true)
+      }
+
+      setMainBrowserWindow(browserWindow)
+
+      if (userSetting.alwaysOnTop) {
+        setAlwaysOnTop(true)
+      }
+
+      return browserWindow
+    }
+
   const ensureBrowserWindow =
     async (): Promise<BrowserWindow | null> => {
       if (
@@ -226,6 +317,7 @@ export const createWindowManager = (): WindowManager => {
     setMainBrowserWindow,
     ensureBrowserWindow,
     withBrowserWindow,
+    createMainWindow,
     showWindow,
     hideWindow,
     toggleWindow,

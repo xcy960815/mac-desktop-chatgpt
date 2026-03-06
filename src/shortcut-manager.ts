@@ -32,6 +32,11 @@ export interface ShortcutManager {
    * @returns {void}
    */
   setCurrentShortcut(shortcut: string | null): void
+  /**
+   * 注册 DevTools 快捷键
+   * @returns {void}
+   */
+  registerDevToolsShortcut(): void
 }
 
 /**
@@ -155,12 +160,30 @@ export const createShortcutManager = ({
     })
   }
 
+  /**
+   * 注册 DevTools 快捷键
+   * @returns {void}
+   */
+  const registerDevToolsShortcut = () => {
+    globalShortcut.register(
+      'CommandOrControl+Shift+I',
+      () => {
+        const browserWindow =
+          windowManager.getMainBrowserWindow()
+        if (browserWindow && !browserWindow.isDestroyed()) {
+          browserWindow.webContents.toggleDevTools()
+        }
+      }
+    )
+  }
+
   return {
     registerToggleShortcut,
     registerIpcHandlers,
     getCurrentShortcut: () => currentShortcut,
     setCurrentShortcut: (shortcut) => {
       currentShortcut = shortcut
-    }
+    },
+    registerDevToolsShortcut
   }
 }
