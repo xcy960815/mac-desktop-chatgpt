@@ -1,5 +1,4 @@
 import {
-  BrowserWindow,
   Menu,
   Tray,
   app,
@@ -13,6 +12,7 @@ import { readUserSetting } from '@/utils/user-setting'
 import {
   MenuLanguage,
   Model,
+  ModelUrl,
   TOOLTIP
 } from '@/utils/constants'
 import {
@@ -32,31 +32,22 @@ import {
 } from './handlers/system-handler'
 import { createUpdateHandler } from './handlers/update-handler'
 
+export type UrlsType = {
+  chatgpt: string
+  deepseek: string
+  grok: string
+  gemini: string
+  qwen: string
+  doubao: string
+}
+
 export interface AppTrayOptions {
   /** 窗口管理器实例 */
   windowManager: WindowManager
-
-  /** 各模型的 URL 配置 */
-  urls: {
-    chatgpt: string
-    deepseek: string
-    grok: string
-    gemini: string
-    qwen: string
-    doubao: string
-  }
-  /** 获取主浏览器窗口 */
-  getMainBrowserWindow(): BrowserWindow | null
-  /** 设置主浏览器窗口 */
-  setMainBrowserWindow(window: BrowserWindow | null): void
   /** 获取当前快捷键 */
   getCurrentShortcut(): string | null
   /** 设置当前快捷键 */
   setCurrentShortcut(shortcut: string | null): void
-  /** 在浏览器窗口上执行任务 */
-  withBrowserWindow<T>(
-    task: (win: BrowserWindow) => T | Promise<T>
-  ): Promise<T | null>
 }
 
 /**
@@ -105,7 +96,21 @@ export const setupAppTray = (
   }
 
   // 为了向下兼容 handlers 中的 options 引用
-  const handlerOptions = { ...options, tray }
+  // 我们在内部生成 urls 对象并拼装
+  const internalUrls: UrlsType = {
+    chatgpt: ModelUrl.ChatGPT,
+    deepseek: ModelUrl.DeepSeek,
+    grok: ModelUrl.Grok,
+    gemini: ModelUrl.Gemini,
+    qwen: ModelUrl.Qwen,
+    doubao: ModelUrl.Doubao
+  }
+
+  const handlerOptions = {
+    ...options,
+    tray,
+    urls: internalUrls
+  }
 
   const updateContextMenu = async () => {
     const userSetting = readUserSetting()
@@ -138,7 +143,7 @@ export const setupAppTray = (
               Model.ChatGPT,
               handlerOptions,
               updateContextMenu,
-              options.urls
+              internalUrls
             )
           },
           {
@@ -149,7 +154,7 @@ export const setupAppTray = (
               Model.Grok,
               handlerOptions,
               updateContextMenu,
-              options.urls
+              internalUrls
             )
           },
           {
@@ -160,7 +165,7 @@ export const setupAppTray = (
               Model.Gemini,
               handlerOptions,
               updateContextMenu,
-              options.urls
+              internalUrls
             )
           },
           {
@@ -171,7 +176,7 @@ export const setupAppTray = (
               Model.DeepSeek,
               handlerOptions,
               updateContextMenu,
-              options.urls
+              internalUrls
             )
           },
           {
@@ -182,7 +187,7 @@ export const setupAppTray = (
               Model.Qwen,
               handlerOptions,
               updateContextMenu,
-              options.urls
+              internalUrls
             )
           },
           {
@@ -193,7 +198,7 @@ export const setupAppTray = (
               Model.Doubao,
               handlerOptions,
               updateContextMenu,
-              options.urls
+              internalUrls
             )
           }
         ]

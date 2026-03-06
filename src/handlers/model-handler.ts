@@ -4,7 +4,10 @@ import {
   readUserSetting,
   writeUserSetting
 } from '@/utils/user-setting'
-import { AppTrayOptions } from '@/tray-context-menu'
+import {
+  AppTrayOptions,
+  UrlsType
+} from '@/tray-context-menu'
 import {
   getAvailableBrowserWindow,
   MODEL_TO_URL_KEY
@@ -22,7 +25,7 @@ export const createModelSwitchHandler = (
   model: Model,
   options: AppTrayOptions & { tray: Tray },
   updateContextMenu: () => void,
-  urls: AppTrayOptions['urls']
+  urls: UrlsType
 ) => {
   return () => {
     const userSetting = readUserSetting()
@@ -33,15 +36,12 @@ export const createModelSwitchHandler = (
     updateContextMenu()
 
     // 根据模型获取对应的 URL
-    const urlKey = MODEL_TO_URL_KEY[
-      model
-    ] as keyof AppTrayOptions['urls']
+    const urlKey = MODEL_TO_URL_KEY[model] as keyof UrlsType
     const savedUrl =
       newUserSetting.urls?.[model] || urls[urlKey]
 
     getAvailableBrowserWindow(
-      options.windowManager,
-      options.getMainBrowserWindow
+      options.windowManager
     )?.webContents.send(
       'model-changed',
       newUserSetting.model,

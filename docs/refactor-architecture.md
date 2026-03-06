@@ -76,6 +76,7 @@ export const createMyNewHandler = (
 此前 `new BrowserWindow` 初始化有着巨量的参数和根据各平台做出的冗长条件分支（如图标路径映射、macOS Dock 控制、预加载脚本等）。
 - 这些逻辑被彻底封转在 `src/window-manager.ts` 的 `createMainWindow()` 方法内部。
 - 业务代码不需要关心 `indexUrl` 甚至是 `preload.js` 的绝对路径应该怎么拼装，只需调用无参方法 `windowManager.createMainWindow()` 一次性获取构建好的主窗口引用。
+- **特有属性内聚**：如“上次访问 URL 的历史记录拦截 (`initializeLastVisitedUrlTracking`)”本身即为特定依附于 Window 对象的业务，不应该由主进程来主动为其附加，因此也被直接内联在了该方法深处。
 
 ### 5.3 应用生命周期解耦 (`app-events.ts`)
 最拖累入口文件阅读体验的是大量无序的全局生命周期闭包函数。我们建立了独立的 `src/app-events.ts` 来掌管应用“骨架”层面的事件。
@@ -89,9 +90,38 @@ export const createMyNewHandler = (
 例如：触发隐藏开发者工具的组合键 `CommandOrControl+Shift+I` 应当属于“快捷键管辖范围”，所以被并入并改造为 `shortcutManager.registerDevToolsShortcut()`。
 
 ### 5.5 新的 main.ts 心智模型
-经过清理，`main.ts` 已经从几百行下降到包含声明在内不足 60 行的代码骨架，成为了一个高度抽象的“导演”脚本。现在的流程是**严格且唯一**的：
+经过清理，`main.ts` 已经从几百行下降到包含声明在内不足 50 行的代码骨架，成为了一个高度抽象的“装配”脚本。不要往里面再塞入任何常量枚举或未处理的逻辑。现在的流程是**严格且唯一**的：
 1. `setupAppConfig()` 读取并应用底层设定。
 2. 等待 Electron `ready`。
 3. `createWindowManager()` -> `createMainWindow()` 构建基本盘。
 4. 依次挂载菜单/托盘 (`setupAppMenu`, `setupAppTray`)。
 5. 依次挂载所有外围能力交互 (`ShortcutManager`, `WebContentsHandlers`, `setupAppEvents`)。
+
+### 5.6 🚨 未来可继续重构空间 (Next Steps for main.ts)
+当前 `main.ts` 已经非常干净，但如果想追求极致的依赖反转，还有以下两个空间可以继续深挖：
+
+#### A. 彻底解脱对特定管理器的反向依赖
+仔细观察当前的挂载流程：
+```typescript
+  const shortcutManager = createShortcutManager({ windowManager })
+  
+  appTray = setupAppTray({
+    windowManager,
+    getCurrentShortcut: () => shortcutManager.getCurrentShortcut(),
+    setCurrentShortcut: (shortcut) => shortcutManager.setCurrentShortcut(shortcut)
+  })
+```
+为了让 `AppTray` 能够展示快捷键，我们在初始化时需要将 `shortcutManager` 的实例方法硬塞给 `setupAppTray`。这造成了“生命周期创建顺序被耦合”（必须先创建 Shortcut，再创建 Tray）。
+未来的优化方案：引入极其轻量级的**发布-订阅模型 (Event Bus)** 或一个共享的运行时“应用管家” (App Context)。当发生依赖横跳时，不再硬编码互相传递，而是通过 `AppContext.getShortcut()` 获取。
+
+#### B. Setup 方法的自动化挂载
+目前的最后几步：
+```typescript
+  shortcutManager.registerToggleShortcut()
+  shortcutManager.registerIpcHandlers()
+  shortcutManager.registerDevToolsShortcut()
+  registerWebContentsHandlers(windowManager)
+  setupAppEvents(windowManager)
+```
+如果未来有更多的“能力插件”加入，`main.ts` 又会重新开始变成平铺函数的陈列室。
+可以考虑抽象出一个 `Plugin/Feature` 的接口，统一将这些能力在内部各自做好 `register()` 闭包，主文件只需要 `[ShortcutManager, WebContentsManager, EventManager].forEach(module => module.bootstrap(windowManager))` 即可。

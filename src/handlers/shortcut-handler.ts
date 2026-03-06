@@ -52,8 +52,7 @@ export const createShortcutHandler = (
             () => {
               const menubarWindow =
                 getAvailableBrowserWindow(
-                  options.windowManager,
-                  options.getMainBrowserWindow
+                  options.windowManager
                 )
               if (!menubarWindow) return
               options.windowManager.toggleWindow()
@@ -86,8 +85,7 @@ export const createShortcutHandler = (
             () => {
               const menubarWindow =
                 getAvailableBrowserWindow(
-                  options.windowManager,
-                  options.getMainBrowserWindow
+                  options.windowManager
                 )
               if (!menubarWindow) return
               options.windowManager.toggleWindow()
@@ -122,8 +120,7 @@ export const createShortcutHandler = (
               () => {
                 const menubarWindow =
                   getAvailableBrowserWindow(
-                    options.windowManager,
-                    options.getMainBrowserWindow
+                    options.windowManager
                   )
                 if (!menubarWindow) return
                 options.windowManager.toggleWindow()
@@ -138,8 +135,7 @@ export const createShortcutHandler = (
           shortcut,
           () => {
             const menubarWindow = getAvailableBrowserWindow(
-              options.windowManager,
-              options.getMainBrowserWindow
+              options.windowManager
             )
             if (!menubarWindow) {
               return
@@ -183,8 +179,7 @@ export const createShortcutHandler = (
               () => {
                 const menubarWindow =
                   getAvailableBrowserWindow(
-                    options.windowManager,
-                    options.getMainBrowserWindow
+                    options.windowManager
                   )
                 if (!menubarWindow) {
                   return
@@ -234,8 +229,7 @@ export const createShortcutHandler = (
             () => {
               const menubarWindow =
                 getAvailableBrowserWindow(
-                  options.windowManager,
-                  options.getMainBrowserWindow
+                  options.windowManager
                 )
               if (!menubarWindow) {
                 return
@@ -274,8 +268,7 @@ export const createShortcutHandler = (
                 () => {
                   const menubarWindow =
                     getAvailableBrowserWindow(
-                      options.windowManager,
-                      options.getMainBrowserWindow
+                      options.windowManager
                     )
                   if (!menubarWindow) return
                   options.windowManager.toggleWindow()
@@ -306,8 +299,7 @@ export const createShortcutHandler = (
               () => {
                 const menubarWindow =
                   getAvailableBrowserWindow(
-                    options.windowManager,
-                    options.getMainBrowserWindow
+                    options.windowManager
                   )
                 if (!menubarWindow) return
                 options.windowManager.toggleWindow()
@@ -318,8 +310,7 @@ export const createShortcutHandler = (
       }
     } catch (error) {
       const browserWindow = getAvailableBrowserWindow(
-        options.windowManager,
-        options.getMainBrowserWindow
+        options.windowManager
       )
       dialog.showMessageBox(browserWindow || undefined, {
         icon: getAppIcon(),

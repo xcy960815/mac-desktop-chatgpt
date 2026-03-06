@@ -106,7 +106,7 @@ export const handleReload = async (
   menuLanguage: MenuLanguage
 ) => {
   const newUserSetting = resetUserUrls()
-  await options.withBrowserWindow((win) => {
+  await options.windowManager.withBrowserWindow((win) => {
     if (win.isDestroyed()) {
       throw new Error(
         getTrayMenuText(

@@ -1,18 +1,13 @@
-import * as path from 'path'
-
 import { setupAppTray } from '@/tray-context-menu'
 import { setupAppMenu } from '@/app-menu'
-import { ModelUrl } from '@/utils/constants'
 import {
   createWindowManager,
   WindowManager
 } from '@/window-manager'
 import { createShortcutManager } from '@/shortcut-manager'
-import { initializeLastVisitedUrlTracking } from '@/utils/url-tracker'
 import { registerWebContentsHandlers } from '@/webview-handlers'
 import { setupAppConfig } from '@/app-config'
 import { setupAppEvents } from '@/app-events'
-
 import { app, Tray } from 'electron'
 
 setupAppConfig()
@@ -28,8 +23,6 @@ app.on('ready', async () => {
   const browserWindow =
     await windowManager.createMainWindow()
 
-  initializeLastVisitedUrlTracking(browserWindow)
-
   setupAppMenu(browserWindow)
 
   const shortcutManager = createShortcutManager({
@@ -38,25 +31,11 @@ app.on('ready', async () => {
 
   appTray = setupAppTray({
     windowManager,
-    urls: {
-      chatgpt: ModelUrl.ChatGPT,
-      deepseek: ModelUrl.DeepSeek,
-      grok: ModelUrl.Grok,
-      gemini: ModelUrl.Gemini,
-      qwen: ModelUrl.Qwen,
-      doubao: ModelUrl.Doubao
-    },
-    getMainBrowserWindow: () =>
-      windowManager!.getMainBrowserWindow(),
-    setMainBrowserWindow: (window) => {
-      windowManager!.setMainBrowserWindow(window)
-    },
     getCurrentShortcut: () =>
       shortcutManager.getCurrentShortcut(),
     setCurrentShortcut: (shortcut) => {
       shortcutManager.setCurrentShortcut(shortcut)
-    },
-    withBrowserWindow: windowManager.withBrowserWindow
+    }
   })
 
   shortcutManager.registerToggleShortcut()

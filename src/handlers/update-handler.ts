@@ -131,8 +131,7 @@ export const createUpdateHandler = (
 
     isCheckingUpdate = true
     const window = getAvailableBrowserWindow(
-      options.windowManager,
-      options.getMainBrowserWindow
+      options.windowManager
     )
 
     const t = (

@@ -14,7 +14,10 @@ import {
   MAIN_WINDOW_HEIGHT
 } from '@/utils/constants'
 import { resolveMainIndexUrl } from '@/utils/common'
-import { readUserSetting } from '@/utils/user-setting'
+import {
+  readUserSetting,
+  writeUserSetting
+} from '@/utils/user-setting'
 
 /**
  * 窗口管理器事件
@@ -282,6 +285,21 @@ export const createWindowManager = (): WindowManager => {
       if (userSetting.alwaysOnTop) {
         setAlwaysOnTop(true)
       }
+
+      if (userSetting.lastVisitedUrl) {
+        browserWindow.loadURL(userSetting.lastVisitedUrl)
+      }
+
+      browserWindow.webContents.on(
+        'did-navigate',
+        (_event, url) => {
+          const currentSetting = readUserSetting()
+          writeUserSetting({
+            ...currentSetting,
+            lastVisitedUrl: url
+          })
+        }
+      )
 
       return browserWindow
     }

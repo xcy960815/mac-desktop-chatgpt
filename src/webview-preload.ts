@@ -1,3 +1,5 @@
+// webview 预加载脚本
+
 // 移除 webdriver 属性，绕过 Cloudflare 检测
 try {
   const code = `
