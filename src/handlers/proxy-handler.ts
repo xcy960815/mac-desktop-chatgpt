@@ -1,9 +1,15 @@
-import { app, dialog, session } from 'electron'
+import {
+  app,
+  dialog,
+  session,
+  BrowserWindow,
+  Tray
+} from 'electron'
 import {
   readUserSetting,
   writeUserSetting
 } from '@/utils/user-setting'
-import { TrayContextMenuOptions } from '@/tray-context-menu'
+import { AppTrayOptions } from '@/tray-context-menu'
 import { showProxyInputDialog } from '@/proxy-input-dialog'
 import { getTrayMenuText } from '@/i18n/tray-menu'
 import { MenuLanguage } from '@/utils/constants'
@@ -24,23 +30,13 @@ const delay = (ms: number) =>
  * @returns {() => Promise<void>} 代理设置处理函数
  */
 export const createProxyHandler = (
-  options: TrayContextMenuOptions,
+  options: AppTrayOptions & { tray: Tray },
   menuLanguage: MenuLanguage
 ) => {
   return async () => {
     try {
       const userSetting = readUserSetting()
       const savedProxy = userSetting.proxy || ''
-
-      if (!options.isMenubarReady()) {
-        for (
-          let i = 0;
-          i < 20 && !options.isMenubarReady();
-          i++
-        ) {
-          await delay(100)
-        }
-      }
 
       let input: string | null = null
       try {
@@ -151,24 +147,17 @@ export const createProxyHandler = (
         })
       }
     } catch (error) {
-      if (options.isMenubarReady()) {
-        dialog.showMessageBox({
-          icon: getAppIcon(),
-          type: 'error',
-          title: getTrayMenuText(
-            'errorTitle',
+      dialog.showMessageBox({
+        icon: getAppIcon(),
+        type: 'error',
+        title: getTrayMenuText('errorTitle', menuLanguage),
+        message:
+          getTrayMenuText(
+            'proxySetErrorMessagePrefix',
             menuLanguage
-          ),
-          message:
-            getTrayMenuText(
-              'proxySetErrorMessagePrefix',
-              menuLanguage
-            ) + String(error),
-          buttons: [
-            getTrayMenuText('confirm', menuLanguage)
-          ]
-        })
-      }
+          ) + String(error),
+        buttons: [getTrayMenuText('confirm', menuLanguage)]
+      })
     }
   }
 }

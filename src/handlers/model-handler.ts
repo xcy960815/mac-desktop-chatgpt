@@ -1,9 +1,10 @@
 import { Model } from '@/utils/constants'
+import { BrowserWindow, Tray } from 'electron'
 import {
   readUserSetting,
   writeUserSetting
 } from '@/utils/user-setting'
-import { TrayContextMenuOptions } from '@/tray-context-menu'
+import { AppTrayOptions } from '@/tray-context-menu'
 import {
   getAvailableBrowserWindow,
   MODEL_TO_URL_KEY
@@ -19,9 +20,9 @@ import {
  */
 export const createModelSwitchHandler = (
   model: Model,
-  options: TrayContextMenuOptions,
+  options: AppTrayOptions & { tray: Tray },
   updateContextMenu: () => void,
-  urls: TrayContextMenuOptions['urls']
+  urls: AppTrayOptions['urls']
 ) => {
   return () => {
     const userSetting = readUserSetting()
@@ -34,7 +35,7 @@ export const createModelSwitchHandler = (
     // 根据模型获取对应的 URL
     const urlKey = MODEL_TO_URL_KEY[
       model
-    ] as keyof TrayContextMenuOptions['urls']
+    ] as keyof AppTrayOptions['urls']
     const savedUrl =
       newUserSetting.urls?.[model] || urls[urlKey]
 

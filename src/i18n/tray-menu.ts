@@ -49,6 +49,15 @@ export type TrayMenuMessageKey =
   | 'windowDestroyedError'
   | 'reloadWindowError'
   | 'showInDock'
+  | 'updateCheckFailedTitle'
+  | 'updateCheckFailedMessagePrefix'
+  | 'updateCheckFetchFailed'
+  | 'updateCheckParseFailed'
+  | 'updateAvailableTitle'
+  | 'updateAvailableMessage'
+  | 'updateAvailableDownload'
+  | 'updateNoUpdateTitle'
+  | 'updateNoUpdateMessage'
 
 const MENU_MESSAGES: Record<
   MenuLanguage,
@@ -112,7 +121,20 @@ const MENU_MESSAGES: Record<
     proxySetErrorMessagePrefix: 'Error setting proxy: ',
     windowDestroyedError: 'Window destroyed',
     reloadWindowError:
-      'Cannot reload window, please try again later.'
+      'Cannot reload window, please try again later.',
+    updateCheckFailedTitle: 'Update Check Failed',
+    updateCheckFailedMessagePrefix:
+      'Failed to check for updates: ',
+    updateCheckFetchFailed:
+      'Failed to fetch version information',
+    updateCheckParseFailed: 'Failed to parse response data',
+    updateAvailableTitle: 'New Version Available',
+    updateAvailableMessage:
+      'New version {newVersion} found (current: {currentVersion})\n\nPlease go to GitHub to download the latest version.',
+    updateAvailableDownload: 'Go to Download',
+    updateNoUpdateTitle: 'Check for Updates',
+    updateNoUpdateMessage:
+      'You are currently on the latest version ({currentVersion})'
   },
   [MenuLanguage.Chinese]: {
     quit: '退出',
@@ -163,7 +185,18 @@ const MENU_MESSAGES: Record<
     proxySavedMessage: '代理设置已保存，请重启应用以生效。',
     proxySetErrorMessagePrefix: '设置代理时发生错误: ',
     windowDestroyedError: '窗口已销毁',
-    reloadWindowError: '无法重新加载窗口，请稍后重试'
+    reloadWindowError: '无法重新加载窗口，请稍后重试',
+    updateCheckFailedTitle: '检查更新失败',
+    updateCheckFailedMessagePrefix: '检查更新失败：',
+    updateCheckFetchFailed: '无法获取版本信息',
+    updateCheckParseFailed: '解析响应数据失败',
+    updateAvailableTitle: '发现新版本',
+    updateAvailableMessage:
+      '发现新版本 {newVersion}（当前版本：{currentVersion}）\n\n请前往 GitHub 下载最新版本安装。',
+    updateAvailableDownload: '前往下载',
+    updateNoUpdateTitle: '检查更新',
+    updateNoUpdateMessage:
+      '当前已是最新版本 ({currentVersion})'
   }
 }
 

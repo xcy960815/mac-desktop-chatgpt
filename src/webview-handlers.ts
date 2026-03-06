@@ -193,8 +193,6 @@ export const registerWebContentsHandlers = (
 ) => {
   registerMacHideHandler(windowManager)
 
-  // commandLine.appendSwitch 已移动到 main.ts 以确保在 app ready 之前运行
-
   app.on('web-contents-created', (_event, webContents) => {
     if (webContents.getType() !== 'webview') {
       return

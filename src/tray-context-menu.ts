@@ -1,13 +1,24 @@
-import { BrowserWindow, Menu, Tray } from 'electron'
+import {
+  BrowserWindow,
+  Menu,
+  Tray,
+  app,
+  nativeTheme,
+  nativeImage
+} from 'electron'
+import * as path from 'path'
 
 import { WindowManager } from '@/window-manager'
 import { readUserSetting } from '@/utils/user-setting'
-import { MenuLanguage, Model } from '@/utils/constants'
+import {
+  MenuLanguage,
+  Model,
+  TOOLTIP
+} from '@/utils/constants'
 import {
   getTrayMenuText,
   TrayMenuMessageKey
 } from '@/i18n/tray-menu'
-import { UpdateManager } from '@/utils/update-manager'
 
 import { createModelSwitchHandler } from './handlers/model-handler'
 import { createShortcutHandler } from './handlers/shortcut-handler'
@@ -17,13 +28,11 @@ import {
   handleAlwaysOnTopToggle,
   handleMenuLanguageChange,
   handleReload,
-  handleCheckForUpdates,
   handleQuit
 } from './handlers/system-handler'
+import { createUpdateHandler } from './handlers/update-handler'
 
-export interface TrayContextMenuOptions {
-  /** 系统托盘实例 */
-  tray: Tray
+export interface AppTrayOptions {
   /** 窗口管理器实例 */
   windowManager: WindowManager
 
@@ -36,8 +45,6 @@ export interface TrayContextMenuOptions {
     qwen: string
     doubao: string
   }
-  /** 检查菜单栏是否已就绪 */
-  isMenubarReady(): boolean
   /** 获取主浏览器窗口 */
   getMainBrowserWindow(): BrowserWindow | null
   /** 设置主浏览器窗口 */
@@ -50,19 +57,55 @@ export interface TrayContextMenuOptions {
   withBrowserWindow<T>(
     task: (win: BrowserWindow) => T | Promise<T>
   ): Promise<T | null>
-  /** 更新管理器 */
-  updateManager: UpdateManager
 }
 
 /**
- * 设置托盘上下文菜单
- * @param {TrayContextMenuOptions} options - 托盘上下文菜单配置选项
- * @returns {() => void} 返回构建上下文菜单的函数
+ * 创建和设置应用托盘
+ * @param {AppTrayOptions} options - 托盘配置选项
+ * @returns {Tray} 返回创建的 Tray 实例
  */
-export const setupTrayContextMenu = (
-  options: TrayContextMenuOptions
-) => {
-  const { tray } = options
+export const setupAppTray = (
+  options: AppTrayOptions
+): Tray => {
+  const appPath = app.getAppPath()
+
+  /**
+   * 根据系统主题获取对应的托盘图标路径
+   */
+  const getTrayIconPath = () => {
+    // macOS 上使用 Template 图片，系统会自动处理深浅色适配
+    if (process.platform === 'darwin') {
+      return path.join(
+        appPath,
+        'images',
+        'gptIconTemplate.png'
+      )
+    }
+    // Windows/Linux 根据系统当前是否为深色模式，返回不同的图标
+    // 深色模式使用浅色图片，浅色模式使用深色图片
+    return nativeTheme.shouldUseDarkColors
+      ? path.join(appPath, 'images', 'gptIconLight.png')
+      : path.join(appPath, 'images', 'gptIconDark.png')
+  }
+
+  const image = nativeImage.createFromPath(
+    getTrayIconPath()
+  )
+  const tray = new Tray(image)
+  tray.setToolTip(TOOLTIP)
+  tray.setIgnoreDoubleClickEvents(true)
+
+  // 监听系统主题变化，动态更新托盘图标
+  if (process.platform !== 'darwin') {
+    nativeTheme.on('updated', () => {
+      tray.setImage(
+        nativeImage.createFromPath(getTrayIconPath())
+      )
+    })
+  }
+
+  // 为了向下兼容 handlers 中的 options 引用
+  const handlerOptions = { ...options, tray }
 
   const updateContextMenu = async () => {
     const userSetting = readUserSetting()
@@ -93,7 +136,7 @@ export const setupTrayContextMenu = (
             checked: isChatGPT,
             click: createModelSwitchHandler(
               Model.ChatGPT,
-              options,
+              handlerOptions,
               updateContextMenu,
               options.urls
             )
@@ -104,7 +147,7 @@ export const setupTrayContextMenu = (
             checked: isGrok,
             click: createModelSwitchHandler(
               Model.Grok,
-              options,
+              handlerOptions,
               updateContextMenu,
               options.urls
             )
@@ -115,7 +158,7 @@ export const setupTrayContextMenu = (
             checked: isGemini,
             click: createModelSwitchHandler(
               Model.Gemini,
-              options,
+              handlerOptions,
               updateContextMenu,
               options.urls
             )
@@ -126,7 +169,7 @@ export const setupTrayContextMenu = (
             checked: isDeepSeek,
             click: createModelSwitchHandler(
               Model.DeepSeek,
-              options,
+              handlerOptions,
               updateContextMenu,
               options.urls
             )
@@ -137,7 +180,7 @@ export const setupTrayContextMenu = (
             checked: isQwen,
             click: createModelSwitchHandler(
               Model.Qwen,
-              options,
+              handlerOptions,
               updateContextMenu,
               options.urls
             )
@@ -148,7 +191,7 @@ export const setupTrayContextMenu = (
             checked: isDoubao,
             click: createModelSwitchHandler(
               Model.Doubao,
-              options,
+              handlerOptions,
               updateContextMenu,
               options.urls
             )
@@ -162,21 +205,24 @@ export const setupTrayContextMenu = (
         checked: alwaysOnTop,
         click: () =>
           handleAlwaysOnTopToggle(
-            options,
+            handlerOptions,
             updateContextMenu
           )
       },
       {
         label: t('setShortcut'),
         click: createShortcutHandler(
-          options,
+          handlerOptions,
           updateContextMenu,
           menuLanguage
         )
       },
       {
         label: t('setProxy'),
-        click: createProxyHandler(options, menuLanguage)
+        click: createProxyHandler(
+          handlerOptions,
+          menuLanguage
+        )
       },
       {
         label: t('autoLaunchOnStartup'),
@@ -217,11 +263,15 @@ export const setupTrayContextMenu = (
       { type: 'separator' },
       {
         label: t('reload'),
-        click: () => handleReload(options, menuLanguage)
+        click: () =>
+          handleReload(handlerOptions, menuLanguage)
       },
       {
         label: t('checkForUpdates'),
-        click: () => handleCheckForUpdates(options)
+        click: createUpdateHandler(
+          handlerOptions,
+          menuLanguage
+        )
       },
       {
         label: t('quit'),
@@ -240,5 +290,19 @@ export const setupTrayContextMenu = (
 
   updateContextMenu()
 
-  return updateContextMenu
+  // 托盘事件处理程序
+  tray.on('click', () => {
+    options.windowManager.toggleWindow()
+  })
+
+  if (process.platform !== 'linux') {
+    tray.on('right-click', () => {
+      const menu = tray._contextMenu
+      if (menu) {
+        tray.popUpContextMenu(menu)
+      }
+    })
+  }
+
+  return tray
 }

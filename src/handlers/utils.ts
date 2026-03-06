@@ -1,7 +1,7 @@
-import { BrowserWindow } from 'electron'
+import { BrowserWindow, Tray } from 'electron'
 import { WindowManager } from '@/window-manager'
 import { Model } from '@/utils/constants'
-import { TrayContextMenuOptions } from '@/tray-context-menu'
+import { AppTrayOptions } from '@/tray-context-menu'
 
 /**
  * 获取可用的浏览器窗口
@@ -11,7 +11,7 @@ import { TrayContextMenuOptions } from '@/tray-context-menu'
  */
 export const getAvailableBrowserWindow = (
   windowManager: WindowManager,
-  getMainBrowserWindow: TrayContextMenuOptions['getMainBrowserWindow']
+  getMainBrowserWindow: AppTrayOptions['getMainBrowserWindow']
 ): BrowserWindow | null => {
   const mainBrowserWindow = getMainBrowserWindow()
   if (
@@ -34,7 +34,7 @@ export const getAvailableBrowserWindow = (
  */
 export const MODEL_TO_URL_KEY: Record<
   Model,
-  keyof TrayContextMenuOptions['urls']
+  keyof AppTrayOptions['urls']
 > = {
   [Model.ChatGPT]: 'chatgpt',
   [Model.DeepSeek]: 'deepseek',

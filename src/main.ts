@@ -1,6 +1,6 @@
 import * as path from 'path'
 
-import { setupTrayContextMenu } from '@/tray-context-menu'
+import { setupAppTray } from '@/tray-context-menu'
 import {
   ModelUrl,
   TOOLTIP,
@@ -16,7 +16,6 @@ import {
 import { createShortcutManager } from '@/shortcut-manager'
 import { initializeLastVisitedUrlTracking } from '@/utils/url-tracker'
 import { registerWebContentsHandlers } from '@/webview-handlers'
-import { createUpdateManager } from '@/utils/update-manager'
 import { readUserSetting } from '@/utils/user-setting'
 
 import {
@@ -31,12 +30,14 @@ import {
 
 // 设置应用名称，这会影响 Dock Hover Title
 app.setName(TOOLTIP)
-
+// 设置忽略证书错误
 app.commandLine.appendSwitch('ignore-certificate-errors')
+// 设置禁用 自动化受控
 app.commandLine.appendSwitch(
   'disable-blink-features',
   'AutomationControlled'
 )
+// 设置禁用 WebGPU、WebAuthn
 app.commandLine.appendSwitch(
   'disable-features',
   'WebGPU,WebAuthn'
@@ -49,9 +50,8 @@ app.commandLine.appendSwitch(
   'true'
 )
 
-// 标记 ready 事件是否已触发
-let isMenubarReady = false
 let windowManager: WindowManager | null = null
+let appTray: Tray | null = null
 
 app.on(
   'certificate-error',
@@ -78,46 +78,6 @@ app.on('ready', async () => {
 
   const appPath = app.getAppPath()
 
-  /**
-   * 根据系统主题获取对应的托盘图标路径
-   */
-  const getTrayIconPath = () => {
-    // macOS 上使用 Template 图片，系统会自动处理深浅色适配
-    if (process.platform === 'darwin') {
-      return path.join(
-        appPath,
-        'images',
-        'gptIconTemplate.png'
-      )
-    }
-    // Windows/Linux 根据系统当前是否为深色模式，返回不同的图标
-    // 深色模式使用浅色图片，浅色模式使用深色图片
-    return nativeTheme.shouldUseDarkColors
-      ? path.join(appPath, 'images', 'gptIconLight.png')
-      : path.join(appPath, 'images', 'gptIconDark.png')
-  }
-
-  /**
-   * @desc 创建菜单栏图标
-   * @type {Tray}
-   */
-  const image = nativeImage.createFromPath(
-    getTrayIconPath()
-  )
-
-  const tray = new Tray(image)
-  tray.setToolTip(TOOLTIP)
-  tray.setIgnoreDoubleClickEvents(true)
-
-  // 监听系统主题变化，动态更新托盘图标
-  if (process.platform !== 'darwin') {
-    nativeTheme.on('updated', () => {
-      tray.setImage(
-        nativeImage.createFromPath(getTrayIconPath())
-      )
-    })
-  }
-
   const indexUrl = resolveMainIndexUrl({
     devServerUrl: MAIN_WINDOW_VITE_DEV_SERVER_URL,
     rendererDir: __dirname
@@ -127,8 +87,15 @@ app.on('ready', async () => {
   windowManager = createWindowManager()
 
   // 创建浏览器窗口
+  const iconPath =
+    process.platform === 'darwin'
+      ? path.join(appPath, 'images', 'gptIconTemplate.png')
+      : nativeTheme.shouldUseDarkColors
+        ? path.join(appPath, 'images', 'gptIconLight.png')
+        : path.join(appPath, 'images', 'gptIconDark.png')
+
   const browserWindow = new BrowserWindow({
-    icon: image,
+    icon: nativeImage.createFromPath(iconPath),
     width: MAIN_WINDOW_WIDTH,
     height: MAIN_WINDOW_HEIGHT,
     useContentSize: true,
@@ -174,8 +141,6 @@ app.on('ready', async () => {
   if (initialSetting.alwaysOnTop) {
     windowManager.setAlwaysOnTop(true)
   }
-
-  isMenubarReady = true
 
   initializeLastVisitedUrlTracking(browserWindow)
 
@@ -254,10 +219,7 @@ app.on('ready', async () => {
     windowManager
   })
 
-  const updateManager = createUpdateManager()
-
-  setupTrayContextMenu({
-    tray,
+  appTray = setupAppTray({
     windowManager,
     urls: {
       chatgpt: ModelUrl.ChatGPT,
@@ -267,34 +229,18 @@ app.on('ready', async () => {
       qwen: ModelUrl.Qwen,
       doubao: ModelUrl.Doubao
     },
-    isMenubarReady: () => isMenubarReady,
     getMainBrowserWindow: () =>
-      windowManager.getMainBrowserWindow(),
+      windowManager!.getMainBrowserWindow(),
     setMainBrowserWindow: (window) => {
-      windowManager.setMainBrowserWindow(window)
+      windowManager!.setMainBrowserWindow(window)
     },
     getCurrentShortcut: () =>
       shortcutManager.getCurrentShortcut(),
     setCurrentShortcut: (shortcut) => {
       shortcutManager.setCurrentShortcut(shortcut)
     },
-    withBrowserWindow: windowManager.withBrowserWindow,
-    updateManager
+    withBrowserWindow: windowManager.withBrowserWindow
   })
-
-  // 托盘事件处理程序
-  tray.on('click', () => {
-    windowManager.toggleWindow()
-  })
-
-  if (process.platform !== 'linux') {
-    tray.on('right-click', () => {
-      const contextMenu = tray._contextMenu
-      if (contextMenu) {
-        tray.popUpContextMenu(contextMenu)
-      }
-    })
-  }
 
   shortcutManager.registerToggleShortcut()
   shortcutManager.registerIpcHandlers()

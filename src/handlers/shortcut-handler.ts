@@ -1,22 +1,14 @@
-import { dialog, globalShortcut } from 'electron'
+import { dialog, globalShortcut, Tray } from 'electron'
 import {
   readUserSetting,
   writeUserSetting
 } from '@/utils/user-setting'
-import { TrayContextMenuOptions } from '@/tray-context-menu'
+import { AppTrayOptions } from '@/tray-context-menu'
 import { showShortcutInputDialog } from '@/shortcut-input-dialog'
 import { getTrayMenuText } from '@/i18n/tray-menu'
 import { MenuLanguage } from '@/utils/constants'
 import { getAvailableBrowserWindow } from './utils'
 import { getAppIcon } from '@/utils/common'
-
-/**
- * 延迟指定的时间
- * @param {number} ms - 延迟的毫秒数
- * @returns {Promise<unknown>} 延迟 Promise
- */
-const delay = (ms: number) =>
-  new Promise((resolve) => setTimeout(resolve, ms))
 
 /**
  * 创建快捷键设置处理函数
@@ -26,7 +18,7 @@ const delay = (ms: number) =>
  * @returns {() => Promise<void>} 快捷键设置处理函数
  */
 export const createShortcutHandler = (
-  options: TrayContextMenuOptions,
+  options: AppTrayOptions & { tray: Tray },
   updateContextMenu: () => void,
   menuLanguage: MenuLanguage
 ) => {
@@ -35,16 +27,6 @@ export const createShortcutHandler = (
       const userSetting = readUserSetting()
       const savedShortcut =
         userSetting.toggleShortcut || 'CommandOrControl+g'
-
-      if (!options.isMenubarReady()) {
-        for (
-          let i = 0;
-          i < 20 && !options.isMenubarReady();
-          i++
-        ) {
-          await delay(100)
-        }
-      }
 
       // 打开对话框前临时取消注册快捷键，避免录入时触发
       const currentShortcutBeforeDialog =

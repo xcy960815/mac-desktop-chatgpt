@@ -1,10 +1,10 @@
-import { app, dialog } from 'electron'
+import { app, BrowserWindow, Tray, dialog } from 'electron'
 import {
   readUserSetting,
   writeUserSetting,
   resetUserUrls
 } from '@/utils/user-setting'
-import { TrayContextMenuOptions } from '@/tray-context-menu'
+import { AppTrayOptions } from '@/tray-context-menu'
 import { getTrayMenuText } from '@/i18n/tray-menu'
 import { getAppIcon } from '@/utils/common'
 import {
@@ -61,7 +61,7 @@ export const handleAutoLaunchToggle = (
  * @returns {void}
  */
 export const handleAlwaysOnTopToggle = (
-  options: TrayContextMenuOptions,
+  options: AppTrayOptions & { tray: Tray },
   updateContextMenu: () => void
 ) => {
   const current = readUserSetting()
@@ -102,7 +102,7 @@ export const handleMenuLanguageChange = (
  * @returns {Promise<void>} 重新加载 Promise
  */
 export const handleReload = async (
-  options: TrayContextMenuOptions,
+  options: AppTrayOptions & { tray: Tray },
   menuLanguage: MenuLanguage
 ) => {
   const newUserSetting = resetUserUrls()
@@ -137,21 +137,6 @@ export const handleReload = async (
       defaultUrl
     )
   })
-}
-
-/**
- * 处理检查更新
- * @param {TrayContextMenuOptions} options - 托盘上下文菜单配置选项
- * @returns {Promise<void>} 检查更新 Promise
- */
-export const handleCheckForUpdates = async (
-  options: TrayContextMenuOptions
-) => {
-  const browserWindow = getAvailableBrowserWindow(
-    options.windowManager,
-    options.getMainBrowserWindow
-  )
-  await options.updateManager.checkForUpdates(browserWindow)
 }
 
 /**

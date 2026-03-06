@@ -57,21 +57,50 @@ export interface UserSetting {
     Qwen?: string
     Doubao?: string
   }
-  toggleShortcut?: string // 用于打开/关闭窗口的快捷键，默认 CommandOrControl+g
-  autoLaunchOnStartup?: boolean // 是否随系统启动
-  alwaysOnTop?: boolean // 是否始终置顶
-  menuLanguage?: MenuLanguage // 托盘菜单语言
-  proxy?: string // 代理设置，例如 socks5://127.0.0.1:7897
-  proxyHistory?: string[] // 代理历史记录
-  shortcutHistory?: string[] // 快捷键历史记录
-  showInDock?: boolean // 是否在程序坞中显示图标
+  /**
+   * 用于打开/关闭窗口的快捷键
+   * @default CommandOrControl+g
+   */
+  toggleShortcut?: string
+  /**
+   * 是否随系统启动
+   * @default false
+   */
+  autoLaunchOnStartup?: boolean
+  /**
+   * 是否始终置顶
+   * @default false
+   */
+  alwaysOnTop?: boolean
+  /**
+   * 托盘菜单语言
+   * @default MenuLanguage.Chinese
+   */
+  menuLanguage?: MenuLanguage
+  /**
+   * 代理设置
+   * @example socks5://127.0.0.1:7897
+   */
+  proxy?: string
+  /**
+   * 代理历史记录
+   */
+  proxyHistory?: string[]
+  /**
+   * 快捷键历史记录
+   */
+  shortcutHistory?: string[]
+  /**
+   * 是否在程序坞中显示图标
+   */
+  showInDock?: boolean
 }
 
 /**
  * 获取用户设置路径，并确保文件存在
  * @returns {string}
  */
-function getUserSettingPath(): string {
+const getUserSettingPath = (): string => {
   const basePath = app.getPath('userData')
   const dirPath = path.join(basePath, SUBPATH)
   const fileFullPath = path.join(dirPath, FILENAME)
@@ -96,7 +125,7 @@ function getUserSettingPath(): string {
  * 读取用户设置（如果文件不存在，自动创建并返回默认值）
  * @returns {UserSetting}
  */
-function readUserSetting(): UserSetting {
+const readUserSetting = (): UserSetting => {
   const filePath = getUserSettingPath()
   try {
     const data = fsSync.readFileSync(filePath, 'utf-8')
@@ -112,7 +141,9 @@ function readUserSetting(): UserSetting {
  * @returns {US} 写入的数据对象
  * @template US
  */
-function writeUserSetting<US = UserSetting>(data: US): US {
+const writeUserSetting = <US = UserSetting>(
+  data: US
+): US => {
   const filePath = getUserSettingPath()
   fsSync.writeFileSync(
     filePath,
@@ -125,7 +156,7 @@ function writeUserSetting<US = UserSetting>(data: US): US {
  * 重置保存的 URLs 到默认值
  * @returns {UserSetting}
  */
-function resetUserUrls(): UserSetting {
+const resetUserUrls = (): UserSetting => {
   const currentSetting = readUserSetting()
   // 使用 Model 枚举和 ModelUrl 枚举动态生成默认 URLs
   const defaultUrls = {
