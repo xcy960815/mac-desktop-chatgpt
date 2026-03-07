@@ -44,10 +44,6 @@ export type UrlsType = {
 export interface AppTrayOptions {
   /** 窗口管理器实例 */
   windowManager: WindowManager
-  /** 获取当前快捷键 */
-  getCurrentShortcut(): string | null
-  /** 设置当前快捷键 */
-  setCurrentShortcut(shortcut: string | null): void
 }
 
 /**
@@ -224,10 +220,7 @@ export const setupAppTray = (
       },
       {
         label: t('setProxy'),
-        click: createProxyHandler(
-          handlerOptions,
-          menuLanguage
-        )
+        click: createProxyHandler(menuLanguage)
       },
       {
         label: t('autoLaunchOnStartup'),

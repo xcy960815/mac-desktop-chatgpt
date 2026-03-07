@@ -4,7 +4,10 @@ import {
   createWindowManager,
   WindowManager
 } from '@/window-manager'
-import { createShortcutManager } from '@/shortcut-manager'
+import {
+  setupGlobalShortcuts,
+  setupShortcutIpcHandlers
+} from '@/handlers/shortcut-setup'
 import { registerWebContentsHandlers } from '@/webview-handlers'
 import { setupAppConfig } from '@/app-config'
 import { setupAppEvents } from '@/app-events'
@@ -25,22 +28,12 @@ app.on('ready', async () => {
 
   setupAppMenu(browserWindow)
 
-  const shortcutManager = createShortcutManager({
-    windowManager
-  })
+  setupGlobalShortcuts(windowManager)
+  setupShortcutIpcHandlers(windowManager)
 
   appTray = setupAppTray({
-    windowManager,
-    getCurrentShortcut: () =>
-      shortcutManager.getCurrentShortcut(),
-    setCurrentShortcut: (shortcut) => {
-      shortcutManager.setCurrentShortcut(shortcut)
-    }
+    windowManager
   })
-
-  shortcutManager.registerToggleShortcut()
-  shortcutManager.registerIpcHandlers()
-  shortcutManager.registerDevToolsShortcut()
 
   registerWebContentsHandlers(windowManager)
 

@@ -1,5 +1,5 @@
 import { Model } from '@/utils/constants'
-import { BrowserWindow, Tray } from 'electron'
+import { Tray } from 'electron'
 import {
   readUserSetting,
   writeUserSetting

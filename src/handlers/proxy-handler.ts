@@ -1,9 +1,8 @@
-import { app, dialog, session, Tray } from 'electron'
+import { app, dialog, session } from 'electron'
 import {
   readUserSetting,
   writeUserSetting
 } from '@/utils/user-setting'
-import { AppTrayOptions } from '@/tray-context-menu'
 import { showProxyInputDialog } from '@/proxy-input-dialog'
 import { getTrayMenuText } from '@/i18n/tray-menu'
 import { MenuLanguage } from '@/utils/constants'
@@ -11,12 +10,10 @@ import { getAppIcon } from '@/utils/common'
 
 /**
  * 创建代理设置处理函数
- * @param {TrayContextMenuOptions} options - 托盘上下文菜单配置选项
  * @param {MenuLanguage} menuLanguage - 当前菜单语言
  * @returns {() => Promise<void>} 代理设置处理函数
  */
 export const createProxyHandler = (
-  options: AppTrayOptions & { tray: Tray },
   menuLanguage: MenuLanguage
 ) => {
   return async () => {

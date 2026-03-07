@@ -29,8 +29,7 @@ export const createShortcutHandler = (
         userSetting.toggleShortcut || 'CommandOrControl+g'
 
       // 打开对话框前临时取消注册快捷键，避免录入时触发
-      const currentShortcutBeforeDialog =
-        options.getCurrentShortcut()
+      const currentShortcutBeforeDialog = savedShortcut
       if (currentShortcutBeforeDialog) {
         globalShortcut.unregister(
           currentShortcutBeforeDialog
@@ -157,7 +156,6 @@ export const createShortcutHandler = (
             toggleShortcut: shortcut,
             shortcutHistory: newHistory
           })
-          options.setCurrentShortcut(shortcut)
           dialog.showMessageBox({
             icon: getAppIcon(),
             type: 'info',
@@ -244,7 +242,6 @@ export const createShortcutHandler = (
               ...userSetting,
               toggleShortcut: 'CommandOrControl+g'
             })
-            options.setCurrentShortcut('CommandOrControl+g')
             dialog.showMessageBox({
               icon: getAppIcon(),
               type: 'info',
