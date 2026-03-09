@@ -3,7 +3,7 @@ import {
   readUserSetting,
   writeUserSetting
 } from '@/utils/user-setting'
-import { showProxyInputDialog } from '@/proxy-input-dialog'
+import { showProxyInputDialog } from '@/windows/proxy-input-dialog'
 import { getTrayMenuText } from '@/i18n/tray-menu'
 import { MenuLanguage } from '@/utils/constants'
 import { getAppIcon } from '@/utils/common'

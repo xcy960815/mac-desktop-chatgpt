@@ -3,8 +3,8 @@ import {
   readUserSetting,
   writeUserSetting
 } from '@/utils/user-setting'
-import { AppTrayOptions } from '@/tray-context-menu'
-import { showShortcutInputDialog } from '@/shortcut-input-dialog'
+import { AppTrayOptions } from '@/core/tray-context-menu'
+import { showShortcutInputDialog } from '@/windows/shortcut-input-dialog'
 import { getTrayMenuText } from '@/i18n/tray-menu'
 import { MenuLanguage } from '@/utils/constants'
 import { getAvailableBrowserWindow } from './utils'

@@ -1,5 +1,5 @@
 import { globalShortcut, ipcMain } from 'electron'
-import { WindowManager } from '@/window-manager'
+import { WindowManager } from '@/core/window-manager'
 import {
   readUserSetting,
   writeUserSetting

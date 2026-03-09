@@ -1,5 +1,5 @@
 import { app } from 'electron'
-import { WindowManager } from '@/window-manager'
+import { WindowManager } from '@/core/window-manager'
 import { readUserSetting } from '@/utils/user-setting'
 import { Model, ModelUrl } from '@/utils/constants'
 

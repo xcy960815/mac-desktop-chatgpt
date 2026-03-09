@@ -1,7 +1,7 @@
 import { app, shell, WebContents } from 'electron'
 import contextMenu from 'electron-context-menu'
 
-import { WindowManager } from '@/window-manager'
+import { WindowManager } from '@/core/window-manager'
 import { ModelUrl } from '@/utils/constants'
 import {
   readUserSetting,

@@ -7,7 +7,7 @@ import {
 import {
   AppTrayOptions,
   UrlsType
-} from '@/tray-context-menu'
+} from '@/core/tray-context-menu'
 import {
   getAvailableBrowserWindow,
   MODEL_TO_URL_KEY

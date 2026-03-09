@@ -4,7 +4,7 @@ import {
   writeUserSetting,
   resetUserUrls
 } from '@/utils/user-setting'
-import { AppTrayOptions } from '@/tray-context-menu'
+import { AppTrayOptions } from '@/core/tray-context-menu'
 import { getTrayMenuText } from '@/i18n/tray-menu'
 import { getAppIcon } from '@/utils/common'
 import {

@@ -1,16 +1,16 @@
-import { setupAppTray } from '@/tray-context-menu'
-import { setupAppMenu } from '@/app-menu'
+import { setupAppTray } from '@/core/tray-context-menu'
+import { setupAppMenu } from '@/core/app-menu'
 import {
   createWindowManager,
   WindowManager
-} from '@/window-manager'
+} from '@/core/window-manager'
 import {
   setupGlobalShortcuts,
   setupShortcutIpcHandlers
 } from '@/handlers/shortcut-setup'
-import { registerWebContentsHandlers } from '@/webview-handlers'
-import { setupAppConfig } from '@/app-config'
-import { setupAppEvents } from '@/app-events'
+import { registerWebContentsHandlers } from '@/webview/webview-handlers'
+import { setupAppConfig } from '@/core/app-config'
+import { setupAppEvents } from '@/core/app-events'
 import { app, Tray } from 'electron'
 
 setupAppConfig()

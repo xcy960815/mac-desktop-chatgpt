@@ -7,7 +7,7 @@ import {
 } from 'electron'
 import * as path from 'path'
 
-import { WindowManager } from '@/window-manager'
+import { WindowManager } from '@/core/window-manager'
 import { readUserSetting } from '@/utils/user-setting'
 import {
   MenuLanguage,
@@ -20,17 +20,17 @@ import {
   TrayMenuMessageKey
 } from '@/i18n/tray-menu'
 
-import { createModelSwitchHandler } from './handlers/model-handler'
-import { createShortcutHandler } from './handlers/shortcut-handler'
-import { createProxyHandler } from './handlers/proxy-handler'
+import { createModelSwitchHandler } from '@/handlers/model-handler'
+import { createShortcutHandler } from '@/handlers/shortcut-handler'
+import { createProxyHandler } from '@/handlers/proxy-handler'
 import {
   handleAutoLaunchToggle,
   handleAlwaysOnTopToggle,
   handleMenuLanguageChange,
   handleReload,
   handleQuit
-} from './handlers/system-handler'
-import { createUpdateHandler } from './handlers/update-handler'
+} from '@/handlers/system-handler'
+import { createUpdateHandler } from '@/handlers/update-handler'
 
 export type UrlsType = {
   chatgpt: string

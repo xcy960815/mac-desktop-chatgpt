@@ -7,7 +7,7 @@ import {
   Tray
 } from 'electron'
 import { getAppIcon } from '@/utils/common'
-import { AppTrayOptions } from '@/tray-context-menu'
+import { AppTrayOptions } from '@/core/tray-context-menu'
 import { getTrayMenuText } from '@/i18n/tray-menu'
 import { MenuLanguage } from '@/utils/constants'
 import { getAvailableBrowserWindow } from './utils'

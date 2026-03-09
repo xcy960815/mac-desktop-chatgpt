@@ -1,10 +1,10 @@
 import { BrowserWindow, Tray } from 'electron'
-import { WindowManager } from '@/window-manager'
+import { WindowManager } from '@/core/window-manager'
 import { Model } from '@/utils/constants'
 import {
   AppTrayOptions,
   UrlsType
-} from '@/tray-context-menu'
+} from '@/core/tray-context-menu'
 
 /**
  * 获取可用的浏览器窗口
