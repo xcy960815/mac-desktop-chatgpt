@@ -23,6 +23,7 @@ import {
   registerModelSyncEvents
 } from '@/core/app-events'
 import { settingsService } from '@/services/settings-service'
+import { createReadySignal } from '@/utils/ready-signal'
 
 export interface BootstrapAppResult {
   windowManager: WindowManager
@@ -168,14 +169,16 @@ export const bootstrapApp =
       iconPath: getTrayIconPath({ appPath })
     })
 
-    let isMenubarReady = false
+    const menubarReadySignal = createReadySignal()
 
     setupApplicationMenu()
     registerWindowInputShortcuts(browserWindow)
 
     setupTrayContextMenu({
       tray,
-      isMenubarReady: () => isMenubarReady,
+      isMenubarReady: menubarReadySignal.isReady,
+      waitForMenubarReady:
+        menubarReadySignal.waitUntilReady,
       getBrowserWindow: () =>
         windowManager.getMainBrowserWindow(),
       toggleWindow: () => windowManager.toggleWindow(),
@@ -202,7 +205,7 @@ export const bootstrapApp =
 
     initializeLastVisitedUrlTracking(browserWindow)
 
-    isMenubarReady = true
+    menubarReadySignal.markReady()
 
     return {
       windowManager,
