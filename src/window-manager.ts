@@ -45,7 +45,7 @@ export const createWindowManager = (): WindowManager => {
   // Helper to emit typed events
   const emit = (
     event: keyof WindowManagerEvents,
-    ...args: any[]
+    ...args: unknown[]
   ) => {
     eventEmitter.emit(event, ...args)
   }
