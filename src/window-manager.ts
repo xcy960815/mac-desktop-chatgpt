@@ -1,8 +1,7 @@
 import {
   BrowserWindow,
   app,
-  globalShortcut,
-  Rectangle
+  globalShortcut
 } from 'electron'
 import { EventEmitter } from 'events'
 import { CustomBrowserWindow } from '@/utils/constants'
@@ -15,7 +14,6 @@ export interface WindowManagerEvents {
   hide: () => void
   'after-show': () => void
   'after-hide': () => void
-  'focus-lost': () => void
 }
 
 /**
@@ -24,7 +22,7 @@ export interface WindowManagerEvents {
 export interface WindowManager extends EventEmitter {
   getMainBrowserWindow(): BrowserWindow | null
   setMainBrowserWindow(window: BrowserWindow | null): void
-  ensureBrowserWindow(): Promise<BrowserWindow | null>
+  ensureBrowserWindow(): BrowserWindow | null
   withBrowserWindow<T>(
     task: (win: BrowserWindow) => T | Promise<T>
   ): Promise<T | null>
@@ -32,7 +30,7 @@ export interface WindowManager extends EventEmitter {
   // 窗口控制逻辑
   showWindow(): Promise<void>
   hideWindow(): void
-  toggleWindow(trayBounds?: Rectangle): Promise<void>
+  toggleWindow(): Promise<void>
   setAlwaysOnTop(alwaysOnTop: boolean): void
   bringWindowToFront(): Promise<void>
   setWillQuit(quit: boolean): void
@@ -41,6 +39,8 @@ export interface WindowManager extends EventEmitter {
 export const createWindowManager = (): WindowManager => {
   const eventEmitter = new EventEmitter()
   let mainBrowserWindow: BrowserWindow | null = null
+  const noop = () => undefined
+  let cleanupWindowListeners = noop
 
   // Helper to emit typed events
   const emit = (
@@ -54,48 +54,67 @@ export const createWindowManager = (): WindowManager => {
     globalShortcut.unregister('esc')
   }
 
+  const getUsableMainBrowserWindow =
+    (): BrowserWindow | null => {
+      if (
+        mainBrowserWindow &&
+        !mainBrowserWindow.isDestroyed()
+      ) {
+        return mainBrowserWindow
+      }
+
+      return null
+    }
+
   const registerEscShortcut = () => {
     unregisterEscShortcut()
     globalShortcut.register('esc', () => {
       // 如果需要，允许使用 Esc 关闭；如果标准应用不需要则移除
       // 目前保留作为实用功能
-      if (mainBrowserWindow?.isVisible()) {
+      const browserWindow = getUsableMainBrowserWindow()
+      if (browserWindow?.isVisible()) {
         hideWindow()
       }
     })
   }
 
   const hideWindow = () => {
-    if (
-      !mainBrowserWindow ||
-      !mainBrowserWindow.isVisible()
-    )
+    const browserWindow = getUsableMainBrowserWindow()
+    if (!browserWindow || !browserWindow.isVisible()) {
       return
+    }
+
     emit('hide')
-    mainBrowserWindow.hide()
+    browserWindow.hide()
     emit('after-hide')
   }
 
   const showWindow = async (): Promise<void> => {
-    if (!mainBrowserWindow) return
+    const browserWindow = getUsableMainBrowserWindow()
+    if (!browserWindow) {
+      return
+    }
 
     emit('show')
 
     // 标准显示逻辑
-    mainBrowserWindow.center()
-    mainBrowserWindow.restore()
-    mainBrowserWindow.focus()
-    mainBrowserWindow.show()
+    browserWindow.center()
+    browserWindow.restore()
+    browserWindow.show()
+    browserWindow.focus()
 
     emit('after-show')
   }
 
   const toggleWindow = async () => {
-    if (!mainBrowserWindow) return
+    const browserWindow = getUsableMainBrowserWindow()
+    if (!browserWindow) {
+      return
+    }
 
     if (
-      mainBrowserWindow.isVisible() &&
-      mainBrowserWindow.isFocused()
+      browserWindow.isVisible() &&
+      browserWindow.isFocused()
     ) {
       hideWindow()
     } else {
@@ -108,36 +127,32 @@ export const createWindowManager = (): WindowManager => {
   }
 
   const setAlwaysOnTop = (alwaysOnTop: boolean) => {
-    if (
-      !mainBrowserWindow ||
-      mainBrowserWindow.isDestroyed()
-    )
+    const browserWindow = getUsableMainBrowserWindow()
+    if (!browserWindow) {
       return
+    }
 
     if (alwaysOnTop) {
-      mainBrowserWindow.setAlwaysOnTop(true, 'floating')
+      browserWindow.setAlwaysOnTop(true, 'floating')
     } else {
-      mainBrowserWindow.setAlwaysOnTop(false)
+      browserWindow.setAlwaysOnTop(false)
     }
   }
 
   const bringWindowToFront = async () => {
-    if (
-      !mainBrowserWindow ||
-      mainBrowserWindow.isDestroyed()
-    ) {
-      if (mainBrowserWindow) await showWindow()
+    const browserWindow = getUsableMainBrowserWindow()
+    if (!browserWindow) {
       return
     }
 
-    if (!mainBrowserWindow.isVisible()) {
+    if (!browserWindow.isVisible()) {
       await showWindow()
       return
     }
 
     // 尝试在 macOS 上使用 moveTop
     const movableWindow =
-      mainBrowserWindow as CustomBrowserWindow
+      browserWindow as CustomBrowserWindow
     if (typeof movableWindow.moveTop === 'function') {
       try {
         movableWindow.moveTop()
@@ -146,8 +161,8 @@ export const createWindowManager = (): WindowManager => {
       }
     }
 
-    mainBrowserWindow.show()
-    mainBrowserWindow.focus()
+    browserWindow.show()
+    browserWindow.focus()
     if (process.platform === 'darwin') {
       app.focus()
     }
@@ -161,56 +176,66 @@ export const createWindowManager = (): WindowManager => {
 
   // --- 窗口监听器设置 ---
   const registerWindowListeners = (win: BrowserWindow) => {
-    win.on('focus', () => {
+    const handleFocus = () => {
       registerEscShortcut()
-    })
+    }
 
-    win.on('blur', () => {
+    const handleBlur = () => {
       unregisterEscShortcut()
-    })
+    }
 
-    win.on('close', (event) => {
+    const handleClose = (event: Electron.Event) => {
       if (!willQuit && process.platform === 'darwin') {
         event.preventDefault()
         hideWindow()
       }
       // 非 macOS 或正在退出时，允许窗口关闭
-    })
+    }
 
     // 关闭时清理
-    win.on('closed', () => {
+    const handleClosed = () => {
       unregisterEscShortcut()
-      mainBrowserWindow = null
-    })
+      if (mainBrowserWindow === win) {
+        mainBrowserWindow = null
+        cleanupWindowListeners = noop
+      }
+    }
+
+    win.on('focus', handleFocus)
+    win.on('blur', handleBlur)
+    win.on('close', handleClose)
+    win.on('closed', handleClosed)
+
+    return () => {
+      win.off('focus', handleFocus)
+      win.off('blur', handleBlur)
+      win.off('close', handleClose)
+      win.off('closed', handleClosed)
+    }
   }
 
   const setMainBrowserWindow = (
     window: BrowserWindow | null
   ) => {
+    cleanupWindowListeners()
     mainBrowserWindow = window
+    cleanupWindowListeners = noop
     if (window) {
-      registerWindowListeners(window)
+      cleanupWindowListeners =
+        registerWindowListeners(window)
       // 我们不在这里自动应用 alwaysOnTop，因为不再在 WindowManager 中存储状态
       // 预期 main.ts 会进行初始设置
     }
   }
 
-  const ensureBrowserWindow =
-    async (): Promise<BrowserWindow | null> => {
-      if (
-        mainBrowserWindow &&
-        !mainBrowserWindow.isDestroyed()
-      ) {
-        return mainBrowserWindow
-      }
-      return null
-    }
+  const ensureBrowserWindow = (): BrowserWindow | null =>
+    getUsableMainBrowserWindow()
 
   const withBrowserWindow = async <T>(
     task: (win: BrowserWindow) => T | Promise<T>
   ): Promise<T | null> => {
-    const win = await ensureBrowserWindow()
-    if (win && !win.isDestroyed()) {
+    const win = ensureBrowserWindow()
+    if (win) {
       try {
         return await task(win)
       } catch (e) {
@@ -222,7 +247,7 @@ export const createWindowManager = (): WindowManager => {
 
   // 返回带有 mixin 的对象
   const instance = Object.assign(eventEmitter, {
-    getMainBrowserWindow: () => mainBrowserWindow,
+    getMainBrowserWindow: getUsableMainBrowserWindow,
     setMainBrowserWindow,
     ensureBrowserWindow,
     withBrowserWindow,
