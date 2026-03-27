@@ -17,12 +17,17 @@ export default async function createMainConfig(
   const { forgeConfigSelf } = forgeEnv
   const define = getBuildDefine(forgeEnv)
   const isProduction = forgeEnv.command === 'build'
+  const entry = forgeConfigSelf.entry
+
+  if (!entry) {
+    throw new Error('Missing forge main entry')
+  }
 
   const config: UserConfig = {
     base: './',
     build: {
       lib: {
-        entry: forgeConfigSelf.entry!,
+        entry,
         fileName: () => '[name].js',
         formats: ['cjs']
       },

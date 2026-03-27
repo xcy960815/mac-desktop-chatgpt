@@ -1,21 +1,11 @@
 import { app, dialog, session } from 'electron'
-import {
-  readUserSetting,
-  writeUserSetting
-} from '@/utils/user-setting'
 import { TrayContextMenuOptions } from '@/tray-context-menu'
 import { showProxyInputDialog } from '@/proxy-input-dialog'
 import { getTrayMenuText } from '@/i18n/tray-menu'
 import { MenuLanguage } from '@/utils/constants'
 import { getAppIcon } from '@/utils/common'
-
-/**
- * 延迟指定的时间
- * @param {number} ms - 延迟的毫秒数
- * @returns {Promise<unknown>} 延迟 Promise
- */
-const delay = (ms: number) =>
-  new Promise((resolve) => setTimeout(resolve, ms))
+import { settingsService } from '@/services/settings-service'
+import { ensureMenubarReady } from './utils'
 
 /**
  * 创建代理设置处理函数
@@ -29,17 +19,15 @@ export const createProxyHandler = (
 ) => {
   return async () => {
     try {
-      const userSetting = readUserSetting()
+      const userSetting = settingsService.get()
       const savedProxy = userSetting.proxy || ''
 
-      if (!options.isMenubarReady()) {
-        for (
-          let i = 0;
-          i < 20 && !options.isMenubarReady();
-          i++
-        ) {
-          await delay(100)
-        }
+      const menubarReady = await ensureMenubarReady(
+        options,
+        menuLanguage
+      )
+      if (!menubarReady) {
+        return
       }
 
       let input: string | null = null
@@ -62,7 +50,6 @@ export const createProxyHandler = (
 
       if (input !== null) {
         const proxy = input.trim()
-        const currentSetting = readUserSetting()
 
         // 检查是否有变更
         // 校验代理格式
@@ -100,20 +87,18 @@ export const createProxyHandler = (
           }
         }
 
-        const history = currentSetting.proxyHistory || []
-        let newHistory = history
-        if (proxy) {
-          newHistory = [
-            proxy,
-            ...history.filter((p) => p !== proxy)
-          ].slice(0, 10)
-        }
-
-        writeUserSetting({
-          ...currentSetting,
+        settingsService.update((settings) => ({
+          ...settings,
           proxy: proxy || undefined,
-          proxyHistory: newHistory
-        })
+          proxyHistory: proxy
+            ? [
+                proxy,
+                ...(settings.proxyHistory || []).filter(
+                  (item) => item !== proxy
+                )
+              ].slice(0, 10)
+            : settings.proxyHistory || []
+        }))
 
         // 应用代理设置
         if (proxy) {

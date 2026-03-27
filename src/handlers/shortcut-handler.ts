@@ -1,22 +1,28 @@
 import { dialog, globalShortcut } from 'electron'
-import {
-  readUserSetting,
-  writeUserSetting
-} from '@/utils/user-setting'
 import { TrayContextMenuOptions } from '@/tray-context-menu'
 import { showShortcutInputDialog } from '@/shortcut-input-dialog'
 import { getTrayMenuText } from '@/i18n/tray-menu'
 import { MenuLanguage } from '@/utils/constants'
-import { getAvailableBrowserWindow } from './utils'
+import {
+  ensureMenubarReady,
+  getAvailableBrowserWindow
+} from './utils'
 import { getAppIcon } from '@/utils/common'
+import { settingsService } from '@/services/settings-service'
 
-/**
- * 延迟指定的时间
- * @param {number} ms - 延迟的毫秒数
- * @returns {Promise<unknown>} 延迟 Promise
- */
-const delay = (ms: number) =>
-  new Promise((resolve) => setTimeout(resolve, ms))
+const registerWindowShortcut = (
+  shortcut: string,
+  options: TrayContextMenuOptions
+): boolean =>
+  globalShortcut.register(shortcut, () => {
+    const menubarWindow = getAvailableBrowserWindow(
+      options.getBrowserWindow
+    )
+    if (!menubarWindow) {
+      return
+    }
+    options.toggleWindow()
+  })
 
 /**
  * 创建快捷键设置处理函数
@@ -32,18 +38,15 @@ export const createShortcutHandler = (
 ) => {
   return async () => {
     try {
-      const userSetting = readUserSetting()
       const savedShortcut =
-        userSetting.toggleShortcut || 'CommandOrControl+g'
+        settingsService.getToggleShortcut()
 
-      if (!options.isMenubarReady()) {
-        for (
-          let i = 0;
-          i < 20 && !options.isMenubarReady();
-          i++
-        ) {
-          await delay(100)
-        }
+      const menubarReady = await ensureMenubarReady(
+        options,
+        menuLanguage
+      )
+      if (!menubarReady) {
+        return
       }
 
       // 打开对话框前临时取消注册快捷键，避免录入时触发
@@ -65,17 +68,9 @@ export const createShortcutHandler = (
       } catch (error) {
         // 出错时恢复快捷键
         if (currentShortcutBeforeDialog) {
-          globalShortcut.register(
+          registerWindowShortcut(
             currentShortcutBeforeDialog,
-            () => {
-              const menubarWindow =
-                getAvailableBrowserWindow(
-                  options.windowManager,
-                  options.getMainBrowserWindow
-                )
-              if (!menubarWindow) return
-              options.windowManager.toggleWindow()
-            }
+            options
           )
         }
         dialog.showMessageBox({
@@ -99,17 +94,9 @@ export const createShortcutHandler = (
       if (input === null) {
         // 用户点击了取消，恢复原快捷键
         if (currentShortcutBeforeDialog) {
-          globalShortcut.register(
+          registerWindowShortcut(
             currentShortcutBeforeDialog,
-            () => {
-              const menubarWindow =
-                getAvailableBrowserWindow(
-                  options.windowManager,
-                  options.getMainBrowserWindow
-                )
-              if (!menubarWindow) return
-              options.windowManager.toggleWindow()
-            }
+            options
           )
         }
         return
@@ -135,50 +122,31 @@ export const createShortcutHandler = (
           })
           // 恢复原快捷键
           if (currentShortcutBeforeDialog) {
-            globalShortcut.register(
+            registerWindowShortcut(
               currentShortcutBeforeDialog,
-              () => {
-                const menubarWindow =
-                  getAvailableBrowserWindow(
-                    options.windowManager,
-                    options.getMainBrowserWindow
-                  )
-                if (!menubarWindow) return
-                options.windowManager.toggleWindow()
-              }
+              options
             )
           }
           return
         }
 
         // 快捷键已在对话框打开前取消注册，无需再次 unregister
-        const registered = globalShortcut.register(
+        const registered = registerWindowShortcut(
           shortcut,
-          () => {
-            const menubarWindow = getAvailableBrowserWindow(
-              options.windowManager,
-              options.getMainBrowserWindow
-            )
-            if (!menubarWindow) {
-              return
-            }
-            options.windowManager.toggleWindow()
-          }
+          options
         )
 
         if (registered) {
-          const currentSetting = readUserSetting()
-          const history =
-            currentSetting.shortcutHistory || []
-          const newHistory = [
-            shortcut,
-            ...history.filter((s) => s !== shortcut)
-          ].slice(0, 10)
-          writeUserSetting({
+          settingsService.update((currentSetting) => ({
             ...currentSetting,
             toggleShortcut: shortcut,
-            shortcutHistory: newHistory
-          })
+            shortcutHistory: [
+              shortcut,
+              ...(
+                currentSetting.shortcutHistory || []
+              ).filter((s) => s !== shortcut)
+            ].slice(0, 10)
+          }))
           options.setCurrentShortcut(shortcut)
           dialog.showMessageBox({
             icon: getAppIcon(),
@@ -196,19 +164,9 @@ export const createShortcutHandler = (
         } else {
           // 注册新快捷键失败，恢复原快捷键
           if (currentShortcutBeforeDialog) {
-            globalShortcut.register(
+            registerWindowShortcut(
               currentShortcutBeforeDialog,
-              () => {
-                const menubarWindow =
-                  getAvailableBrowserWindow(
-                    options.windowManager,
-                    options.getMainBrowserWindow
-                  )
-                if (!menubarWindow) {
-                  return
-                }
-                options.windowManager.toggleWindow()
-              }
+              options
             )
           }
           dialog.showMessageBox({
@@ -247,27 +205,15 @@ export const createShortcutHandler = (
         })
         if (resetResult.response === 0) {
           // 快捷键已在对话框打开前取消注册，无需再次 unregister
-          const defaultRegistered = globalShortcut.register(
+          const defaultRegistered = registerWindowShortcut(
             'CommandOrControl+g',
-            () => {
-              const menubarWindow =
-                getAvailableBrowserWindow(
-                  options.windowManager,
-                  options.getMainBrowserWindow
-                )
-              if (!menubarWindow) {
-                return
-              }
-              options.windowManager.toggleWindow()
-            }
+            options
           )
 
           if (defaultRegistered) {
-            const userSetting = readUserSetting()
-            writeUserSetting({
-              ...userSetting,
-              toggleShortcut: 'CommandOrControl+g'
-            })
+            settingsService.setToggleShortcut(
+              'CommandOrControl+g'
+            )
             options.setCurrentShortcut('CommandOrControl+g')
             dialog.showMessageBox({
               icon: getAppIcon(),
@@ -287,17 +233,9 @@ export const createShortcutHandler = (
           } else {
             // 重置失败，恢复原快捷键
             if (currentShortcutBeforeDialog) {
-              globalShortcut.register(
+              registerWindowShortcut(
                 currentShortcutBeforeDialog,
-                () => {
-                  const menubarWindow =
-                    getAvailableBrowserWindow(
-                      options.windowManager,
-                      options.getMainBrowserWindow
-                    )
-                  if (!menubarWindow) return
-                  options.windowManager.toggleWindow()
-                }
+                options
               )
             }
             dialog.showMessageBox({
@@ -319,25 +257,16 @@ export const createShortcutHandler = (
         } else {
           // 用户取消重置，恢复原快捷键
           if (currentShortcutBeforeDialog) {
-            globalShortcut.register(
+            registerWindowShortcut(
               currentShortcutBeforeDialog,
-              () => {
-                const menubarWindow =
-                  getAvailableBrowserWindow(
-                    options.windowManager,
-                    options.getMainBrowserWindow
-                  )
-                if (!menubarWindow) return
-                options.windowManager.toggleWindow()
-              }
+              options
             )
           }
         }
       }
     } catch (error) {
       const browserWindow = getAvailableBrowserWindow(
-        options.windowManager,
-        options.getMainBrowserWindow
+        options.getBrowserWindow
       )
       dialog.showMessageBox(browserWindow || undefined, {
         icon: getAppIcon(),

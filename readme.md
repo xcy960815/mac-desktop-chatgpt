@@ -22,6 +22,7 @@
 - [📦 构建](#-构建)
 - [🎮 使用指南](#-使用指南)
 - [🔧 开发指南](#-开发指南)
+- [📚 项目文档](#-项目文档)
 - [❓ 常见问题](#-常见问题)
 - [🔧 故障排除](#-故障排除)
 - [🗺️ 路线图](#️-路线图)
@@ -41,10 +42,12 @@
 - 🔗 **会话持久化** - 重启应用自动恢复到上次访问的对话
 - 🎯 **导航事件监听** - 支持单页应用路由变化追踪
 - ⌨️ **全局快捷键** - Cmd/Ctrl+G 显示/隐藏，支持自定义及**快捷键历史记录**
-- 🌐 **跨平台支持** - 支持 macOS (Intel/Apple Silicon) 和 Windows (32/64位)
-- 🧲 **窗口锁定模式** - 支持自动隐藏、锁定在桌面、置顶于所有应用三种模式
+- 🌐 **跨平台支持** - 支持 macOS 与 Windows，保留 Linux 构建链路
+- 📌 **窗口置顶** - 托盘菜单可直接切换窗口置顶状态
 - 🔁 **一键开机自启** - 托盘菜单直接切换自动启动
-- 🛡️ **自定义代理设置** - 支持 HTTP/HTTPS 代理配置，内置**代理历史记录与清空**功能
+- 🌍 **中英文菜单** - 托盘菜单支持中文 / English 切换
+- 🛡️ **自定义代理设置** - 支持 HTTP/HTTPS/SOCKS 代理配置，内置**代理历史记录**
+- 🧱 **模块化主进程结构** - 启动装配、窗口管理、菜单动作、对话框模板与设置访问已按职责拆分
 
 ## 📸 预览
 
@@ -100,17 +103,18 @@ pnpm start
 ### 构建和测试
 
 ```bash
-# 构建项目（不打包）
-npm run build
+# 打包当前平台应用
+pnpm run package
 
-# 构建并运行生产版本（用于测试构建产物）
-npm run start:prod
+# 构建并运行生产版本
+pnpm run start:prod
 ```
 
 ### 代码检查
 
 ```bash
 pnpm run lint
+pnpm exec tsc --noEmit
 ```
 
 ## 📦 构建
@@ -119,16 +123,16 @@ pnpm run lint
 
 | 命令 | 说明 | 用途 |
 |------|------|------|
-| `npm start` | 启动开发模式 | 开发时使用，支持热重载 |
-| `npm run build` | 构建项目 | 仅构建代码，不打包，产物在 `.vite/build` 目录 |
-| `npm run start:prod` | 构建并运行生产版本 | 构建后直接运行，用于测试生产环境 |
-| `npm run package` | 打包应用 | 打包成可执行文件，不生成安装程序 |
-| `npm run make` | 构建 macOS 版本（默认） | 生成 macOS (arm64 + x64) ZIP 文件 |
-| `npm run make:mac` | 构建 macOS 版本 | 生成 macOS (arm64 + x64) ZIP 文件 |
-| `npm run make:win` | 构建 Windows 版本 | 生成 Windows (x64) ZIP 文件 |
-| `npm run make:win-installer` | 构建 Windows 安装程序* | 生成 Windows Squirrel 安装程序 |
-| `npm run make:all` | 构建所有平台 | 同时构建 macOS 和 Windows 版本 |
-| `npm run lint` | 代码检查 | 运行 ESLint 检查代码规范 |
+| `pnpm start` | 启动开发模式 | 开发时使用，支持热重载 |
+| `pnpm run package` | 打包当前平台应用 | 生成当前平台可执行产物 |
+| `pnpm run start:prod` | 打包并运行生产版本 | 用于验证生产构建结果 |
+| `pnpm run make:mac` | 构建 macOS 版本 | 生成 macOS (arm64 + x64) ZIP 文件 |
+| `pnpm run make:win` | 构建 Windows 版本 | 生成 Windows (x64) ZIP 文件 |
+| `pnpm run make:win-installer` | 构建 Windows 安装程序* | 生成 Windows Squirrel 安装程序 |
+| `pnpm run make:linux` | 构建 Linux 版本 | 生成 Linux deb 包 |
+| `pnpm run make:all` | 构建所有平台 | 同时构建 macOS、Windows 与 Linux 版本 |
+| `pnpm run lint` | 代码检查 | 运行 ESLint 检查代码规范 |
+| `pnpm exec tsc --noEmit` | 类型检查 | 运行 TypeScript 检查 |
 
 > *注意：Windows 安装程序（.exe）需要在 Windows 环境中构建，或在 macOS 上安装 Wine 和 Mono
 
@@ -178,15 +182,17 @@ pnpm run make:all
 
 ### 托盘菜单 & 切换模型
 
-托盘菜单包含常用的窗口与启动项控制：
+托盘菜单包含当前已经稳定支持的控制项：
 
-- `Auto-launch on startup`：勾选后随系统启动（macOS 通过 Login Item 设置）
-- `窗口行为`：
-  - `自动隐藏`：失焦 100ms 自动收起（默认行为）
-  - `锁定在桌面`：窗口失焦依然保持可见，可被其他应用遮挡
-  - `置顶于所有应用`：窗口始终置顶，适合持续对照参考
-- `Set shortcut`：打开快捷键输入对话框，自定义全局快捷键（保留最近 **10 条历史记录**，支持一键清空）
-- `Set Proxy`：配置 HTTP/HTTPS 代理，解决网络连接问题（保留最近 **10 条历史记录**，支持一键清空）
+- `Model`：切换当前模型
+- `Always on top`：切换窗口置顶状态
+- `Set shortcut`：打开快捷键输入对话框，自定义全局快捷键（保留最近 **10 条历史记录**）
+- `Set Proxy`：配置代理，解决网络连接问题（保留最近 **10 条历史记录**）
+- `Auto-launch on startup`：勾选后随系统启动
+- `Language`：切换托盘菜单语言
+- `Reload`：重新加载当前窗口
+- `Check for updates`：检查更新
+- `Quit`：退出应用
 
 切换模型步骤：
 
@@ -199,7 +205,8 @@ pnpm run make:all
 - 当前选择的模型
 - 每个模型的最后访问 URL
 - 代理设置
-- 窗口行为偏好
+- 快捷键设置
+- 菜单语言与窗口置顶偏好
 
 **配置文件位置：**
 - macOS: `~/Library/Application Support/chathub-desktop/config/settings.json`
@@ -209,37 +216,55 @@ pnpm run make:all
 
 ### 项目结构
 
-```
+```text
 chathub-desktop/
 ├── src/
-│   ├── main.ts              # Electron 主进程
-│   ├── preload.ts           # 预加载脚本（IPC 通信桥梁）
-│   ├── webview-preload.ts   # WebView 预加载脚本
-│   ├── renderer.ts          # 渲染进程
-│   ├── tray-context-menu.ts # 系统托盘上下文菜单
-│   ├── window-manager.ts    # 主窗口状态与行为
-│   ├── shortcut-manager.ts  # 全局快捷键注册
-│   ├── shortcut-input-dialog.ts # 快捷键输入对话框
-│   ├── proxy-input-dialog.ts    # 代理设置对话框
-│   ├── webview-handlers.ts  # WebView 事件与通信
-│   ├── url-tracker.ts       # 模型 URL 追踪
-│   ├── constants.ts         # 常量定义（模型和 URL 枚举）
+│   ├── core/                # 启动装配、主窗口、托盘与应用事件
+│   ├── dialogs/             # 输入型对话框模板与共享逻辑
+│   ├── handlers/            # 快捷键/代理等交互型 handler
 │   ├── i18n/
-│   │   └── tray-menu.ts     # 托盘菜单国际化
-│   └── utils/
-│       ├── common.ts        # 通用工具函数
-│       ├── user-setting.ts  # 用户设置管理
-│       └── update-manager.ts # 更新检查管理
+│   │   └── tray-menu.ts     # 托盘菜单国际化文案
+│   ├── services/            # settings 与 tray action 服务层
+│   ├── utils/               # 通用工具、URL 追踪、更新检查、ready signal
+│   ├── main.ts              # Electron 主进程极薄入口
+│   ├── preload.ts           # 主窗口 preload
+│   ├── webview-preload.ts   # WebView preload（登录兼容与环境伪装）
+│   ├── renderer.ts          # 渲染进程入口
+│   ├── tray-context-menu.ts # 托盘菜单模板与 controller
+│   ├── window-manager.ts    # 主窗口引用与生命周期控制
+│   ├── shortcut-manager.ts  # 全局快捷键注册
+│   ├── shortcut-input-dialog.ts # 快捷键输入对话框入口
+│   ├── proxy-input-dialog.ts    # 代理设置对话框入口
+│   └── webview-handlers.ts  # WebView 事件与通信
+├── docs/
+│   ├── 重构实施记录.md      # 本轮重构全过程记录
+│   └── 谷歌登录绕过方案.md  # 登录兼容方案说明
 ├── images/                  # 图标资源
 ├── index.html               # 主 HTML 文件
-├── index.css               # 主样式文件
-├── forge.config.ts         # Electron Forge 配置
-├── vite.base.config.ts     # Vite 基础配置
-├── vite.main.config.ts     # Vite 主进程配置
-├── vite.preload.config.ts  # Vite 预加载配置
-├── vite.renderer.config.ts # Vite 渲染进程配置
-└── package.json            # 项目配置
+├── index.css                # 主样式文件
+├── forge.config.ts          # Electron Forge 配置
+├── vite.base.config.ts      # Vite 基础配置
+├── vite.main.config.ts      # Vite 主进程配置
+├── vite.preload.config.ts   # Vite 预加载配置
+├── vite.renderer.config.ts  # Vite 渲染进程配置
+└── package.json             # 项目配置
 ```
+
+### 当前主进程结构
+
+重构后，主进程职责大致分为四层：
+
+- `main.ts`：只保留启动入口
+- `core/*`：负责应用启动装配、主窗口创建、托盘事件、应用生命周期
+- `services/*`：负责设置访问与 tray 业务动作
+- `handlers/*` / `dialogs/*`：负责具体交互流程与输入型对话框
+
+这样的结构能避免入口文件继续膨胀，也更方便后续继续添加模型、菜单能力或平台行为。
+
+## 📚 项目文档
+
+- `docs/重构实施记录.md`：本轮重构从稳定基线开始的完整实施记录，适合了解拆分思路、阶段目标与提交边界
+- `docs/谷歌登录绕过方案.md`：Google / Gemini 登录兼容相关说明
 
 ## ❓ 常见问题
 
