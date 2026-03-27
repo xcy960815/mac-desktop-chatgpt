@@ -15,7 +15,7 @@
     "make:mac:arm64": "electron-forge make --platform darwin --arch arm64",
     "make:mac:x64": "electron-forge make --platform darwin --arch x64",
     "make:mac": "npm run make:mac:arm64 && npm run make:mac:x64",
-    "make:win": "electron-forge make --platform win32 --arch x64 --targets @electron-forge/maker-zip",
+    "make:win": "electron-forge make --platform win32 --arch x64",
     "make:win-installer": "electron-forge make --platform win32 --arch x64",
     "make:linux": "electron-forge make --platform linux --arch x64 --targets @electron-forge/maker-deb",
     "make:all": "npm run make:mac && npm run make:win && npm run make:linux",
@@ -76,7 +76,9 @@
   },
   "license": "MIT",
   "dependencies": {
-    "electron-context-menu": "^3.6.1"
+    "electron-context-menu": "^3.6.1",
+    "electron-squirrel-startup": "^1.0.1",
+    "update-electron-app": "^3.1.2"
   },
   "volta": {
     "node": "20.19.0"

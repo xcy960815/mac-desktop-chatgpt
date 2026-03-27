@@ -191,7 +191,7 @@ pnpm run make:all
 - `Auto-launch on startup`：勾选后随系统启动
 - `Language`：切换托盘菜单语言
 - `Reload`：重新加载当前窗口
-- `Check for updates`：检查更新
+- `Check for updates`：检查更新。Windows 正式安装版已支持自动检查、后台下载并提示重启安装；macOS 与 Linux 保持手动更新
 - `Quit`：退出应用
 
 切换模型步骤：

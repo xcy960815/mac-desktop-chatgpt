@@ -1,10 +1,13 @@
 import { app } from 'electron'
+import electronSquirrelStartup from 'electron-squirrel-startup'
 
 import { setupAppConfig } from '@/core/app-config'
 import { bootstrapApp } from '@/core/bootstrap'
 
-setupAppConfig()
+if (!electronSquirrelStartup) {
+  setupAppConfig()
 
-app.on('ready', async () => {
-  await bootstrapApp()
-})
+  app.on('ready', async () => {
+    await bootstrapApp()
+  })
+}
