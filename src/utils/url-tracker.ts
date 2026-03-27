@@ -1,9 +1,6 @@
 import { BrowserWindow } from 'electron'
 
-import {
-  readUserSetting,
-  writeUserSetting
-} from '@/utils/user-setting'
+import { settingsService } from '@/services/settings-service'
 
 /**
  * 初始化上次访问的 URL 跟踪
@@ -13,7 +10,7 @@ import {
 export const initializeLastVisitedUrlTracking = (
   browserWindow: BrowserWindow
 ) => {
-  const userSetting = readUserSetting()
+  const userSetting = settingsService.get()
   if (userSetting.lastVisitedUrl) {
     browserWindow.loadURL(userSetting.lastVisitedUrl)
   }
@@ -21,11 +18,7 @@ export const initializeLastVisitedUrlTracking = (
   browserWindow.webContents.on(
     'did-navigate',
     (_event, url) => {
-      const currentSetting = readUserSetting()
-      writeUserSetting({
-        ...currentSetting,
-        lastVisitedUrl: url
-      })
+      settingsService.setLastVisitedUrl(url)
     }
   )
 }
