@@ -10,10 +10,10 @@ import { CustomBrowserWindow } from '@/utils/constants'
  * 窗口管理器事件
  */
 export interface WindowManagerEvents {
-  show: () => void
-  hide: () => void
-  'after-show': () => void
-  'after-hide': () => void
+  'window-will-show': () => void
+  'window-did-show': () => void
+  'window-will-hide': () => void
+  'window-did-hide': () => void
 }
 
 /**
@@ -84,9 +84,9 @@ export const createWindowManager = (): WindowManager => {
       return
     }
 
-    emit('hide')
+    emit('window-will-hide')
     browserWindow.hide()
-    emit('after-hide')
+    emit('window-did-hide')
   }
 
   const showWindow = async (): Promise<void> => {
@@ -95,7 +95,7 @@ export const createWindowManager = (): WindowManager => {
       return
     }
 
-    emit('show')
+    emit('window-will-show')
 
     // 标准显示逻辑
     browserWindow.center()
@@ -103,7 +103,7 @@ export const createWindowManager = (): WindowManager => {
     browserWindow.show()
     browserWindow.focus()
 
-    emit('after-show')
+    emit('window-did-show')
   }
 
   const toggleWindow = async () => {
