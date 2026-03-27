@@ -3,11 +3,8 @@ import contextMenu from 'electron-context-menu'
 
 import { WindowManager } from '@/window-manager'
 import { ModelUrl } from '@/utils/constants'
-import {
-  readUserSetting,
-  writeUserSetting,
-  UserSetting
-} from '@/utils/user-setting'
+import { UserSetting } from '@/utils/user-setting'
+import { settingsService } from '@/services/settings-service'
 
 type UserSettingWithUrls = UserSetting & {
   urls: Required<UserSetting['urls']>
@@ -18,13 +15,15 @@ type UserSettingWithUrls = UserSetting & {
  * @returns {UserSetting} 初始化后的用户设置对象
  */
 const ensureUrlsInitialized = (): UserSettingWithUrls => {
-  const currentSetting = readUserSetting()
+  const currentSetting = settingsService.get()
   if (!currentSetting.urls) {
     currentSetting.urls = {
       ChatGPT: ModelUrl.ChatGPT,
       DeepSeek: ModelUrl.DeepSeek,
       Grok: ModelUrl.Grok,
-      Gemini: ModelUrl.Gemini
+      Gemini: ModelUrl.Gemini,
+      Qwen: ModelUrl.Qwen,
+      Doubao: ModelUrl.Doubao
     }
   }
   return currentSetting as UserSettingWithUrls
@@ -39,7 +38,7 @@ const saveWebViewUrl = (url: string) => {
   const currentSetting = ensureUrlsInitialized()
   const currentModel = currentSetting.model
   currentSetting.urls[currentModel] = url
-  writeUserSetting(currentSetting)
+  settingsService.save(currentSetting)
 }
 
 /**
@@ -78,12 +77,7 @@ const registerLoadFailureHandler = (
 ) => {
   webContents.on(
     'did-fail-load',
-    (
-      _event,
-      errorCode,
-      errorDescription,
-      _validatedURL
-    ) => {
+    (_event, errorCode, errorDescription) => {
       if (errorCode === -3 || Math.abs(errorCode) === 0) {
         return
       }

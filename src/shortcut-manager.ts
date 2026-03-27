@@ -1,10 +1,7 @@
 import { globalShortcut, ipcMain } from 'electron'
 
 import { WindowManager } from '@/window-manager'
-import {
-  readUserSetting,
-  writeUserSetting
-} from '@/utils/user-setting'
+import { settingsService } from '@/services/settings-service'
 
 /**
  * 快捷键管理器接口
@@ -79,9 +76,7 @@ export const createShortcutManager = ({
       globalShortcut.unregister(currentShortcut)
     }
 
-    const userSetting = readUserSetting()
-    const shortcut =
-      userSetting.toggleShortcut || 'CommandOrControl+g'
+    const shortcut = settingsService.getToggleShortcut()
 
     const registered = registerShortcut(shortcut)
     if (registered) {
@@ -123,11 +118,7 @@ export const createShortcutManager = ({
         const registered = registerShortcut(shortcut)
 
         if (registered) {
-          const userSetting = readUserSetting()
-          writeUserSetting({
-            ...userSetting,
-            toggleShortcut: shortcut
-          })
+          settingsService.setToggleShortcut(shortcut)
           currentShortcut = shortcut
           return {
             success: true,
@@ -148,10 +139,7 @@ export const createShortcutManager = ({
     )
 
     ipcMain.handle('get-toggle-shortcut', () => {
-      const userSetting = readUserSetting()
-      return (
-        userSetting.toggleShortcut || 'CommandOrControl+g'
-      )
+      return settingsService.getToggleShortcut()
     })
   }
 
