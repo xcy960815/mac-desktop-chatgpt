@@ -168,7 +168,7 @@ const registerMacHideHandler = (
     return
   }
 
-  windowManager.on('after-hide', () => {
+  windowManager.on('window-did-hide', () => {
     if (process.platform === 'darwin') {
       app.hide()
     }

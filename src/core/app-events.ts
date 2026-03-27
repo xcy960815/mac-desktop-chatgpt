@@ -28,7 +28,7 @@ export const registerAppLifecycleEvents = (
 export const registerModelSyncEvents = (
   windowManager: WindowManager
 ): void => {
-  windowManager.on('after-show', async () => {
+  windowManager.on('window-did-show', async () => {
     const win = windowManager.getMainBrowserWindow()
     if (!win) return
 
