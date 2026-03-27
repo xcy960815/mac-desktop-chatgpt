@@ -1,13 +1,10 @@
 import { app, dialog, session } from 'electron'
-import {
-  readUserSetting,
-  writeUserSetting
-} from '@/utils/user-setting'
 import { TrayContextMenuOptions } from '@/tray-context-menu'
 import { showProxyInputDialog } from '@/proxy-input-dialog'
 import { getTrayMenuText } from '@/i18n/tray-menu'
 import { MenuLanguage } from '@/utils/constants'
 import { getAppIcon } from '@/utils/common'
+import { settingsService } from '@/services/settings-service'
 
 /**
  * 延迟指定的时间
@@ -29,7 +26,7 @@ export const createProxyHandler = (
 ) => {
   return async () => {
     try {
-      const userSetting = readUserSetting()
+      const userSetting = settingsService.get()
       const savedProxy = userSetting.proxy || ''
 
       if (!options.isMenubarReady()) {
@@ -62,7 +59,6 @@ export const createProxyHandler = (
 
       if (input !== null) {
         const proxy = input.trim()
-        const currentSetting = readUserSetting()
 
         // 检查是否有变更
         // 校验代理格式
@@ -100,20 +96,18 @@ export const createProxyHandler = (
           }
         }
 
-        const history = currentSetting.proxyHistory || []
-        let newHistory = history
-        if (proxy) {
-          newHistory = [
-            proxy,
-            ...history.filter((p) => p !== proxy)
-          ].slice(0, 10)
-        }
-
-        writeUserSetting({
-          ...currentSetting,
+        settingsService.update((settings) => ({
+          ...settings,
           proxy: proxy || undefined,
-          proxyHistory: newHistory
-        })
+          proxyHistory: proxy
+            ? [
+                proxy,
+                ...(settings.proxyHistory || []).filter(
+                  (item) => item !== proxy
+                )
+              ].slice(0, 10)
+            : settings.proxyHistory || []
+        }))
 
         // 应用代理设置
         if (proxy) {
