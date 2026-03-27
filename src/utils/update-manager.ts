@@ -1,79 +1,118 @@
 import {
-  dialog,
-  BrowserWindow,
   app,
-  shell,
+  autoUpdater,
+  BrowserWindow,
+  dialog,
   MessageBoxOptions,
-  net
+  net,
+  shell
 } from 'electron'
+import {
+  updateElectronApp,
+  UpdateSourceType
+} from 'update-electron-app'
+
 import { getAppIcon } from '@/utils/common'
-/**
- * GitHub Release 接口定义
- */
+
 interface GitHubRelease {
-  url: string
-  assets_url: string
-  upload_url: string
-  html_url: string
-  id: number
-  author: {
-    login: string
-    id: number
-    node_id: string
-    avatar_url: string
-    gravatar_id: string
-    url: string
-    html_url: string
-    followers_url: string
-    following_url: string
-    gists_url: string
-    starred_url: string
-    subscriptions_url: string
-    organizations_url: string
-    repos_url: string
-    events_url: string
-    received_events_url: string
-    type: string
-    site_admin: boolean
-  }
-  node_id: string
   tag_name: string
-  target_commitish: string
-  name: string
-  draft: boolean
-  prerelease: boolean
-  created_at: string
-  published_at: string
-  assets: Array<Record<string, unknown>>
-  tarball_url: string
-  zipball_url: string
-  body: string
+}
+
+interface CreateUpdateManagerOptions {
+  getWindow?: () => BrowserWindow | null
 }
 
 /**
  * 更新管理器
- * 负责检查和应用更新
+ * Windows 的正式安装版启用应用内自动更新，
+ * macOS / Linux 以及其他场景仍使用 GitHub Release 手动下载。
  */
 export class UpdateManager {
   private checkingUpdate = false
+  private downloadingUpdate = false
+  private autoUpdateInitialized = false
+  private manualCheckWindow: BrowserWindow | null = null
+
+  private readonly getWindow: () => BrowserWindow | null
   private readonly RELEASES_URL =
     'https://github.com/xcy960815/mac-desktop-chatgpt/releases'
   private readonly API_URL =
     'https://api.github.com/repos/xcy960815/mac-desktop-chatgpt/releases/latest'
+  private readonly REPOSITORY =
+    'xcy960815/mac-desktop-chatgpt'
+  private readonly AUTO_UPDATE_PLATFORMS =
+    new Set<NodeJS.Platform>(['win32'])
 
-  constructor() {
-    // 无需初始化配置
+  constructor({
+    getWindow = () => null
+  }: CreateUpdateManagerOptions = {}) {
+    this.getWindow = getWindow
   }
 
-  /**
-   * 检查更新
-   * @param {BrowserWindow | null} window - 用于显示对话框的窗口
-   * @returns {Promise<void>}
-   */
+  initialize(): void {
+    if (
+      this.autoUpdateInitialized ||
+      !this.shouldUseAutoUpdater()
+    ) {
+      return
+    }
+
+    this.registerAutoUpdaterEvents()
+
+    updateElectronApp({
+      updateSource: {
+        type: UpdateSourceType.ElectronPublicUpdateService,
+        repo: this.REPOSITORY
+      },
+      updateInterval: '10 minutes',
+      notifyUser: false,
+      logger: console
+    })
+
+    this.autoUpdateInitialized = true
+  }
+
   async checkForUpdates(
     window: BrowserWindow | null = null
   ): Promise<void> {
+    const targetWindow = this.resolveWindow(window)
+
     if (this.checkingUpdate) {
+      await this.showInfoDialog(
+        targetWindow,
+        '检查更新',
+        '正在检查更新，请稍后再试。'
+      )
+      return
+    }
+
+    if (this.shouldUseAutoUpdater()) {
+      if (this.downloadingUpdate) {
+        await this.showInfoDialog(
+          targetWindow,
+          '检查更新',
+          '新版本正在后台下载，下载完成后会提示安装。'
+        )
+        return
+      }
+
+      this.initialize()
+      this.manualCheckWindow = targetWindow
+      this.checkingUpdate = true
+
+      try {
+        autoUpdater.checkForUpdates()
+      } catch (error) {
+        this.checkingUpdate = false
+        this.manualCheckWindow = null
+
+        await this.showErrorDialog(
+          targetWindow,
+          error instanceof Error
+            ? error.message
+            : '触发自动更新失败'
+        )
+      }
       return
     }
 
@@ -83,11 +122,13 @@ export class UpdateManager {
       const latestRelease = await this.getLatestRelease()
 
       if (!latestRelease) {
-        this.showErrorDialog(window, '无法获取版本信息')
+        await this.showErrorDialog(
+          targetWindow,
+          '无法获取版本信息'
+        )
         return
       }
 
-      // 移除版本号中的 'v' 前缀
       const latestVersion = latestRelease.tag_name.replace(
         /^v/,
         ''
@@ -100,18 +141,18 @@ export class UpdateManager {
       if (
         this.isNewerVersion(latestVersion, currentVersion)
       ) {
-        this.showUpdateAvailableDialog(
-          window,
+        await this.showManualUpdateDialog(
+          targetWindow,
           latestVersion,
           currentVersion
         )
       } else {
-        this.showNoUpdateDialog(window)
+        await this.showNoUpdateDialog(targetWindow)
       }
     } catch (error) {
       console.error('检查更新失败:', error)
-      this.showErrorDialog(
-        window,
+      await this.showErrorDialog(
+        targetWindow,
         error instanceof Error
           ? error.message
           : '检查更新时发生未知错误'
@@ -121,9 +162,77 @@ export class UpdateManager {
     }
   }
 
-  /**
-   * 获取最新发布信息
-   */
+  private shouldUseAutoUpdater(): boolean {
+    return (
+      app.isPackaged &&
+      this.AUTO_UPDATE_PLATFORMS.has(process.platform)
+    )
+  }
+
+  private registerAutoUpdaterEvents(): void {
+    autoUpdater.on('checking-for-update', () => {
+      this.checkingUpdate = true
+    })
+
+    autoUpdater.on('update-available', async () => {
+      this.checkingUpdate = false
+      this.downloadingUpdate = true
+
+      if (!this.manualCheckWindow) {
+        return
+      }
+
+      await this.showInfoDialog(
+        this.manualCheckWindow,
+        '发现新版本',
+        '发现新版本，正在后台下载。下载完成后会提示安装。'
+      )
+    })
+
+    autoUpdater.on('update-not-available', async () => {
+      this.checkingUpdate = false
+      this.downloadingUpdate = false
+
+      if (!this.manualCheckWindow) {
+        return
+      }
+
+      await this.showNoUpdateDialog(this.manualCheckWindow)
+      this.manualCheckWindow = null
+    })
+
+    autoUpdater.on('update-downloaded', async () => {
+      this.checkingUpdate = false
+      this.downloadingUpdate = false
+
+      await this.showRestartToInstallDialog(
+        this.manualCheckWindow
+      )
+
+      this.manualCheckWindow = null
+    })
+
+    autoUpdater.on('error', async (error) => {
+      console.error('自动更新失败:', error)
+
+      this.checkingUpdate = false
+      this.downloadingUpdate = false
+
+      if (!this.manualCheckWindow) {
+        return
+      }
+
+      await this.showErrorDialog(
+        this.manualCheckWindow,
+        error instanceof Error
+          ? error.message
+          : '自动更新失败'
+      )
+
+      this.manualCheckWindow = null
+    })
+  }
+
   private getLatestRelease(): Promise<GitHubRelease> {
     return new Promise((resolve, reject) => {
       const request = net.request(this.API_URL)
@@ -147,7 +256,7 @@ export class UpdateManager {
           try {
             const json = JSON.parse(data) as GitHubRelease
             resolve(json)
-          } catch (e) {
+          } catch {
             reject(new Error('解析响应数据失败'))
           }
         })
@@ -161,104 +270,114 @@ export class UpdateManager {
     })
   }
 
-  /**
-   * 显示有更新可用的对话框
-   */
-  private showUpdateAvailableDialog(
+  private async showManualUpdateDialog(
     window: BrowserWindow | null,
     newVersion: string,
     currentVersion: string
-  ): void {
-    const message = `发现新版本 ${newVersion}（当前版本：${currentVersion}）\n\n请前往 GitHub 下载最新版本安装。`
-
-    const options: MessageBoxOptions = {
-      icon: getAppIcon(),
+  ): Promise<void> {
+    const result = await this.showMessageBox(window, {
       type: 'info',
       title: '发现新版本',
-      message,
+      message: `发现新版本 ${newVersion}（当前版本：${currentVersion}）\n\n请前往 GitHub 下载最新版本安装。`,
       buttons: ['前往下载', '取消'],
       defaultId: 0,
       cancelId: 1
-    }
+    })
 
-    const handleResponse = (response: number) => {
-      if (response === 0) {
-        shell.openExternal(this.RELEASES_URL)
-      }
-    }
-
-    if (window && !window.isDestroyed()) {
-      dialog
-        .showMessageBox(window, options)
-        .then((result) => {
-          handleResponse(result.response)
-        })
-    } else {
-      dialog.showMessageBox(options).then((result) => {
-        handleResponse(result.response)
-      })
+    if (result.response === 0) {
+      await shell.openExternal(this.RELEASES_URL)
     }
   }
 
-  /**
-   * 显示无更新对话框
-   */
-  private showNoUpdateDialog(
+  private async showNoUpdateDialog(
     window: BrowserWindow | null
-  ): void {
-    const message = '当前已是最新版本'
-    if (window && !window.isDestroyed()) {
-      dialog.showMessageBox(window, {
-        icon: getAppIcon(),
-        type: 'info',
-        title: '检查更新',
-        message,
-        buttons: ['确定']
-      })
-    } else {
-      dialog.showMessageBox({
-        icon: getAppIcon(),
-        type: 'info',
-        title: '检查更新',
-        message,
-        buttons: ['确定']
-      })
-    }
+  ): Promise<void> {
+    await this.showMessageBox(window, {
+      type: 'info',
+      title: '检查更新',
+      message: '当前已是最新版本',
+      buttons: ['确定']
+    })
   }
 
-  /**
-   * 显示错误对话框
-   */
-  private showErrorDialog(
+  private async showErrorDialog(
     window: BrowserWindow | null,
     errorMessage: string
-  ): void {
-    const message = `检查更新失败：${errorMessage}`
-    if (window && !window.isDestroyed()) {
-      dialog.showMessageBox(window, {
-        icon: getAppIcon(),
-        type: 'error',
-        title: '检查更新失败',
-        message,
-        buttons: ['确定']
-      })
-    } else {
-      dialog.showMessageBox({
-        icon: getAppIcon(),
-        type: 'error',
-        title: '检查更新失败',
-        message,
-        buttons: ['确定']
-      })
+  ): Promise<void> {
+    await this.showMessageBox(window, {
+      type: 'error',
+      title: '检查更新失败',
+      message: `检查更新失败：${errorMessage}`,
+      buttons: ['确定']
+    })
+  }
+
+  private async showInfoDialog(
+    window: BrowserWindow | null,
+    title: string,
+    message: string
+  ): Promise<void> {
+    await this.showMessageBox(window, {
+      type: 'info',
+      title,
+      message,
+      buttons: ['确定']
+    })
+  }
+
+  private async showRestartToInstallDialog(
+    window: BrowserWindow | null
+  ): Promise<void> {
+    const result = await this.showMessageBox(window, {
+      type: 'info',
+      title: '更新已下载',
+      message:
+        '新版本已经下载完成，重启应用后即可完成安装。',
+      buttons: ['立即重启', '稍后'],
+      defaultId: 0,
+      cancelId: 1
+    })
+
+    if (result.response === 0) {
+      autoUpdater.quitAndInstall()
     }
   }
 
-  /**
-   * 比较版本号
-   * @param {string} version1 - 版本号1
-   * @param {string} version2 - 版本号2
-   * @returns {boolean} 如果 version1 大于 version2 返回 true
-   */
+  private showMessageBox(
+    window: BrowserWindow | null,
+    options: MessageBoxOptions
+  ) {
+    const dialogOptions = {
+      icon: getAppIcon(),
+      ...options
+    }
+    const targetWindow = this.resolveWindow(window)
+
+    if (targetWindow) {
+      return dialog.showMessageBox(
+        targetWindow,
+        dialogOptions
+      )
+    }
+
+    return dialog.showMessageBox(dialogOptions)
+  }
+
+  private resolveWindow(
+    window: BrowserWindow | null = null
+  ): BrowserWindow | null {
+    if (window && !window.isDestroyed()) {
+      return window
+    }
+
+    const currentWindow = this.getWindow()
+    if (currentWindow && !currentWindow.isDestroyed()) {
+      return currentWindow
+    }
+
+    return null
+  }
+
   private isNewerVersion(
     version1: string,
     version2: string
@@ -286,10 +405,8 @@ export class UpdateManager {
   }
 }
 
-/**
- * 创建更新管理器实例
- * @returns {UpdateManager}
- */
-export function createUpdateManager(): UpdateManager {
-  return new UpdateManager()
+export function createUpdateManager(
+  options: CreateUpdateManagerOptions = {}
+): UpdateManager {
+  return new UpdateManager(options)
 }
