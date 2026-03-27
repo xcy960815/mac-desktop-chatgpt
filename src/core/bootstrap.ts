@@ -111,7 +111,8 @@ const registerWindowInputShortcuts = (
 
 const registerTrayEvents = (
   tray: Electron.Tray,
-  windowManager: WindowManager
+  windowManager: WindowManager,
+  getContextMenu: () => Electron.Menu | null
 ): void => {
   tray.on('click', () => {
     windowManager.toggleWindow()
@@ -119,7 +120,7 @@ const registerTrayEvents = (
 
   if (process.platform !== 'linux') {
     tray.on('right-click', () => {
-      const contextMenu = tray._contextMenu
+      const contextMenu = getContextMenu()
       if (contextMenu) {
         tray.popUpContextMenu(contextMenu)
       }
@@ -174,7 +175,7 @@ export const bootstrapApp =
     setupApplicationMenu()
     registerWindowInputShortcuts(browserWindow)
 
-    setupTrayContextMenu({
+    const trayContextMenuController = setupTrayContextMenu({
       tray,
       isMenubarReady: menubarReadySignal.isReady,
       waitForMenubarReady:
@@ -193,7 +194,11 @@ export const bootstrapApp =
       updateManager
     })
 
-    registerTrayEvents(tray, windowManager)
+    registerTrayEvents(
+      tray,
+      windowManager,
+      trayContextMenuController.getContextMenu
+    )
 
     shortcutManager.registerToggleShortcut()
     shortcutManager.registerIpcHandlers()

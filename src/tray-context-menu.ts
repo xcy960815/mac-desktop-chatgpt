@@ -35,6 +35,11 @@ export interface TrayContextMenuOptions {
   updateManager: UpdateManager
 }
 
+export interface TrayContextMenuController {
+  updateContextMenu(): Promise<void>
+  getContextMenu(): Menu | null
+}
+
 interface TrayMenuState {
   currentModel: Model
   alwaysOnTop: boolean
@@ -108,8 +113,9 @@ const createTrayMenuActions = (
  */
 export const setupTrayContextMenu = (
   options: TrayContextMenuOptions
-) => {
+): TrayContextMenuController => {
   const { tray } = options
+  let currentContextMenu: Menu | null = null
 
   const updateContextMenu = async () => {
     const {
@@ -228,16 +234,19 @@ export const setupTrayContextMenu = (
       }
     ])
 
+    currentContextMenu = contextMenu
+
     // Linux 使用 setContextMenu 直接绑定（AppIndicator 不支持 right-click 事件）
-    // macOS/Windows 存储菜单供右键事件处理程序使用
+    // macOS/Windows 通过显式 getter 暴露给右键事件处理程序
     if (process.platform === 'linux') {
       tray.setContextMenu(contextMenu)
-    } else {
-      tray._contextMenu = contextMenu
     }
   }
 
   updateContextMenu()
 
-  return updateContextMenu
+  return {
+    updateContextMenu,
+    getContextMenu: () => currentContextMenu
+  }
 }

@@ -39,7 +39,7 @@ export interface WindowManager extends EventEmitter {
 export const createWindowManager = (): WindowManager => {
   const eventEmitter = new EventEmitter()
   let mainBrowserWindow: BrowserWindow | null = null
-  const noop = () => undefined
+  const noop = (): void => undefined
   let cleanupWindowListeners = noop
 
   // Helper to emit typed events
