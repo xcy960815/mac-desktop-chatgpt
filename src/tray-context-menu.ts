@@ -1,57 +1,103 @@
 import { BrowserWindow, Menu, Tray } from 'electron'
 
-import { WindowManager } from '@/window-manager'
-import { readUserSetting } from '@/utils/user-setting'
 import { MenuLanguage, Model } from '@/utils/constants'
 import {
   getTrayMenuText,
   TrayMenuMessageKey
 } from '@/i18n/tray-menu'
 import { UpdateManager } from '@/utils/update-manager'
-
-import { createModelSwitchHandler } from './handlers/model-handler'
-import { createShortcutHandler } from './handlers/shortcut-handler'
+import { settingsService } from '@/services/settings-service'
+import { createTrayActionService } from '@/services/tray-action-service'
 import { createProxyHandler } from './handlers/proxy-handler'
-import {
-  handleAutoLaunchToggle,
-  handleAlwaysOnTopToggle,
-  handleMenuLanguageChange,
-  handleReload,
-  handleCheckForUpdates,
-  handleQuit
-} from './handlers/system-handler'
+import { createShortcutHandler } from './handlers/shortcut-handler'
+
+export interface TrayMenuUrls {
+  chatgpt: string
+  deepseek: string
+  grok: string
+  gemini: string
+  qwen: string
+  doubao: string
+}
 
 export interface TrayContextMenuOptions {
-  /** 系统托盘实例 */
   tray: Tray
-  /** 窗口管理器实例 */
-  windowManager: WindowManager
-
-  /** 各模型的 URL 配置 */
-  urls: {
-    chatgpt: string
-    deepseek: string
-    grok: string
-    gemini: string
-    qwen: string
-    doubao: string
-  }
-  /** 检查菜单栏是否已就绪 */
   isMenubarReady(): boolean
-  /** 获取主浏览器窗口 */
-  getMainBrowserWindow(): BrowserWindow | null
-  /** 设置主浏览器窗口 */
-  setMainBrowserWindow(window: BrowserWindow | null): void
-  /** 获取当前快捷键 */
+  getBrowserWindow(): BrowserWindow | null
+  toggleWindow(): void | Promise<void>
+  setAlwaysOnTop(alwaysOnTop: boolean): void
   getCurrentShortcut(): string | null
-  /** 设置当前快捷键 */
   setCurrentShortcut(shortcut: string | null): void
-  /** 在浏览器窗口上执行任务 */
   withBrowserWindow<T>(
     task: (win: BrowserWindow) => T | Promise<T>
   ): Promise<T | null>
-  /** 更新管理器 */
   updateManager: UpdateManager
+}
+
+interface TrayMenuState {
+  currentModel: Model
+  alwaysOnTop: boolean
+  isAutoLaunchEnabled: boolean
+  menuLanguage: MenuLanguage
+}
+
+interface TrayMenuActions {
+  onModelChange(model: Model): () => void
+  onAlwaysOnTopToggle(): () => void
+  onSetShortcut(): () => Promise<void>
+  onSetProxy(): () => Promise<void>
+  onAutoLaunchToggle(enabled: boolean): void
+  onLanguageChange(language: MenuLanguage): () => void
+  onReload(): () => Promise<void>
+  onCheckForUpdates(): () => Promise<void>
+  onQuit(): () => void
+}
+
+const getTrayMenuState = (): TrayMenuState => {
+  const userSetting = settingsService.get()
+
+  return {
+    currentModel: userSetting.model || Model.ChatGPT,
+    alwaysOnTop: !!userSetting.alwaysOnTop,
+    isAutoLaunchEnabled: !!userSetting.autoLaunchOnStartup,
+    menuLanguage:
+      userSetting.menuLanguage ?? MenuLanguage.Chinese
+  }
+}
+
+const createTrayMenuActions = (
+  context: TrayContextMenuOptions,
+  menuLanguage: MenuLanguage,
+  updateContextMenu: () => void
+): TrayMenuActions => {
+  const trayActionService = createTrayActionService({
+    context,
+    menuLanguage,
+    updateContextMenu
+  })
+
+  return {
+    onModelChange: (model: Model) =>
+      trayActionService.switchModel(model),
+    onAlwaysOnTopToggle: () =>
+      trayActionService.toggleAlwaysOnTop(),
+    onSetShortcut: () =>
+      createShortcutHandler(
+        context,
+        updateContextMenu,
+        menuLanguage
+      ),
+    onSetProxy: () =>
+      createProxyHandler(context, menuLanguage),
+    onAutoLaunchToggle: (enabled: boolean) =>
+      trayActionService.toggleAutoLaunch(enabled),
+    onLanguageChange: (language: MenuLanguage) =>
+      trayActionService.changeMenuLanguage(language),
+    onReload: () => trayActionService.reloadCurrentModel(),
+    onCheckForUpdates: () =>
+      trayActionService.checkForUpdates(),
+    onQuit: () => trayActionService.quit()
+  }
 }
 
 /**
@@ -65,23 +111,19 @@ export const setupTrayContextMenu = (
   const { tray } = options
 
   const updateContextMenu = async () => {
-    const userSetting = readUserSetting()
-    const currentModel = userSetting.model || Model.ChatGPT
-    const isChatGPT = currentModel === Model.ChatGPT
-    const isDeepSeek = currentModel === Model.DeepSeek
-    const isGrok = currentModel === Model.Grok
-    const isGemini = currentModel === Model.Gemini
-    const isQwen = currentModel === Model.Qwen
-    const isDoubao = currentModel === Model.Doubao
-
-    const alwaysOnTop = !!userSetting.alwaysOnTop
-    const isAutoLaunchEnabled =
-      !!userSetting.autoLaunchOnStartup
-
-    const menuLanguage =
-      userSetting.menuLanguage ?? MenuLanguage.Chinese
+    const {
+      currentModel,
+      alwaysOnTop,
+      isAutoLaunchEnabled,
+      menuLanguage
+    } = getTrayMenuState()
     const t = (key: TrayMenuMessageKey) =>
       getTrayMenuText(key, menuLanguage)
+    const actions = createTrayMenuActions(
+      options,
+      menuLanguage,
+      updateContextMenu
+    )
 
     const contextMenu = Menu.buildFromTemplate([
       {
@@ -90,68 +132,38 @@ export const setupTrayContextMenu = (
           {
             label: Model.ChatGPT,
             type: 'radio',
-            checked: isChatGPT,
-            click: createModelSwitchHandler(
-              Model.ChatGPT,
-              options,
-              updateContextMenu,
-              options.urls
-            )
+            checked: currentModel === Model.ChatGPT,
+            click: actions.onModelChange(Model.ChatGPT)
           },
           {
             label: Model.Grok,
             type: 'radio',
-            checked: isGrok,
-            click: createModelSwitchHandler(
-              Model.Grok,
-              options,
-              updateContextMenu,
-              options.urls
-            )
+            checked: currentModel === Model.Grok,
+            click: actions.onModelChange(Model.Grok)
           },
           {
             label: Model.Gemini,
             type: 'radio',
-            checked: isGemini,
-            click: createModelSwitchHandler(
-              Model.Gemini,
-              options,
-              updateContextMenu,
-              options.urls
-            )
+            checked: currentModel === Model.Gemini,
+            click: actions.onModelChange(Model.Gemini)
           },
           {
             label: Model.DeepSeek,
             type: 'radio',
-            checked: isDeepSeek,
-            click: createModelSwitchHandler(
-              Model.DeepSeek,
-              options,
-              updateContextMenu,
-              options.urls
-            )
+            checked: currentModel === Model.DeepSeek,
+            click: actions.onModelChange(Model.DeepSeek)
           },
           {
             label: Model.Qwen,
             type: 'radio',
-            checked: isQwen,
-            click: createModelSwitchHandler(
-              Model.Qwen,
-              options,
-              updateContextMenu,
-              options.urls
-            )
+            checked: currentModel === Model.Qwen,
+            click: actions.onModelChange(Model.Qwen)
           },
           {
             label: Model.Doubao,
             type: 'radio',
-            checked: isDoubao,
-            click: createModelSwitchHandler(
-              Model.Doubao,
-              options,
-              updateContextMenu,
-              options.urls
-            )
+            checked: currentModel === Model.Doubao,
+            click: actions.onModelChange(Model.Doubao)
           }
         ]
       },
@@ -160,33 +172,23 @@ export const setupTrayContextMenu = (
         label: t('windowAlwaysOnTop'),
         type: 'checkbox',
         checked: alwaysOnTop,
-        click: () =>
-          handleAlwaysOnTopToggle(
-            options,
-            updateContextMenu
-          )
+        click: actions.onAlwaysOnTopToggle()
       },
       {
         label: t('setShortcut'),
-        click: createShortcutHandler(
-          options,
-          updateContextMenu,
-          menuLanguage
-        )
+        click: actions.onSetShortcut()
       },
       {
         label: t('setProxy'),
-        click: createProxyHandler(options, menuLanguage)
+        click: actions.onSetProxy()
       },
       {
         label: t('autoLaunchOnStartup'),
         type: 'checkbox',
         checked: isAutoLaunchEnabled,
         click: (menuItem) =>
-          handleAutoLaunchToggle(
-            Boolean(menuItem.checked),
-            menuLanguage,
-            updateContextMenu
+          actions.onAutoLaunchToggle(
+            Boolean(menuItem.checked)
           )
       },
       {
@@ -196,36 +198,32 @@ export const setupTrayContextMenu = (
             label: t('languageEnglish'),
             type: 'radio',
             checked: menuLanguage === MenuLanguage.English,
-            click: () =>
-              handleMenuLanguageChange(
-                MenuLanguage.English,
-                updateContextMenu
-              )
+            click: actions.onLanguageChange(
+              MenuLanguage.English
+            )
           },
           {
             label: t('languageChinese'),
             type: 'radio',
             checked: menuLanguage === MenuLanguage.Chinese,
-            click: () =>
-              handleMenuLanguageChange(
-                MenuLanguage.Chinese,
-                updateContextMenu
-              )
+            click: actions.onLanguageChange(
+              MenuLanguage.Chinese
+            )
           }
         ]
       },
       { type: 'separator' },
       {
         label: t('reload'),
-        click: () => handleReload(options, menuLanguage)
+        click: actions.onReload()
       },
       {
         label: t('checkForUpdates'),
-        click: () => handleCheckForUpdates(options)
+        click: actions.onCheckForUpdates()
       },
       {
         label: t('quit'),
-        click: () => handleQuit()
+        click: actions.onQuit()
       }
     ])
 
