@@ -1,45 +1,53 @@
-import { BrowserWindow } from 'electron'
-import { WindowManager } from '@/window-manager'
-import { Model } from '@/utils/constants'
+import { BrowserWindow, dialog } from 'electron'
 import { TrayContextMenuOptions } from '@/tray-context-menu'
+import { getTrayMenuText } from '@/i18n/tray-menu'
+import { MenuLanguage } from '@/utils/constants'
+import { getAppIcon } from '@/utils/common'
+
+const MENUBAR_READY_TIMEOUT_MS = 2000
 
 /**
  * 获取可用的浏览器窗口
- * @param {WindowManager} windowManager - 窗口管理器实例
- * @param {TrayContextMenuOptions['getMainBrowserWindow']} getMainBrowserWindow - 获取主浏览器窗口的函数
+ * @param {TrayContextMenuOptions['getBrowserWindow']} getBrowserWindow - 获取主浏览器窗口的函数
  * @returns {BrowserWindow | null} 可用的浏览器窗口或 null
  */
 export const getAvailableBrowserWindow = (
-  windowManager: WindowManager,
-  getMainBrowserWindow: TrayContextMenuOptions['getMainBrowserWindow']
+  getBrowserWindow: TrayContextMenuOptions['getBrowserWindow']
 ): BrowserWindow | null => {
-  const mainBrowserWindow = getMainBrowserWindow()
-  if (
-    mainBrowserWindow &&
-    !mainBrowserWindow.isDestroyed()
-  ) {
-    return mainBrowserWindow
-  }
-
-  const menubarWindow = windowManager.getMainBrowserWindow()
-  if (menubarWindow && !menubarWindow.isDestroyed()) {
-    return menubarWindow
+  const browserWindow = getBrowserWindow()
+  if (browserWindow && !browserWindow.isDestroyed()) {
+    return browserWindow
   }
 
   return null
 }
 
-/**
- * 模型名称到 URL 配置键的映射
- */
-export const MODEL_TO_URL_KEY: Record<
-  Model,
-  keyof TrayContextMenuOptions['urls']
-> = {
-  [Model.ChatGPT]: 'chatgpt',
-  [Model.DeepSeek]: 'deepseek',
-  [Model.Grok]: 'grok',
-  [Model.Gemini]: 'gemini',
-  [Model.Qwen]: 'qwen',
-  [Model.Doubao]: 'doubao'
+export const ensureMenubarReady = async (
+  options: TrayContextMenuOptions,
+  menuLanguage: MenuLanguage
+): Promise<boolean> => {
+  if (options.isMenubarReady()) {
+    return true
+  }
+
+  const ready = await options.waitForMenubarReady(
+    MENUBAR_READY_TIMEOUT_MS
+  )
+
+  if (ready) {
+    return true
+  }
+
+  dialog.showMessageBox({
+    icon: getAppIcon(),
+    type: 'error',
+    title: getTrayMenuText('errorTitle', menuLanguage),
+    message: getTrayMenuText(
+      'appNotReadyMessage',
+      menuLanguage
+    ),
+    buttons: [getTrayMenuText('confirm', menuLanguage)]
+  })
+
+  return false
 }

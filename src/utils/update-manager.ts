@@ -44,7 +44,7 @@ interface GitHubRelease {
   prerelease: boolean
   created_at: string
   published_at: string
-  assets: Array<any>
+  assets: Array<Record<string, unknown>>
   tarball_url: string
   zipball_url: string
   body: string
