@@ -5,14 +5,7 @@ import { getTrayMenuText } from '@/i18n/tray-menu'
 import { MenuLanguage } from '@/utils/constants'
 import { getAppIcon } from '@/utils/common'
 import { settingsService } from '@/services/settings-service'
-
-/**
- * 延迟指定的时间
- * @param {number} ms - 延迟的毫秒数
- * @returns {Promise<unknown>} 延迟 Promise
- */
-const delay = (ms: number) =>
-  new Promise((resolve) => setTimeout(resolve, ms))
+import { ensureMenubarReady } from './utils'
 
 /**
  * 创建代理设置处理函数
@@ -29,14 +22,12 @@ export const createProxyHandler = (
       const userSetting = settingsService.get()
       const savedProxy = userSetting.proxy || ''
 
-      if (!options.isMenubarReady()) {
-        for (
-          let i = 0;
-          i < 20 && !options.isMenubarReady();
-          i++
-        ) {
-          await delay(100)
-        }
+      const menubarReady = await ensureMenubarReady(
+        options,
+        menuLanguage
+      )
+      if (!menubarReady) {
+        return
       }
 
       let input: string | null = null

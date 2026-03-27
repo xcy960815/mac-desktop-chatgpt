@@ -3,17 +3,12 @@ import { TrayContextMenuOptions } from '@/tray-context-menu'
 import { showShortcutInputDialog } from '@/shortcut-input-dialog'
 import { getTrayMenuText } from '@/i18n/tray-menu'
 import { MenuLanguage } from '@/utils/constants'
-import { getAvailableBrowserWindow } from './utils'
+import {
+  ensureMenubarReady,
+  getAvailableBrowserWindow
+} from './utils'
 import { getAppIcon } from '@/utils/common'
 import { settingsService } from '@/services/settings-service'
-
-/**
- * 延迟指定的时间
- * @param {number} ms - 延迟的毫秒数
- * @returns {Promise<unknown>} 延迟 Promise
- */
-const delay = (ms: number) =>
-  new Promise((resolve) => setTimeout(resolve, ms))
 
 const registerWindowShortcut = (
   shortcut: string,
@@ -46,14 +41,12 @@ export const createShortcutHandler = (
       const savedShortcut =
         settingsService.getToggleShortcut()
 
-      if (!options.isMenubarReady()) {
-        for (
-          let i = 0;
-          i < 20 && !options.isMenubarReady();
-          i++
-        ) {
-          await delay(100)
-        }
+      const menubarReady = await ensureMenubarReady(
+        options,
+        menuLanguage
+      )
+      if (!menubarReady) {
+        return
       }
 
       // 打开对话框前临时取消注册快捷键，避免录入时触发

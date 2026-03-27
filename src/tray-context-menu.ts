@@ -23,6 +23,7 @@ export interface TrayMenuUrls {
 export interface TrayContextMenuOptions {
   tray: Tray
   isMenubarReady(): boolean
+  waitForMenubarReady(timeoutMs?: number): Promise<boolean>
   getBrowserWindow(): BrowserWindow | null
   toggleWindow(): void | Promise<void>
   setAlwaysOnTop(alwaysOnTop: boolean): void
