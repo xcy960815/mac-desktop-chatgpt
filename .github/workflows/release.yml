@@ -72,57 +72,34 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Prepare artifacts
-        id: prepare_artifacts
-        shell: bash
-        run: |
-          # 查找构建产物，根据 forge.config.ts 的 normalizeZipOutputs，文件应该在 out/make/zip/ 根目录
-          # CI 环境会保留版本号，文件名格式：chathub-desktop-darwin-arm64-1.0.0.zip
-          VERSION=${{ steps.get_version.outputs.version }}
-          
-          if [ "${{ matrix.platform }}" == "darwin" ]; then
-            # macOS: 优先查找包含版本号的完整文件名
-            ARTIFACT=$(find out/make/zip -name "*darwin-${{ matrix.arch }}-${VERSION}.zip" -type f 2>/dev/null | head -1)
-            if [ -z "$ARTIFACT" ]; then
-              # 如果没找到，尝试查找包含 darwin 和对应架构的 zip 文件（带版本号）
-              ARTIFACT=$(find out/make/zip -name "*darwin-${{ matrix.arch }}*.zip" -type f 2>/dev/null | head -1)
-            fi
-            if [ -z "$ARTIFACT" ]; then
-              # 如果还没找到，尝试查找所有 darwin zip
-              ARTIFACT=$(find out/make/zip -name "*darwin*.zip" -type f 2>/dev/null | head -1)
-            fi
-          elif [ "${{ matrix.platform }}" == "linux" ]; then
-            # Linux: 查找 deb 文件
-            ARTIFACT=$(find out/make/deb -name "*.deb" -type f 2>/dev/null | head -1)
-          else
-            # Windows: 优先查找包含版本号的完整文件名
-            ARTIFACT=$(find out/make/zip -name "*win32-x64-${VERSION}.zip" -type f 2>/dev/null | head -1)
-            if [ -z "$ARTIFACT" ]; then
-              # 如果没找到，尝试查找包含 win32 的 zip 文件
-              ARTIFACT=$(find out/make/zip -name "*win32*.zip" -type f 2>/dev/null | head -1)
-            fi
-            if [ -z "$ARTIFACT" ]; then
-              # 如果还没找到，尝试查找包含 windows 的 zip 文件
-              ARTIFACT=$(find out/make/zip -name "*windows*.zip" -type f 2>/dev/null | head -1)
-            fi
-          fi
-
-          if [ -z "$ARTIFACT" ]; then
-            echo "❌ 未找到构建产物！"
-            echo "当前目录结构："
-            ls -la out/make/zip/ 2>/dev/null || echo "out/make/zip 目录不存在"
-            find out -name "*.zip" -type f 2>/dev/null || echo "未找到任何 zip 文件"
-            exit 1
-          fi
-
-          echo "✅ 找到构建产物: $ARTIFACT"
-          echo "artifact_path=$ARTIFACT" >> $GITHUB_OUTPUT
-
-      - name: Upload artifact
+      - name: Upload macOS artifacts
+        if: matrix.platform == 'darwin'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.platform }}-${{ matrix.arch }}
-          path: ${{ steps.prepare_artifacts.outputs.artifact_path }}
+          path: out/make/zip/*.zip
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload Windows artifacts
+        if: matrix.platform == 'win32'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            out/make/squirrel.windows/**/*.exe
+            out/make/squirrel.windows/**/*.nupkg
+            out/make/squirrel.windows/**/RELEASES
+            out/make/zip/*.zip
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload Linux artifacts
+        if: matrix.platform == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}-${{ matrix.arch }}
+          path: out/make/deb/**/*.deb
           retention-days: 30
           if-no-files-found: error
 
@@ -167,10 +144,10 @@ jobs:
       - name: List artifacts
         run: |
           echo "📦 构建产物列表："
-          find artifacts -name "*.zip" -type f || true
+          find artifacts \( -name "*.zip" -o -name "*.deb" -o -name "*.exe" -o -name "*.nupkg" -o -name "RELEASES" \) -type f || true
           echo ""
           echo "文件详情："
-          ls -lh artifacts/*/*.zip 2>/dev/null || ls -lh artifacts/*.zip 2>/dev/null || true
+          find artifacts \( -name "*.zip" -o -name "*.deb" -o -name "*.exe" -o -name "*.nupkg" -o -name "RELEASES" \) -type f -exec ls -lh {} \;
 
       - name: Get current date
         id: date
@@ -190,7 +167,8 @@ jobs:
 
             - **macOS (Intel)**: chathub-desktop-darwin-x64-${{ steps.get_version.outputs.version }}.zip
             - **macOS (Apple Silicon)**: chathub-desktop-darwin-arm64-${{ steps.get_version.outputs.version }}.zip
-            - **Windows (x64)**: chathub-desktop-win32-x64-${{ steps.get_version.outputs.version }}.zip
+            - **Windows (x64)**: chathub-desktop-${{ steps.get_version.outputs.version }} Setup.exe
+            - **Windows 便携版 (x64)**: chathub-desktop-win32-x64-${{ steps.get_version.outputs.version }}.zip
             - **Linux (x64)**: chathub-desktop_${{ steps.get_version.outputs.version }}_amd64.deb
             
             ### 📋 安装说明
@@ -201,9 +179,9 @@ jobs:
             3. 首次打开可能需要右键点击 → 打开（绕过安全检查）
 
             #### Windows
-            1. 下载 ZIP 文件并解压
-            2. 运行 `Desktop ChatGPT.exe`
-            3. 首次运行可能需要允许通过 Windows Defender 防火墙
+            1. 优先下载 `Setup.exe` 安装包完成安装
+            2. 已安装版本后，后续更新将由应用内自动下载并提示重启安装
+            3. 如需免安装版本，可下载 ZIP 文件并手动运行 `Desktop ChatGPT.exe`
 
             #### Linux (Ubuntu/Debian)
             1. 下载 `.deb` 安装包
@@ -218,6 +196,9 @@ jobs:
           files: |
             artifacts/**/*.zip
             artifacts/**/*.deb
+            artifacts/**/*.exe
+            artifacts/**/*.nupkg
+            artifacts/**/RELEASES
           draft: false
           prerelease: ${{ contains(github.ref, '-') || contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
           generate_release_notes: true
