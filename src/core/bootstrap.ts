@@ -156,7 +156,9 @@ export const bootstrapApp =
     const shortcutManager = createShortcutManager({
       windowManager
     })
-    const updateManager = createUpdateManager()
+    const updateManager = createUpdateManager({
+      getWindow: () => windowManager.getMainBrowserWindow()
+    })
 
     const tray = createAppTray({ appPath })
     const browserWindow = await createMainWindow({
@@ -209,6 +211,7 @@ export const bootstrapApp =
     registerAppLifecycleEvents(windowManager)
 
     initializeLastVisitedUrlTracking(browserWindow)
+    updateManager.initialize()
 
     menubarReadySignal.markReady()
 
