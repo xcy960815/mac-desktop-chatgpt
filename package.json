@@ -20,7 +20,7 @@
     "make:linux": "electron-forge make --platform linux --arch x64 --targets @electron-forge/maker-deb",
     "make:all": "npm run make:mac && npm run make:win && npm run make:linux",
     "publish": "electron-forge publish",
-    "lint": "eslint --ext .ts,.tsx,.mts --ignore-pattern out .",
+    "lint": "eslint --ext .ts,.tsx,.mts,.cjs --ignore-pattern out .",
     "prepare": "husky install",
     "lint-staged": "lint-staged",
     "test": "vitest run"

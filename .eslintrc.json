@@ -13,6 +13,14 @@
     "plugin:import/typescript"
   ],
   "parser": "@typescript-eslint/parser",
+  "overrides": [
+    {
+      "files": ["*.cjs"],
+      "rules": {
+        "@typescript-eslint/no-var-requires": "off"
+      }
+    }
+  ],
   "settings": {
     "import/resolver": {
       "typescript": {
