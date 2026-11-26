@@ -44,15 +44,6 @@ declare global {
   }
 }
 
-declare module 'electron' {
-  interface Tray {
-    /**
-     * 存储的上下文菜单实例，用于在某些平台手动触发右键事件
-     */
-    _contextMenu?: Electron.Menu
-  }
-}
-
 declare module 'vite' {
   interface ConfigEnv<
     K extends keyof VitePluginConfig =

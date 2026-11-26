@@ -1,10 +1,12 @@
-import { app, dialog } from 'electron'
+import { app } from 'electron'
 
 import { getTrayMenuText } from '@/i18n/tray-menu'
 import { MenuLanguage, Model } from '@/utils/constants'
-import { getAppIcon } from '@/utils/common'
 import { settingsService } from '@/services/settings-service'
-import { getAvailableBrowserWindow } from '@/handlers/utils'
+import {
+  getAvailableBrowserWindow,
+  showSettingsMessage
+} from '@/handlers/utils'
 import { UpdateManager } from '@/utils/update-manager'
 
 export interface TrayActionContext {
@@ -22,22 +24,12 @@ export interface CreateTrayActionServiceOptions {
   updateContextMenu: () => void
 }
 
-export interface TrayActionService {
-  switchModel(model: Model): () => void
-  toggleAlwaysOnTop(): () => void
-  toggleAutoLaunch(enabled: boolean): void
-  changeMenuLanguage(language: MenuLanguage): () => void
-  reloadCurrentModel(): () => Promise<void>
-  checkForUpdates(): () => Promise<void>
-  quit(): () => void
-}
-
 export const createTrayActionService = ({
   context,
   menuLanguage,
   updateContextMenu
-}: CreateTrayActionServiceOptions): TrayActionService => {
-  const switchModel = (model: Model) => () => {
+}: CreateTrayActionServiceOptions) => {
+  const switchModel = (model: Model) => {
     const newUserSetting =
       settingsService.setCurrentModel(model)
     updateContextMenu()
@@ -51,7 +43,7 @@ export const createTrayActionService = ({
     )
   }
 
-  const toggleAlwaysOnTop = () => () => {
+  const toggleAlwaysOnTop = () => {
     const current = settingsService.get()
     const newValue = !current.alwaysOnTop
     settingsService.setAlwaysOnTop(newValue)
@@ -68,39 +60,34 @@ export const createTrayActionService = ({
       settingsService.setAutoLaunchOnStartup(enabled)
       updateContextMenu()
     } catch {
-      dialog.showMessageBox({
-        icon: getAppIcon(),
-        type: 'error',
-        title: getTrayMenuText(
-          'autoLaunchErrorTitle',
-          menuLanguage
-        ),
-        message: getTrayMenuText(
+      return showSettingsMessage(
+        menuLanguage,
+        'error',
+        'autoLaunchErrorTitle',
+        getTrayMenuText(
           'autoLaunchErrorMessage',
           menuLanguage
-        ),
-        buttons: [getTrayMenuText('confirm', menuLanguage)]
-      })
+        )
+      )
     }
   }
 
-  const changeMenuLanguage =
-    (language: MenuLanguage) => () => {
-      const latestSetting = settingsService.get()
-      if (latestSetting.menuLanguage === language) {
-        return
-      }
-      settingsService.setMenuLanguage(language)
-      updateContextMenu()
+  const changeMenuLanguage = (language: MenuLanguage) => {
+    const latestSetting = settingsService.get()
+    if (latestSetting.menuLanguage === language) {
+      return
     }
+    settingsService.setMenuLanguage(language)
+    updateContextMenu()
+  }
 
-  const reloadCurrentModel = () => async () => {
+  const reloadCurrentModel = async () => {
     await context.withBrowserWindow((win) => {
       win.webContents.send('reload-current-model')
     })
   }
 
-  const checkForUpdates = () => async () => {
+  const checkForUpdates = async () => {
     const browserWindow = getAvailableBrowserWindow(
       context.getBrowserWindow
     )
@@ -109,7 +96,7 @@ export const createTrayActionService = ({
     )
   }
 
-  const quit = () => () => {
+  const quit = () => {
     app.quit()
   }
 

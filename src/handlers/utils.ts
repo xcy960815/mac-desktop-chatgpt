@@ -1,6 +1,8 @@
 import { BrowserWindow, dialog } from 'electron'
-import { TrayContextMenuOptions } from '@/tray-context-menu'
-import { getTrayMenuText } from '@/i18n/tray-menu'
+import {
+  getTrayMenuText,
+  type TrayMenuMessageKey
+} from '@/i18n/tray-menu'
 import { MenuLanguage } from '@/utils/constants'
 import { getAppIcon } from '@/utils/common'
 
@@ -8,11 +10,10 @@ const MENUBAR_READY_TIMEOUT_MS = 2000
 
 /**
  * 获取可用的浏览器窗口
- * @param {TrayContextMenuOptions['getBrowserWindow']} getBrowserWindow - 获取主浏览器窗口的函数
  * @returns {BrowserWindow | null} 可用的浏览器窗口或 null
  */
 export const getAvailableBrowserWindow = (
-  getBrowserWindow: TrayContextMenuOptions['getBrowserWindow']
+  getBrowserWindow: () => BrowserWindow | null
 ): BrowserWindow | null => {
   const browserWindow = getBrowserWindow()
   if (browserWindow && !browserWindow.isDestroyed()) {
@@ -22,8 +23,13 @@ export const getAvailableBrowserWindow = (
   return null
 }
 
+export interface MenubarReadiness {
+  isMenubarReady(): boolean
+  waitForMenubarReady(timeoutMs?: number): Promise<boolean>
+}
+
 export const ensureMenubarReady = async (
-  options: TrayContextMenuOptions,
+  options: MenubarReadiness,
   menuLanguage: MenuLanguage
 ): Promise<boolean> => {
   if (options.isMenubarReady()) {
@@ -38,16 +44,26 @@ export const ensureMenubarReady = async (
     return true
   }
 
-  dialog.showMessageBox({
-    icon: getAppIcon(),
-    type: 'error',
-    title: getTrayMenuText('errorTitle', menuLanguage),
-    message: getTrayMenuText(
-      'appNotReadyMessage',
-      menuLanguage
-    ),
-    buttons: [getTrayMenuText('confirm', menuLanguage)]
-  })
-
+  await showSettingsMessage(
+    menuLanguage,
+    'error',
+    'errorTitle',
+    getTrayMenuText('appNotReadyMessage', menuLanguage)
+  )
   return false
+}
+
+export function showSettingsMessage(
+  language: MenuLanguage,
+  type: 'error' | 'info',
+  title: TrayMenuMessageKey,
+  message: string
+) {
+  return dialog.showMessageBox({
+    type,
+    title: getTrayMenuText(title, language),
+    message,
+    icon: getAppIcon(),
+    buttons: [getTrayMenuText('confirm', language)]
+  })
 }

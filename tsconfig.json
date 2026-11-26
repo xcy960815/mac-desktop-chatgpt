@@ -8,15 +8,14 @@
     "esModuleInterop": true,
     "noImplicitAny": true,
     "sourceMap": true,
-    "baseUrl": ".",
     "outDir": "dist",
     "moduleResolution": "node16",
     "resolveJsonModule": true,
     "typeRoots": ["node_modules/@types", "./types/*.d.ts"],
     "types": ["node"],
     "paths": {
-      "vite": ["node_modules/vite"],
-      "@/*": ["src/*"],
+      "vite": ["./node_modules/vite"],
+      "@/*": ["./src/*"]
     }
   }
 }

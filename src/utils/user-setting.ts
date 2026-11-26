@@ -1,7 +1,9 @@
 import fsSync from 'fs'
 import path from 'path'
+import { randomUUID } from 'crypto'
 import { app } from 'electron'
 import {
+  DEFAULT_TOGGLE_SHORTCUT,
   MenuLanguage,
   Model,
   ModelUrl
@@ -19,15 +21,8 @@ const SUBPATH = 'config'
  */
 const DEFAULTSETTING: UserSetting = {
   model: Model.ChatGPT,
-  urls: {
-    ChatGPT: ModelUrl.ChatGPT,
-    DeepSeek: ModelUrl.DeepSeek,
-    Grok: ModelUrl.Grok,
-    Gemini: ModelUrl.Gemini,
-    Qwen: ModelUrl.Qwen,
-    Doubao: ModelUrl.Doubao
-  },
-  toggleShortcut: 'CommandOrControl+g',
+  urls: { ...ModelUrl },
+  toggleShortcut: DEFAULT_TOGGLE_SHORTCUT,
   autoLaunchOnStartup: false,
   alwaysOnTop: false,
   menuLanguage: MenuLanguage.Chinese,
@@ -49,14 +44,7 @@ const FILENAME = 'settings.json'
 export interface UserSetting {
   model: Model
   lastVisitedUrl?: string // 保留用于向后兼容
-  urls?: {
-    ChatGPT?: string
-    DeepSeek?: string
-    Grok?: string
-    Gemini?: string
-    Qwen?: string
-    Doubao?: string
-  }
+  urls?: Partial<Record<Model, string>>
   toggleShortcut?: string // 用于打开/关闭窗口的快捷键，默认 CommandOrControl+g
   autoLaunchOnStartup?: boolean // 是否随系统启动
   alwaysOnTop?: boolean // 是否始终置顶
@@ -106,23 +94,20 @@ function readUserSetting(): UserSetting {
   }
 }
 
-/**
- * 写入用户设置
- * @param {US} data - 要写入的数据对象
- * @returns {US} 写入的数据对象
- * @template US
- */
-function writeUserSetting<US = UserSetting>(data: US): US {
+function writeUserSetting(data: UserSetting): UserSetting {
   const filePath = getUserSettingPath()
-  fsSync.writeFileSync(
-    filePath,
-    JSON.stringify(data, null, 2)
-  )
+  const temporary = `${filePath}.${randomUUID()}.tmp`
+  try {
+    fsSync.writeFileSync(
+      temporary,
+      JSON.stringify(data, null, 2),
+      { mode: 0o600 }
+    )
+    fsSync.renameSync(temporary, filePath)
+  } finally {
+    fsSync.rmSync(temporary, { force: true })
+  }
   return data
 }
 
-export {
-  writeUserSetting,
-  readUserSetting,
-  getUserSettingPath
-}
+export { writeUserSetting, readUserSetting }

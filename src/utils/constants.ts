@@ -4,15 +4,17 @@
  */
 export const TOOLTIP = 'ChatHub Desktop'
 
+export const DEFAULT_TOGGLE_SHORTCUT = 'CommandOrControl+g'
+
 /**
- * 支持的模型枚举
+ * 支持的模型，按托盘菜单的显示顺序排列
  * @enum {string}
  */
 export enum Model {
   ChatGPT = 'ChatGPT',
-  DeepSeek = 'DeepSeek',
   Grok = 'Grok',
   Gemini = 'Gemini',
+  DeepSeek = 'DeepSeek',
   Qwen = 'Qwen',
   Doubao = 'Doubao'
 }
@@ -21,13 +23,13 @@ export enum Model {
  * 各模型默认访问 URL
  * @enum {string}
  */
-export enum ModelUrl {
-  ChatGPT = 'https://chatgpt.com',
-  DeepSeek = 'https://chat.deepseek.com/',
-  Grok = 'https://grok.com/',
-  Gemini = 'https://gemini.google.com/app',
-  Qwen = 'https://www.qianwen.com/chat',
-  Doubao = 'https://www.doubao.com/chat/'
+export const ModelUrl: Record<Model, string> = {
+  ChatGPT: 'https://chatgpt.com',
+  DeepSeek: 'https://chat.deepseek.com/',
+  Grok: 'https://grok.com/',
+  Gemini: 'https://gemini.google.com/app',
+  Qwen: 'https://www.qianwen.com/chat',
+  Doubao: 'https://www.doubao.com/chat/'
 }
 
 /**

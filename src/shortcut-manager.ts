@@ -1,154 +1,130 @@
 import { globalShortcut, ipcMain } from 'electron'
-
-import { WindowManager } from '@/window-manager'
 import { settingsService } from '@/services/settings-service'
+import { DEFAULT_TOGGLE_SHORTCUT } from '@/utils/constants'
 
-/**
- * 快捷键管理器接口
- * @interface ShortcutManager
- */
-export interface ShortcutManager {
-  /**
-   * 注册打开/关闭窗口的快捷键
-   * @returns {void}
-   */
-  registerToggleShortcut(): void
-  /**
-   * 注册 IPC 处理程序
-   * @returns {void}
-   */
-  registerIpcHandlers(): void
-  /**
-   * 获取当前的快捷键
-   * @returns {string | null}
-   */
-  getCurrentShortcut(): string | null
-  /**
-   * 设置当前的快捷键
-   * @param {string | null} shortcut - 快捷键字符串，如果为 null 则清除当前快捷键
-   * @returns {void}
-   */
-  setCurrentShortcut(shortcut: string | null): void
-}
+export type ShortcutManager = ReturnType<
+  typeof createShortcutManager
+>
 
-/**
- * 快捷键管理器选项
- * @interface ShortcutManagerOptions
- */
-interface ShortcutManagerOptions {
-  /** 窗口管理器实例 */
-  windowManager: WindowManager
-}
+export const createShortcutManager = (
+  toggleWindow: () => void
+) => {
+  let registered: string | null = null
+  let editing = false
 
-/**
- * 创建快捷键管理器
- * @param {ShortcutManagerOptions} options - 快捷键管理器配置选项
- * @param {WindowManager} options.windowManager - 窗口管理器实例
- * @returns {ShortcutManager} 快捷键管理器实例
- */
-export const createShortcutManager = ({
-  windowManager
-}: ShortcutManagerOptions): ShortcutManager => {
-  let currentShortcut: string | null = null
-
-  /**
-   * 打开/关闭窗口
-   * @returns {void}
-   */
-  const toggleWindow = () => {
-    windowManager.toggleWindow()
+  function register(shortcut: string): boolean {
+    try {
+      if (globalShortcut.register(shortcut, toggleWindow)) {
+        registered = shortcut
+        return true
+      }
+    } catch {
+      // Electron throws for malformed accelerators and returns false for conflicts.
+    }
+    return false
   }
 
-  /**
-   * 注册快捷键
-   * @param {string} shortcut - 快捷键字符串
-   * @returns {boolean} 注册是否成功
-   */
-  const registerShortcut = (shortcut: string): boolean =>
-    globalShortcut.register(shortcut, toggleWindow)
+  function unregister() {
+    if (registered) globalShortcut.unregister(registered)
+    registered = null
+  }
 
-  /**
-   * 注册打开/关闭窗口的快捷键
-   * @returns {void}
-   */
-  const registerToggleShortcut = () => {
-    if (currentShortcut) {
-      globalShortcut.unregister(currentShortcut)
-    }
-
-    const shortcut = settingsService.getToggleShortcut()
-
-    const registered = registerShortcut(shortcut)
-    if (registered) {
-      currentShortcut = shortcut
-      return
-    }
-
-    if (shortcut === 'CommandOrControl+g') {
-      return
-    }
-
-    const defaultRegistered = registerShortcut(
-      'CommandOrControl+g'
-    )
-    if (defaultRegistered) {
-      currentShortcut = 'CommandOrControl+g'
+  function restorePrevious(previous: string | null) {
+    if (!registered && previous && !register(previous)) {
+      throw new Error(`无法恢复快捷键 ${previous}`)
     }
   }
 
-  /**
-   * 注册 IPC 处理程序
-   * @returns {void}
-   */
-  const registerIpcHandlers = () => {
+  function registerToggleShortcut() {
+    unregister()
+    const saved = settingsService.getToggleShortcut()
+    if (
+      !register(saved) &&
+      saved !== DEFAULT_TOGGLE_SHORTCUT
+    ) {
+      register(DEFAULT_TOGGLE_SHORTCUT)
+    }
+  }
+
+  // null cancels the edit. An empty string requests a confirmed reset.
+  async function editToggleShortcut(
+    choose: () => Promise<string | null>,
+    remember = true
+  ) {
+    if (editing) return null
+    editing = true
+    const previous = registered
+    try {
+      unregister()
+      const input = await choose()
+      if (input === null) return null
+      const reset = !input.trim()
+      const shortcut = reset
+        ? DEFAULT_TOGGLE_SHORTCUT
+        : input.trim()
+      const success = register(shortcut)
+      if (success) {
+        try {
+          settingsService.saveShortcut(
+            shortcut,
+            remember && !reset
+          )
+        } catch (error) {
+          unregister()
+          throw error
+        }
+      }
+      return { success, shortcut, reset }
+    } finally {
+      editing = false
+      restorePrevious(previous)
+    }
+  }
+
+  function registerIpcHandlers() {
     ipcMain.handle(
       'set-toggle-shortcut',
       async (_event, shortcut: string) => {
-        if (!shortcut || shortcut.trim() === '') {
+        if (
+          typeof shortcut !== 'string' ||
+          !shortcut.trim()
+        ) {
           return {
             success: false,
             message: '快捷键不能为空'
           }
         }
-
-        if (currentShortcut) {
-          globalShortcut.unregister(currentShortcut)
-        }
-
-        const registered = registerShortcut(shortcut)
-
-        if (registered) {
-          settingsService.setToggleShortcut(shortcut)
-          currentShortcut = shortcut
+        if (editing)
           return {
-            success: true,
-            message: '快捷键设置成功'
+            success: false,
+            message: '正在编辑快捷键'
           }
-        }
-
-        if (currentShortcut) {
-          registerShortcut(currentShortcut)
-        }
-
-        return {
-          success: false,
-          message:
-            '快捷键已被占用或格式不正确，请尝试其他快捷键'
+        try {
+          const result = await editToggleShortcut(
+            async () => shortcut,
+            false
+          )
+          const success = !!result?.success
+          return {
+            success,
+            message: success
+              ? '快捷键设置成功'
+              : '快捷键已被占用或格式不正确，请尝试其他快捷键'
+          }
+        } catch (error) {
+          return { success: false, message: String(error) }
         }
       }
     )
-
-    ipcMain.handle('get-toggle-shortcut', () => {
-      return settingsService.getToggleShortcut()
-    })
+    ipcMain.handle(
+      'get-toggle-shortcut',
+      settingsService.getToggleShortcut
+    )
   }
 
   return {
     registerToggleShortcut,
     registerIpcHandlers,
-    getCurrentShortcut: () => currentShortcut,
-    setCurrentShortcut: (shortcut) => {
-      currentShortcut = shortcut
-    }
+    editToggleShortcut
   }
 }

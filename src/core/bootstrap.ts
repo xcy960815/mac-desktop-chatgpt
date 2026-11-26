@@ -149,11 +149,11 @@ export const bootstrapApp =
 
     const appPath = app.getAppPath()
     const windowManager = createWindowManager()
-    const shortcutManager = createShortcutManager({
-      windowManager
-    })
+    const shortcutManager = createShortcutManager(
+      windowManager.toggleWindow
+    )
     const updateManager = createUpdateManager({
-      getWindow: () => windowManager.getMainBrowserWindow()
+      getWindow: windowManager.getMainBrowserWindow
     })
 
     const tray = createAppTray({ appPath })
@@ -179,16 +179,9 @@ export const bootstrapApp =
       isMenubarReady: menubarReadySignal.isReady,
       waitForMenubarReady:
         menubarReadySignal.waitUntilReady,
-      getBrowserWindow: () =>
-        windowManager.getMainBrowserWindow(),
-      toggleWindow: () => windowManager.toggleWindow(),
-      setAlwaysOnTop: (alwaysOnTop) =>
-        windowManager.setAlwaysOnTop(alwaysOnTop),
-      getCurrentShortcut: () =>
-        shortcutManager.getCurrentShortcut(),
-      setCurrentShortcut: (shortcut) => {
-        shortcutManager.setCurrentShortcut(shortcut)
-      },
+      getBrowserWindow: windowManager.getMainBrowserWindow,
+      setAlwaysOnTop: windowManager.setAlwaysOnTop,
+      shortcutManager,
       withBrowserWindow: windowManager.withBrowserWindow,
       updateManager
     })

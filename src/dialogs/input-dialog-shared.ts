@@ -1,192 +1,160 @@
 import { existsSync } from 'fs'
 import * as path from 'path'
-
 import {
   app,
   BrowserWindow,
   ipcMain,
   screen
 } from 'electron'
+import {
+  getTrayMenuText,
+  type TrayMenuMessageKey
+} from '@/i18n/tray-menu'
+import type { MenuLanguage } from '@/utils/constants'
 
-export const DIALOG_WIDTH = 400
-export const DIALOG_HEIGHT = 350
+const WIDTH = 400
+const HEIGHT = 350
 
-export const createPendingDialogPromise = <
-  T = string | null
->(): Promise<T> =>
-  new Promise((resolve) => {
-    void resolve
-  })
-
-export const resolveDialogParentBounds = (
-  parentWindow: BrowserWindow | null
-): Electron.Rectangle => {
-  try {
-    if (
-      !parentWindow ||
-      parentWindow.isDestroyed() ||
-      !parentWindow.isVisible()
-    ) {
-      throw new Error('No valid parent window')
-    }
-    return parentWindow.getBounds()
-  } catch {
-    const primaryDisplay = screen.getPrimaryDisplay()
-    const { width, height } = primaryDisplay.workAreaSize
-    return {
-      x: 0,
-      y: 0,
-      width,
-      height
-    }
-  }
-}
-
-export const resolveDialogPosition = (
-  parentBounds: Electron.Rectangle
-) => ({
-  x: Math.round(
-    parentBounds.x + (parentBounds.width - DIALOG_WIDTH) / 2
-  ),
-  y: Math.round(
-    parentBounds.y +
-      (parentBounds.height - DIALOG_HEIGHT) / 2
-  )
-})
-
-export const resolveDialogPreloadPath = (): string => {
-  const appPath = app.getAppPath()
+function resolvePreloadPath() {
   const candidates = [
     path.join(__dirname, 'preload.js'),
     path.join(__dirname, '..', 'preload.js'),
-    path.join(appPath, '.vite', 'build', 'preload.js')
+    path.join(
+      app.getAppPath(),
+      '.vite',
+      'build',
+      'preload.js'
+    )
   ]
-
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) {
-      return candidate
-    }
-  }
-
-  return candidates[0]
-}
-
-export interface CreateInputDialogWindowOptions {
-  parentWindow: BrowserWindow | null
-  title: string
-}
-
-export const createInputDialogWindow = ({
-  parentWindow,
-  title
-}: CreateInputDialogWindowOptions): BrowserWindow => {
-  const parentBounds =
-    resolveDialogParentBounds(parentWindow)
-  const { x, y } = resolveDialogPosition(parentBounds)
-
-  return new BrowserWindow({
-    width: DIALOG_WIDTH,
-    height: DIALOG_HEIGHT,
-    x,
-    y,
-    resizable: false,
-    frame: true,
-    alwaysOnTop: true,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      sandbox: false,
-      preload: resolveDialogPreloadPath()
-    },
-    title,
-    show: false
-  })
-}
-
-export const loadDialogHtml = (
-  dialogWindow: BrowserWindow,
-  html: string
-): void => {
-  dialogWindow.loadURL(
-    `data:text/html;charset=utf-8,${encodeURIComponent(
-      html
-    )}`
+  return (
+    candidates.find((candidate) => existsSync(candidate)) ??
+    candidates[0]
   )
 }
 
-export const showDialogWindow = (
-  dialogWindow: BrowserWindow
-): void => {
-  dialogWindow.once('ready-to-show', () => {
-    dialogWindow.show()
-    dialogWindow.focus()
-  })
-}
-
-export const closeDialogWindowSafely = (
-  dialogWindow: BrowserWindow
-): void => {
-  setTimeout(() => {
-    if (!dialogWindow.isDestroyed()) {
-      dialogWindow.close()
-    }
-  }, 50)
-}
-
-export const attachDialogFocusRestoreOnClose = (
-  dialogWindow: BrowserWindow,
-  parentWindow: BrowserWindow | null
-): void => {
-  dialogWindow.on('close', () => {
-    if (
-      process.platform === 'darwin' &&
-      parentWindow &&
-      !parentWindow.isDestroyed() &&
-      parentWindow.isVisible() &&
-      !parentWindow.isFocused()
-    ) {
-      parentWindow.hide()
-      setTimeout(() => {
-        if (parentWindow && !parentWindow.isDestroyed()) {
-          parentWindow.showInactive()
-        }
-      }, 100)
-    }
-  })
-}
-
-export interface BindDialogIpcOptions {
-  channel: string
+interface InputDialogOptions<T> {
+  title: TrayMenuMessageKey
+  responseChannel: string
   deleteChannel: string
-  onDelete: (value: string) => void
-  onResolve: (value: string | null) => void
+  removeHistory(value: string): void
+  render(data: T, language: MenuLanguage): string
 }
 
-export const bindDialogIpc = ({
-  channel,
-  deleteChannel,
-  onDelete,
-  onResolve
-}: BindDialogIpcOptions): (() => void) => {
-  const handleResponse = (
-    _event: Electron.IpcMainEvent,
-    value: string | null
-  ) => {
-    onResolve(value)
+export function createInputDialog<T>(
+  options: InputDialogOptions<T>
+) {
+  let active: BrowserWindow | null = null
+
+  function focusIfOpen() {
+    if (!active || active.isDestroyed()) return false
+    if (active.isMinimized()) active.restore()
+    active.focus()
+    return true
   }
 
-  const handleDelete = (
-    _event: Electron.IpcMainEvent,
-    value: string
-  ) => {
-    onDelete(value)
-  }
+  async function show(
+    language: MenuLanguage,
+    data: T,
+    parent?: BrowserWindow
+  ): Promise<string | null> {
+    if (focusIfOpen()) return null
+    const url = `data:text/html;charset=utf-8,${encodeURIComponent(options.render(data, language))}`
+    const bounds =
+      parent && !parent.isDestroyed() && parent.isVisible()
+        ? parent.getBounds()
+        : screen.getPrimaryDisplay().workArea
+    const win = new BrowserWindow({
+      width: WIDTH,
+      height: HEIGHT,
+      x: Math.round(bounds.x + (bounds.width - WIDTH) / 2),
+      y: Math.round(
+        bounds.y + (bounds.height - HEIGHT) / 2
+      ),
+      resizable: false,
+      alwaysOnTop: true,
+      show: false,
+      title: getTrayMenuText(options.title, language),
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        sandbox: false,
+        preload: resolvePreloadPath()
+      }
+    })
+    active = win
 
-  ipcMain.on(channel, handleResponse)
-  ipcMain.on(deleteChannel, handleDelete)
+    return new Promise((resolve, reject) => {
+      function cleanup() {
+        ipcMain.off(options.responseChannel, onResponse)
+        ipcMain.off(options.deleteChannel, onDelete)
+      }
+      function onResponse(
+        event: Electron.IpcMainEvent,
+        value: string | null
+      ) {
+        if (
+          event.sender !== win.webContents ||
+          (typeof value !== 'string' && value !== null)
+        )
+          return
+        cleanup()
+        resolve(value)
+        setTimeout(() => {
+          if (!win.isDestroyed()) win.close()
+        }, 50)
+      }
+      function onDelete(
+        event: Electron.IpcMainEvent,
+        value: unknown
+      ) {
+        if (
+          event.sender !== win.webContents ||
+          typeof value !== 'string'
+        )
+          return
+        try {
+          options.removeHistory(value)
+        } catch (error) {
+          fail(error)
+        }
+      }
+      function fail(error: unknown) {
+        cleanup()
+        reject(error)
+        if (!win.isDestroyed()) win.close()
+      }
 
-  return () => {
-    ipcMain.removeListener(channel, handleResponse)
-    ipcMain.removeListener(deleteChannel, handleDelete)
+      ipcMain.on(options.responseChannel, onResponse)
+      ipcMain.on(options.deleteChannel, onDelete)
+      win.once('closed', () => {
+        cleanup()
+        if (active === win) active = null
+        resolve(null)
+      })
+      win.once('close', () => {
+        if (
+          process.platform === 'darwin' &&
+          parent &&
+          !parent.isDestroyed() &&
+          parent.isVisible() &&
+          !parent.isFocused()
+        ) {
+          parent.hide()
+          setTimeout(() => {
+            if (!parent.isDestroyed()) parent.showInactive()
+          }, 100)
+        }
+      })
+      win.once('ready-to-show', () => {
+        win.show()
+        win.focus()
+      })
+      try {
+        win.loadURL(url).catch(fail)
+      } catch (error) {
+        fail(error)
+      }
+    })
   }
+  return { show, focusIfOpen }
 }
