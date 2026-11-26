@@ -64,27 +64,18 @@
 
 ### macOS
 
-1. 下载对应架构的 ZIP 文件：
-   - Apple Silicon (M1/M2/M3)：`chathub-desktop-darwin-arm64-1.0.7.zip`
-   - Intel 芯片：`chathub-desktop-darwin-x64-1.0.7.zip`
-2. 解压并将 `ChatHub Desktop.app` 拖入「应用程序」文件夹
-3. 首次打开可能需要右键点击 → 打开（绕过安全检查）
+从 [GitHub Releases](https://github.com/xcy960815/mac-desktop-chatgpt/releases/latest) 下载当前正式版。Apple Silicon 选择名称含 `darwin-arm64` 的 ZIP，Intel 选择 `darwin-x64`。解压后将 `ChatHub Desktop.app` 放入「应用程序」。
 
 ### Windows
 
-1. 下载对应架构的 ZIP 文件：
-   - 64位系统：`chathub-desktop-windows-x64-1.0.7.zip`
-   - 32位系统：`chathub-desktop-windows-ia32-1.0.7.zip`
-2. 解压到任意目录
-3. 运行 `ChatHub Desktop.exe`
-4. 首次运行可能需要允许通过 Windows Defender 防火墙
+下载名称含 `windows-x64` 的便携 ZIP，解压后运行 `chathub-desktop.exe`。提供 Squirrel 安装包的版本也可选择 `Setup.exe`。安装版支持后台更新，便携版通过托盘检查更新后手动下载。
 
 ## 🚀 快速开始
 
 ### 环境要求
 
 - Node.js >= 20.19.0
-- pnpm >= 9.15.0
+- pnpm 10.24.0
 
 ### 安装依赖
 
@@ -115,6 +106,7 @@ pnpm run start:prod
 ```bash
 pnpm run lint
 pnpm exec tsc --noEmit
+pnpm test
 ```
 
 ## 📦 构建
@@ -127,7 +119,7 @@ pnpm exec tsc --noEmit
 | `pnpm run package` | 打包当前平台应用 | 生成当前平台可执行产物 |
 | `pnpm run start:prod` | 打包并运行生产版本 | 用于验证生产构建结果 |
 | `pnpm run make:mac` | 构建 macOS 版本 | 生成 macOS (arm64 + x64) ZIP 文件 |
-| `pnpm run make:win` | 构建 Windows 版本 | 生成 Windows (x64) ZIP 文件 |
+| `pnpm run make:win` | 构建 Windows 版本 | 生成 x64 便携 ZIP、Squirrel 安装包与更新索引 |
 | `pnpm run make:win-installer` | 构建 Windows 安装程序* | 生成 Windows Squirrel 安装程序 |
 | `pnpm run make:linux` | 构建 Linux 版本 | 生成 Linux deb 包 |
 | `pnpm run make:all` | 构建所有平台 | 同时构建 macOS、Windows 与 Linux 版本 |
@@ -147,8 +139,8 @@ pnpm run make:mac
 **输出文件：**
 ```
 out/make/zip/
-├── chathub-desktop-darwin-arm64-1.0.7.zip
-└── chathub-desktop-darwin-x64-1.0.7.zip
+├── ChatHub Desktop-darwin-arm64.zip
+└── ChatHub Desktop-darwin-x64.zip
 ```
 
 #### 构建 Windows 版本
@@ -159,9 +151,9 @@ pnpm run make:win
 
 **输出文件：**
 ```
-out/make/zip/
-├── chathub-desktop-windows-x64-1.0.7.zip
-└── chathub-desktop-windows-ia32-1.0.7.zip
+out/make/
+├── zip/ChatHub Desktop-windows-x64.zip
+└── squirrel.windows/x64/  # Setup.exe、完整 nupkg 与 RELEASES
 ```
 
 #### 构建所有平台
@@ -191,7 +183,7 @@ pnpm run make:all
 - `Auto-launch on startup`：勾选后随系统启动
 - `Language`：切换托盘菜单语言
 - `Reload`：重新加载当前窗口
-- `Check for updates`：检查更新。Windows 正式安装版已支持自动检查、后台下载并提示重启安装；macOS 与 Linux 保持手动更新
+- `Check for updates`：检查更新。Windows Squirrel 安装版会自动检查、后台下载并提示重启安装。Windows 便携版、macOS 与 Linux 使用手动更新
 - `Quit`：退出应用
 
 切换模型步骤：
@@ -286,7 +278,7 @@ chathub-desktop/
 <details>
 <summary><b>Q: 应用会收集我的数据吗？</b></summary>
 
-不会。所有数据（包括登录状态、对话历史）都存储在本地，应用不会向任何第三方服务器发送数据。详见 [安全与隐私](#️-安全与隐私) 章节。
+客户端在本机保存设置和会话地址。你输入的提示词、上传的文件以及登录请求会直接发送到当前 AI 服务或其身份提供商。对话内容的保存期限由相应服务决定。
 </details>
 
 <details>
@@ -337,13 +329,10 @@ rmdir /s %APPDATA%\chathub-desktop\config\
 
 ## 🛡️ 安全与隐私
 
-- **本地存储**: 所有用户数据（设置、登录状态、URL 记录）仅存储在本地，不会上传到任何服务器
-- **无数据收集**: 应用不包含任何遥测或数据收集代码
-- **开源透明**: 完整源代码公开，可自行审计
-- **WebView 隔离**: 每个 AI 模型在独立的 WebView 中运行，相互隔离
-- **安全更新**: 定期更新 Electron 和依赖库以修复安全漏洞
-
-> ⚠️ **注意**: 应用通过 WebView 加载第三方 AI 服务网页，您在这些服务中输入的内容将直接发送到对应的服务提供商（如 OpenAI、Google 等），请遵循各服务的使用条款和隐私政策。
+- 客户端在本机保存偏好设置和各模型的最后访问地址。清除地址记录后，可在提供商的网页中查找已保存的对话。
+- 六个服务复用同一个 WebView 和 Electron 浏览器会话。网页存储遵循浏览器的同源策略，共同使用的登录服务可能复用其登录状态。
+- 登录信息、提示词和上传文件会经网络交给相应服务。各服务的隐私政策决定了它们如何处理这些数据。
+- 检查更新会访问 GitHub。Windows Squirrel 安装版还会向 Electron 公共更新服务发送平台、架构和应用版本。
 
 ## 🤝 贡献
 

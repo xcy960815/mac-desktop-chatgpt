@@ -6,6 +6,7 @@ import {
   MAIN_WINDOW_HEIGHT,
   MAIN_WINDOW_WIDTH
 } from '@/utils/constants'
+import { settingsService } from '@/services/settings-service'
 import { UserSetting } from '@/utils/user-setting'
 
 export interface CreateMainWindowOptions {
@@ -46,6 +47,14 @@ export const createMainWindow = async ({
     app.focus()
   })
 
+  browserWindow.webContents.on('did-finish-load', () => {
+    const { model } = settingsService.get()
+    browserWindow.webContents.send(
+      'model-changed',
+      model,
+      settingsService.getCurrentModelUrl(model)
+    )
+  })
   browserWindow.loadURL(indexUrl)
 
   if (process.platform === 'darwin') {

@@ -95,24 +95,8 @@ export const createTrayActionService = ({
     }
 
   const reloadCurrentModel = () => async () => {
-    const newUserSetting = settingsService.resetUrls()
     await context.withBrowserWindow((win) => {
-      if (win.isDestroyed()) {
-        throw new Error(
-          getTrayMenuText(
-            'windowDestroyedError',
-            menuLanguage
-          )
-        )
-      }
-
-      const currentModel = newUserSetting.model
-
-      win.webContents.send(
-        'model-changed',
-        currentModel,
-        settingsService.getCurrentModelUrl(currentModel)
-      )
+      win.webContents.send('reload-current-model')
     })
   }
 
@@ -126,7 +110,6 @@ export const createTrayActionService = ({
   }
 
   const quit = () => () => {
-    settingsService.resetUrls()
     app.quit()
   }
 

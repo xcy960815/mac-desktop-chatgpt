@@ -10,7 +10,6 @@ import {
   createShortcutManager,
   ShortcutManager
 } from '@/shortcut-manager'
-import { initializeLastVisitedUrlTracking } from '@/utils/url-tracker'
 import { registerWebContentsHandlers } from '@/webview-handlers'
 import {
   createUpdateManager,
@@ -18,10 +17,7 @@ import {
 } from '@/utils/update-manager'
 import { createAppTray, getTrayIconPath } from '@/core/tray'
 import { createMainWindow } from '@/core/main-window'
-import {
-  registerAppLifecycleEvents,
-  registerModelSyncEvents
-} from '@/core/app-events'
+import { registerAppLifecycleEvents } from '@/core/app-events'
 import { settingsService } from '@/services/settings-service'
 import { createReadySignal } from '@/utils/ready-signal'
 
@@ -161,6 +157,7 @@ export const bootstrapApp =
     })
 
     const tray = createAppTray({ appPath })
+    registerWebContentsHandlers(windowManager)
     const browserWindow = await createMainWindow({
       appPath,
       indexUrl: resolveMainIndexUrl({
@@ -206,11 +203,8 @@ export const bootstrapApp =
     shortcutManager.registerIpcHandlers()
 
     registerDevtoolsShortcut(browserWindow)
-    registerWebContentsHandlers(windowManager)
-    registerModelSyncEvents(windowManager)
     registerAppLifecycleEvents(windowManager)
 
-    initializeLastVisitedUrlTracking(browserWindow)
     updateManager.initialize()
 
     menubarReadySignal.markReady()

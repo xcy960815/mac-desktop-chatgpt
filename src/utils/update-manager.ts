@@ -1,3 +1,6 @@
+import { existsSync } from 'node:fs'
+import path from 'node:path'
+import { gt } from 'semver'
 import {
   app,
   autoUpdater,
@@ -40,9 +43,6 @@ export class UpdateManager {
     'https://api.github.com/repos/xcy960815/mac-desktop-chatgpt/releases/latest'
   private readonly REPOSITORY =
     'xcy960815/mac-desktop-chatgpt'
-  private readonly AUTO_UPDATE_PLATFORMS =
-    new Set<NodeJS.Platform>(['win32'])
-
   constructor({
     getWindow = () => null
   }: CreateUpdateManagerOptions = {}) {
@@ -138,9 +138,7 @@ export class UpdateManager {
       console.log('当前版本:', currentVersion)
       console.log('最新版本:', latestVersion)
 
-      if (
-        this.isNewerVersion(latestVersion, currentVersion)
-      ) {
+      if (gt(latestVersion, currentVersion)) {
         await this.showManualUpdateDialog(
           targetWindow,
           latestVersion,
@@ -165,7 +163,14 @@ export class UpdateManager {
   private shouldUseAutoUpdater(): boolean {
     return (
       app.isPackaged &&
-      this.AUTO_UPDATE_PLATFORMS.has(process.platform)
+      process.platform === 'win32' &&
+      existsSync(
+        path.resolve(
+          path.dirname(process.execPath),
+          '..',
+          'Update.exe'
+        )
+      )
     )
   }
 
@@ -376,32 +381,6 @@ export class UpdateManager {
     }
 
     return null
-  }
-
-  private isNewerVersion(
-    version1: string,
-    version2: string
-  ): boolean {
-    const v1Parts = version1.split('.').map(Number)
-    const v2Parts = version2.split('.').map(Number)
-
-    for (
-      let i = 0;
-      i < Math.max(v1Parts.length, v2Parts.length);
-      i++
-    ) {
-      const v1Part = v1Parts[i] || 0
-      const v2Part = v2Parts[i] || 0
-
-      if (v1Part > v2Part) {
-        return true
-      }
-      if (v1Part < v2Part) {
-        return false
-      }
-    }
-
-    return false
   }
 }
 

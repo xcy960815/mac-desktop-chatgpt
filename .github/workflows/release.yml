@@ -5,8 +5,37 @@ on:
     tags:
       - 'v*' # 匹配 v 开头的 tag，如 v1.0.0, v1.1.0
 
+concurrency:
+  group: desktop-release
+  cancel-in-progress: false
+
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.0'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      - name: Check version against all published stable releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -o pipefail
+          gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name' |
+            node scripts/check-release-version.cjs "$GITHUB_REF_NAME"
+      - run: pnpm run lint
+      - run: pnpm exec tsc --noEmit
+      - run: pnpm test
+
   build:
+    needs: validate
     name: Build ${{ matrix.platform }}-${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -72,6 +101,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Verify macOS bundle signature
+        if: matrix.platform == 'darwin'
+        run: codesign --verify --deep --strict "out/ChatHub Desktop-darwin-${{ matrix.arch }}/ChatHub Desktop.app"
+
+      - name: Check packaged macOS startup
+        if: matrix.platform == 'darwin' && runner.arch == matrix.arch
+        run: node scripts/check-packaged-startup.cjs "out/ChatHub Desktop-darwin-${{ matrix.arch }}/ChatHub Desktop.app/Contents/MacOS/chathub-desktop"
+
       - name: Upload macOS artifacts
         if: matrix.platform == 'darwin'
         uses: actions/upload-artifact@v4
@@ -80,6 +117,14 @@ jobs:
           path: out/make/zip/*.zip
           retention-days: 30
           if-no-files-found: error
+
+      - name: Verify Windows installer, portable ZIP and update feed
+        if: matrix.platform == 'win32'
+        run: node scripts/check-windows-artifacts.cjs
+
+      - name: Check packaged Windows startup
+        if: matrix.platform == 'win32'
+        run: node scripts/check-packaged-startup.cjs "out/ChatHub Desktop-windows-x64/chathub-desktop.exe"
 
       - name: Upload Windows artifacts
         if: matrix.platform == 'win32'
@@ -165,23 +210,23 @@ jobs:
 
             ### 📥 下载
 
-            - **macOS (Intel)**: chathub-desktop-darwin-x64-${{ steps.get_version.outputs.version }}.zip
-            - **macOS (Apple Silicon)**: chathub-desktop-darwin-arm64-${{ steps.get_version.outputs.version }}.zip
-            - **Windows (x64)**: chathub-desktop-${{ steps.get_version.outputs.version }} Setup.exe
-            - **Windows 便携版 (x64)**: chathub-desktop-win32-x64-${{ steps.get_version.outputs.version }}.zip
+            - **macOS (Intel)**: ChatHub.Desktop-darwin-x64-${{ steps.get_version.outputs.version }}.zip
+            - **macOS (Apple Silicon)**: ChatHub.Desktop-darwin-arm64-${{ steps.get_version.outputs.version }}.zip
+            - **Windows (x64)**: 匹配架构的 `Setup.exe` 安装包
+            - **Windows 便携版 (x64)**: ChatHub.Desktop-windows-x64-${{ steps.get_version.outputs.version }}.zip
             - **Linux (x64)**: chathub-desktop_${{ steps.get_version.outputs.version }}_amd64.deb
             
             ### 📋 安装说明
 
             #### macOS
             1. 下载对应架构的 ZIP 文件
-            2. 解压并将 `Desktop ChatGPT.app` 拖入「应用程序」文件夹
+            2. 解压并将 `ChatHub Desktop.app` 拖入「应用程序」文件夹
             3. 首次打开可能需要右键点击 → 打开（绕过安全检查）
 
             #### Windows
             1. 优先下载 `Setup.exe` 安装包完成安装
             2. 已安装版本后，后续更新将由应用内自动下载并提示重启安装
-            3. 如需免安装版本，可下载 ZIP 文件并手动运行 `Desktop ChatGPT.exe`
+            3. 如需免安装版本，可下载 ZIP 文件并手动运行 `chathub-desktop.exe`
 
             #### Linux (Ubuntu/Debian)
             1. 下载 `.deb` 安装包

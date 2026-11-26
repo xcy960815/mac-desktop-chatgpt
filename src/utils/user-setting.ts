@@ -121,32 +121,8 @@ function writeUserSetting<US = UserSetting>(data: US): US {
   return data
 }
 
-/**
- * 重置保存的 URLs 到默认值
- * @returns {UserSetting}
- */
-function resetUserUrls(): UserSetting {
-  const currentSetting = readUserSetting()
-  // 使用 Model 枚举和 ModelUrl 枚举动态生成默认 URLs
-  const defaultUrls = {
-    [Model.ChatGPT]: ModelUrl.ChatGPT,
-    [Model.DeepSeek]: ModelUrl.DeepSeek,
-    [Model.Grok]: ModelUrl.Grok,
-    [Model.Gemini]: ModelUrl.Gemini,
-    [Model.Qwen]: ModelUrl.Qwen,
-    [Model.Doubao]: ModelUrl.Doubao
-  } as const
-  const resetSetting: UserSetting = {
-    ...currentSetting,
-    urls: defaultUrls,
-    lastVisitedUrl: undefined
-  }
-  return writeUserSetting(resetSetting)
-}
-
 export {
   writeUserSetting,
   readUserSetting,
-  getUserSettingPath,
-  resetUserUrls
+  getUserSettingPath
 }

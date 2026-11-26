@@ -1,7 +1,7 @@
 {
   "name": "chathub-desktop",
   "productName": "ChatHub Desktop",
-  "version": "1.1.7",
+  "version": "1.1.12",
   "description": "一款基于 electron + vite + typescript 开发的跨平台桌面级应用，统一承载 ChatGPT、DeepSeek、Grok、Gemini、Qwen 与 Doubao 等模型网页端，免去来回切换。",
   "main": ".vite/build/main.js",
   "scripts": {
@@ -20,9 +20,10 @@
     "make:linux": "electron-forge make --platform linux --arch x64 --targets @electron-forge/maker-deb",
     "make:all": "npm run make:mac && npm run make:win && npm run make:linux",
     "publish": "electron-forge publish",
-    "lint": "eslint --ext .ts,.tsx .",
+    "lint": "eslint --ext .ts,.tsx,.mts --ignore-pattern out .",
     "prepare": "husky install",
-    "lint-staged": "lint-staged"
+    "lint-staged": "lint-staged",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@commitlint/cli": "^18.4.4",
@@ -35,6 +36,7 @@
     "@electron-forge/plugin-fuses": "^7.8.0",
     "@electron-forge/plugin-vite": "^7.8.0",
     "@electron/fuses": "^1.7.0",
+    "@types/semver": "^7.7.0",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
     "conventional-changelog-cli": "^5.0.0",
@@ -48,7 +50,8 @@
     "terser": "^5.39.0",
     "ts-node": "^10.9.2",
     "typescript": "~5.8.2",
-    "vite": "^6.2.3"
+    "vite": "^6.2.3",
+    "vitest": "^3.2.7"
   },
   "keywords": [
     "desktop",
@@ -78,6 +81,7 @@
   "dependencies": {
     "electron-context-menu": "^3.6.1",
     "electron-squirrel-startup": "^1.0.1",
+    "semver": "^7.7.1",
     "update-electron-app": "^3.1.2"
   },
   "volta": {
@@ -97,7 +101,8 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
-      "electron"
+      "electron",
+      "electron-winstaller"
     ]
   }
 }

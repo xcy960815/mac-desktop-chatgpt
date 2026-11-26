@@ -1,4 +1,5 @@
 import * as path from 'path'
+import { pathToFileURL } from 'node:url'
 import { app, nativeImage, NativeImage } from 'electron'
 
 /**
@@ -46,8 +47,10 @@ export const resolveMainIndexUrl = ({
     return devServerUrl
   }
 
-  return `file://${path.join(
-    rendererDir,
-    './renderer/main_window/index.html'
-  )}`
+  return pathToFileURL(
+    path.join(
+      rendererDir,
+      'renderer/main_window/index.html'
+    )
+  ).href
 }

@@ -3,6 +3,7 @@
 
 import { contextBridge, ipcRenderer } from 'electron'
 import path from 'path'
+import { pathToFileURL } from 'node:url'
 
 /**
  * Electron API 接口定义
@@ -19,15 +20,7 @@ interface ElectronAPI {
   onModelChanged: (
     callback: (modelName: string, url?: string) => void
   ) => void
-  /**
-   * 加载错误回调
-   * @param {function} callback - 回调函数，接收错误消息
-   * @param {string} callback.errorMessage - 错误消息文本
-   * @returns {void}
-   */
-  onLoadError: (
-    callback: (errorMessage: string) => void
-  ) => void
+  onReloadCurrentModel: (callback: () => void) => void
 
   /**
    * 发送模型改变事件
@@ -87,15 +80,17 @@ interface ElectronAPI {
    * Webview Preload 脚本路径
    * @type {string}
    */
-  webviewPreloadPath: string
+  webviewPreloadUrl: string
 }
 
 // 暴露安全的 API 到渲染进程
 contextBridge.exposeInMainWorld('electronAPI', {
-  webviewPreloadPath: path.join(
-    __dirname,
-    'webview-preload.js'
-  ),
+  webviewPreloadUrl: pathToFileURL(
+    path.join(__dirname, 'webview-preload.js')
+  ).href,
+  onReloadCurrentModel: (callback: () => void) => {
+    ipcRenderer.on('reload-current-model', () => callback())
+  },
   onModelChanged: (
     callback: (modelName: string, url?: string) => void
   ) => {
@@ -106,14 +101,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
       }
     )
   },
-  onLoadError: (
-    callback: (errorMessage: string) => void
-  ) => {
-    ipcRenderer.on('load-error', (_event, errorMessage) => {
-      callback(errorMessage)
-    })
-  },
-
   sendModelChanged: (model: string) => {
     ipcRenderer.send('model-changed', model)
   },

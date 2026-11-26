@@ -1,178 +1,80 @@
 import { Model, ModelUrl } from '@/utils/constants'
 
-export {}
-
 declare global {
   interface Window {
     electronAPI: {
-      /**
-       * 模型改变回调
-       * @param {(modelName: string, url?: string) => void} callback
-       * @returns {void}
-       */
-      onModelChanged: (
-        callback: (modelName: string, url?: string) => void
-      ) => void
-      /**
-       * 加载错误回调
-       * @param {(errorMessage: string) => void} callback
-       * @returns {void}
-       */
-      onLoadError: (
-        callback: (errorMessage: string) => void
-      ) => void
-
-      /**
-       * 平台
-       * @returns {string}
-       */
+      onModelChanged(
+        callback: (model: Model, url?: string) => void
+      ): void
+      onReloadCurrentModel(callback: () => void): void
       platform: string
-      /**
-       * Webview Preload 脚本路径
-       * @returns {string}
-       */
-      webviewPreloadPath: string
+      webviewPreloadUrl: string
     }
   }
 }
 
-/**
- * 设置 webview 地址
- * @param {string} modelName - 模型名称
- * @param {string} [savedUrl] - 保存的 URL（可选）
- * @returns {void}
- */
-function setWebviewSrc(
-  modelName: string,
-  savedUrl?: string
-) {
-  const webview = document.getElementById(
-    'webview-container'
-  ) as HTMLIFrameElement & {
-    preload: string
-    useragent: string
-    openDevTools: () => void
-  }
-  const webviewLoading = document.getElementById(
-    'webview-loading'
-  ) as HTMLDivElement
-  const webviewError = document.getElementById(
-    'webview-error'
-  ) as HTMLDivElement
-  const originWebviewUrl = webview?.src
+const webview = document.getElementById(
+  'webview-container'
+) as Electron.WebviewTag
+const loading = document.getElementById('webview-loading')
+const error = document.getElementById('webview-error')
+const message = document.getElementById('error-message')
+const api = window.electronAPI
+webview.preload = api.webviewPreloadUrl
 
-  // 设置 preload 脚本
-  if (window.electronAPI.webviewPreloadPath) {
-    webview.preload = `file://${window.electronAPI.webviewPreloadPath}`
-  }
+let retryTimer: ReturnType<typeof setTimeout>
 
-  // 如果有保存的 URL，优先使用保存的 URL
-  let webviewUrl: string
-  if (savedUrl) {
-    webviewUrl = savedUrl
-  } else {
-    // 否则使用默认 URL
-    webviewUrl =
-      modelName === Model.DeepSeek
-        ? ModelUrl.DeepSeek
-        : modelName === Model.ChatGPT
-          ? ModelUrl.ChatGPT
-          : modelName === Model.Gemini
-            ? ModelUrl.Gemini
-            : ModelUrl.Grok
-  }
+function startLoading() {
+  clearTimeout(retryTimer)
+  error.classList.remove('active')
+  loading.classList.add('active')
+}
 
-  const isErrorActive =
-    webviewError?.classList.contains('active')
+function reloadCurrentModel() {
+  if (!webview.src) return
+  startLoading()
+  webview.reload()
+}
 
-  // 如果 URL 相同且当前没有报错，不重复加载
-  if (
-    originWebviewUrl &&
-    originWebviewUrl === webviewUrl &&
-    !isErrorActive
-  ) {
+webview.addEventListener('did-start-loading', startLoading)
+webview.addEventListener('did-stop-loading', () => {
+  loading.classList.remove('active')
+})
+const networkErrors: Record<number, string> = {
+  [-7]: '网络连接超时，请检查您的网络连接',
+  [-100]: '网络连接意外断开，请检查代理设置',
+  [-102]: '无法连接到服务器，请稍后重试',
+  [-105]: 'DNS 解析失败，请检查网络设置',
+  [-106]: '无法访问互联网，请检查网络连接',
+  [-109]: '无法访问该地址',
+  [-138]: '网络访问被拒绝'
+}
+
+webview.addEventListener('did-fail-load', (event) => {
+  const { errorCode, isMainFrame, errorDescription } = event
+  if (!isMainFrame || errorCode === -3 || errorCode === 0)
+    return
+  clearTimeout(retryTimer)
+  loading.classList.remove('active')
+  message.textContent =
+    networkErrors[errorCode] ||
+    `加载失败: ${errorDescription} (错误码: ${errorCode})`
+  error.classList.add('active')
+  if (errorCode === -7)
+    retryTimer = setTimeout(reloadCurrentModel, 5000)
+})
+api.onModelChanged((model, savedUrl) => {
+  const url = savedUrl || ModelUrl[model]
+  if (webview.src === url) {
+    if (error.classList.contains('active'))
+      reloadCurrentModel()
     return
   }
-
-  // 隐藏错误提示
-  hideError()
-
-  // 显示 webviewLoading
-  webviewLoading.classList.add('active')
-  webview.src = webviewUrl
-  // 监听 webview 加载完成
-  webview.addEventListener(
-    'did-stop-loading',
-    () => {
-      webviewLoading.classList.remove('active')
-    },
-    { once: true }
-  )
-}
-
-/**
- * 显示错误提示
- * @param {string} errorMessage - 错误消息文本
- * @returns {void}
- */
-function showError(errorMessage: string) {
-  const webviewLoading = document.getElementById(
-    'webview-loading'
-  ) as HTMLDivElement
-  const webviewError = document.getElementById(
-    'webview-error'
-  ) as HTMLDivElement
-  const errorMessageEl = document.getElementById(
-    'error-message'
-  ) as HTMLDivElement
-
-  // 隐藏加载动画
-  webviewLoading.classList.remove('active')
-  // 显示错误提示
-  errorMessageEl.textContent = errorMessage
-  webviewError.classList.add('active')
-}
-
-/**
- * 隐藏错误提示
- * @returns {void}
- */
-function hideError() {
-  const webviewError = document.getElementById(
-    'webview-error'
-  ) as HTMLDivElement
-  webviewError.classList.remove('active')
-}
-
-/**
- * 重试按钮点击事件
- * @returns {void}
- */
-type WebviewElementWithReload = HTMLIFrameElement & {
-  reload: () => void
-}
-
-const retryButton = document.getElementById('retry-button')
-retryButton?.addEventListener('click', () => {
-  hideError()
-  const webview = document.getElementById(
-    'webview-container'
-  ) as WebviewElementWithReload | null
-  if (webview && webview.src) {
-    const webviewLoading = document.getElementById(
-      'webview-loading'
-    ) as HTMLDivElement
-    webviewLoading.classList.add('active')
-    webview.reload()
-  }
+  startLoading()
+  webview.src = url
 })
-
-window.electronAPI.onModelChanged(setWebviewSrc)
-window.electronAPI.onLoadError(showError)
-
-/**
- * 根据平台为 body 添加 class
- * @returns {void}
- */
-const platform = window.electronAPI.platform
-document.body.classList.add(`platform-${platform}`)
+api.onReloadCurrentModel(reloadCurrentModel)
+document
+  .getElementById('retry-button')
+  .addEventListener('click', reloadCurrentModel)
+document.body.classList.add(`platform-${api.platform}`)

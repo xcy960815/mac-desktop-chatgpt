@@ -2,44 +2,7 @@ import { app, shell, WebContents } from 'electron'
 import contextMenu from 'electron-context-menu'
 
 import { WindowManager } from '@/window-manager'
-import { ModelUrl } from '@/utils/constants'
-import { UserSetting } from '@/utils/user-setting'
 import { settingsService } from '@/services/settings-service'
-
-type UserSettingWithUrls = UserSetting & {
-  urls: Required<UserSetting['urls']>
-}
-
-/**
- * 确保用户设置中的 URLs 已初始化
- * @returns {UserSetting} 初始化后的用户设置对象
- */
-const ensureUrlsInitialized = (): UserSettingWithUrls => {
-  const currentSetting = settingsService.get()
-  if (!currentSetting.urls) {
-    currentSetting.urls = {
-      ChatGPT: ModelUrl.ChatGPT,
-      DeepSeek: ModelUrl.DeepSeek,
-      Grok: ModelUrl.Grok,
-      Gemini: ModelUrl.Gemini,
-      Qwen: ModelUrl.Qwen,
-      Doubao: ModelUrl.Doubao
-    }
-  }
-  return currentSetting as UserSettingWithUrls
-}
-
-/**
- * 保存 WebView 的当前 URL 到用户设置
- * @param {string} url - 要保存的 URL 字符串
- * @returns {void}
- */
-const saveWebViewUrl = (url: string) => {
-  const currentSetting = ensureUrlsInitialized()
-  const currentModel = currentSetting.model
-  currentSetting.urls[currentModel] = url
-  settingsService.save(currentSetting)
-}
 
 /**
  * 注册导航监听器，监听 WebView 的导航事件
@@ -50,61 +13,14 @@ const registerNavigationListeners = (
   webContents: WebContents
 ) => {
   webContents.on('did-navigate', (_event, url) => {
-    saveWebViewUrl(url)
+    settingsService.setCurrentModelUrl(url)
   })
 
-  webContents.on('did-navigate-in-page', (_event, url) => {
-    saveWebViewUrl(url)
-  })
-
-  webContents.on('did-finish-load', () => {
-    const url = webContents.getURL()
-    if (url) {
-      saveWebViewUrl(url)
-    }
-  })
-}
-
-/**
- * 注册加载失败处理器，处理 WebView 加载失败的情况
- * @param {WebContents} webContents - WebContents 实例
- * @param {WindowManager} windowManager - 窗口管理器实例
- * @returns {void}
- */
-const registerLoadFailureHandler = (
-  webContents: WebContents,
-  windowManager: WindowManager
-) => {
   webContents.on(
-    'did-fail-load',
-    (_event, errorCode, errorDescription) => {
-      if (errorCode === -3 || Math.abs(errorCode) === 0) {
-        return
-      }
-
-      const errorMessages: { [key: string]: string } = {
-        '-7': '网络连接超时，请检查您的网络连接',
-        '-100': '网络连接意外断开，请检查代理设置',
-        '-102': '无法连接到服务器，请稍后重试',
-        '-105': 'DNS 解析失败，请检查网络设置',
-        '-106': '无法访问互联网，请检查网络连接',
-        '-109': '无法访问该地址',
-        '-138': '网络访问被拒绝'
-      }
-
-      const errorMessage =
-        errorMessages[errorCode.toString()] ||
-        `加载失败: ${errorDescription} (错误码: ${errorCode})`
-
-      windowManager
-        .getMainBrowserWindow()
-        ?.webContents.send('load-error', errorMessage)
-
-      if (errorCode === -7) {
-        setTimeout(() => {
-          webContents.reload()
-        }, 5000)
-      }
+    'did-navigate-in-page',
+    (_event, url, isMainFrame) => {
+      if (isMainFrame)
+        settingsService.setCurrentModelUrl(url)
     }
   )
 }
@@ -194,7 +110,6 @@ export const registerWebContentsHandlers = (
       return
     }
 
-    registerLoadFailureHandler(webContents, windowManager)
     registerNavigationListeners(webContents)
 
     webContents.setWindowOpenHandler(({ url }) => {

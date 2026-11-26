@@ -1,0 +1,28 @@
+name: Desktop checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.0'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run lint
+      - run: pnpm exec tsc --noEmit
+      - run: pnpm test
+      - run: pnpm run make:win
+      - run: node scripts/check-windows-artifacts.cjs
+      - run: node scripts/check-packaged-startup.cjs "out/ChatHub Desktop-windows-x64/chathub-desktop.exe"

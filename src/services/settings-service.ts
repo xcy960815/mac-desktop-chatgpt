@@ -1,7 +1,6 @@
 import {
   getUserSettingPath,
   readUserSetting,
-  resetUserUrls,
   UserSetting,
   writeUserSetting
 } from '@/utils/user-setting'
@@ -14,24 +13,24 @@ import {
 const DEFAULT_TOGGLE_SHORTCUT = 'CommandOrControl+g'
 const HISTORY_LIMIT = 10
 
-const DEFAULT_MODEL_URLS: Required<
-  NonNullable<UserSetting['urls']>
-> = {
-  ChatGPT: ModelUrl.ChatGPT,
-  DeepSeek: ModelUrl.DeepSeek,
-  Grok: ModelUrl.Grok,
-  Gemini: ModelUrl.Gemini,
-  Qwen: ModelUrl.Qwen,
-  Doubao: ModelUrl.Doubao
+// Retain conversation links from provider domains used by older releases.
+const previousOrigins: Partial<Record<Model, string[]>> = {
+  [Model.ChatGPT]: ['https://chat.openai.com'],
+  [Model.Qwen]: [
+    'https://tongyi.aliyun.com',
+    'https://chat.qwen.ai'
+  ]
 }
 
-const DEFAULT_MODEL_URL_MAP: Record<Model, string> = {
-  [Model.ChatGPT]: ModelUrl.ChatGPT,
-  [Model.DeepSeek]: ModelUrl.DeepSeek,
-  [Model.Grok]: ModelUrl.Grok,
-  [Model.Gemini]: ModelUrl.Gemini,
-  [Model.Qwen]: ModelUrl.Qwen,
-  [Model.Doubao]: ModelUrl.Doubao
+function isModelUrl(model: Model, url?: string): boolean {
+  if (!ModelUrl[model] || !url || !URL.canParse(url))
+    return false
+  const { origin, protocol } = new URL(url)
+  if (protocol !== 'https:') return false
+  return (
+    origin === new URL(ModelUrl[model]).origin ||
+    !!previousOrigins[model]?.includes(origin)
+  )
 }
 
 const dedupeRecent = (
@@ -50,7 +49,6 @@ export interface SettingsService {
     updater: (settings: UserSetting) => UserSetting
   ): UserSetting
   getPath(): string
-  resetUrls(): UserSetting
   getDefaultModelUrl(model: Model): string
   getDefaultModelUrls(): Required<
     NonNullable<UserSetting['urls']>
@@ -71,7 +69,6 @@ export interface SettingsService {
   setAutoLaunchOnStartup(enabled: boolean): UserSetting
   setAlwaysOnTop(enabled: boolean): UserSetting
   setMenuLanguage(language: MenuLanguage): UserSetting
-  setLastVisitedUrl(url?: string): UserSetting
 }
 
 export const createSettingsService =
@@ -86,19 +83,23 @@ export const createSettingsService =
     ): UserSetting => save(updater(get()))
 
     const getDefaultModelUrls = () => ({
-      ...DEFAULT_MODEL_URLS
+      ...ModelUrl
     })
 
     const getDefaultModelUrl = (model: Model): string =>
-      DEFAULT_MODEL_URL_MAP[model]
+      ModelUrl[model]
 
     const getCurrentModelUrl = (model?: Model): string => {
       const settings = get()
       const targetModel = model ?? settings.model
-      return (
-        settings.urls?.[targetModel] ||
-        getDefaultModelUrl(targetModel)
-      )
+      const saved = settings.urls?.[targetModel]
+      if (isModelUrl(targetModel, saved)) return saved
+      if (
+        isModelUrl(targetModel, settings.lastVisitedUrl)
+      ) {
+        return settings.lastVisitedUrl
+      }
+      return getDefaultModelUrl(targetModel)
     }
 
     return {
@@ -106,7 +107,6 @@ export const createSettingsService =
       save,
       update,
       getPath: () => getUserSettingPath(),
-      resetUrls: () => resetUserUrls(),
       getDefaultModelUrl,
       getDefaultModelUrls,
       getCurrentModelUrl,
@@ -115,15 +115,20 @@ export const createSettingsService =
           ...settings,
           model
         })),
-      setCurrentModelUrl: (url: string) =>
-        update((settings) => ({
+      setCurrentModelUrl: (url: string) => {
+        const settings = get()
+        const model = settings.model
+        if (
+          !isModelUrl(model, url) ||
+          settings.urls?.[model] === url
+        ) {
+          return settings
+        }
+        return save({
           ...settings,
-          urls: {
-            ...getDefaultModelUrls(),
-            ...settings.urls,
-            [settings.model]: url
-          }
-        })),
+          urls: { ...settings.urls, [model]: url }
+        })
+      },
       getToggleShortcut: () =>
         get().toggleShortcut || DEFAULT_TOGGLE_SHORTCUT,
       setToggleShortcut: (shortcut: string) =>
@@ -183,11 +188,6 @@ export const createSettingsService =
         update((settings) => ({
           ...settings,
           menuLanguage: language
-        })),
-      setLastVisitedUrl: (url?: string) =>
-        update((settings) => ({
-          ...settings,
-          lastVisitedUrl: url
         }))
     }
   }

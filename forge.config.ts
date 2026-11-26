@@ -219,6 +219,15 @@ const removeVersionFromLocalBuilds = async () => {
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    osxSign: {
+      identity: '-',
+      identityValidation: false,
+      preAutoEntitlements: false,
+      optionsForFile: () => ({
+        hardenedRuntime: false,
+        timestamp: 'none'
+      })
+    },
     icon: 'images/icon',
     // 应用程序的名称
     name: pkg.productName,
@@ -226,35 +235,10 @@ const config: ForgeConfig = {
     executableName: pkg.name,
     // 产品的版本
     appVersion: pkg.version,
-    // 配置自动更新（electron-updater 会从 GitHub Releases 获取更新）
-    // 注意：需要在 package.json 中配置 repository 字段
-    // 忽略不必要的文件
-    // 注意：electron-forge 使用 minimatch，但某些复杂模式可能导致问题
-    // 这里只保留最关键的排除项，避免构建错误
+    // Keep externalized dependencies intact, including their own dist directories.
     ignore: [
-      '.git',
-      '.gitignore',
-      '.gitattributes',
-      '.vscode',
-      '.idea',
-      'tsconfig.json',
-      'vite.main.config.ts',
-      'vite.preload.config.ts',
-      'vite.renderer.config.ts',
-      'vite.base.config.ts',
-      'forge.config.ts',
-      'forge.env.d.ts',
-      'commitlint.config.js',
-      'node_modules/.cache',
-      'node_modules/.vite',
-      'node_modules/.bin',
-      'readme.md',
-      'CHANGELOG.md',
-      'find-errors.log',
-      'foge.config-backup.ts',
-      'config/settings.json',
-      '.DS_Store',
-      'Thumbs.db'
+      /^\/(?!\.vite(?:\/|$)|images(?:\/|$)|node_modules(?:\/|$)|package\.json$)/,
+      /^\/node_modules\/\.(?:cache|vite|pnpm)(?:\/|$)/
     ],
     // 是否覆盖已存在的打包文件
     overwrite: true
@@ -263,7 +247,6 @@ const config: ForgeConfig = {
   makers: [
     new MakerSquirrel({
       // Windows Squirrel 安装程序配置
-      name: pkg.name,
       setupIcon: path.resolve(__dirname, 'images/icon.ico')
     }),
     new MakerZIP({}, ['darwin', 'win32']),

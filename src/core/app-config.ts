@@ -6,7 +6,6 @@ export const setupAppConfig = (): void => {
   // 设置应用名称，这会影响 Dock Hover Title
   app.setName(TOOLTIP)
 
-  app.commandLine.appendSwitch('ignore-certificate-errors')
   app.commandLine.appendSwitch(
     'disable-blink-features',
     'AutomationControlled'

@@ -1,7 +1,6 @@
 import { app, globalShortcut } from 'electron'
 
 import { WindowManager } from '@/window-manager'
-import { settingsService } from '@/services/settings-service'
 
 export const registerAppLifecycleEvents = (
   windowManager: WindowManager
@@ -22,26 +21,5 @@ export const registerAppLifecycleEvents = (
 
   app.on('before-quit', () => {
     windowManager.setWillQuit(true)
-  })
-}
-
-export const registerModelSyncEvents = (
-  windowManager: WindowManager
-): void => {
-  windowManager.on('window-did-show', async () => {
-    const win = windowManager.getMainBrowserWindow()
-    if (!win) return
-
-    const userSetting = settingsService.get()
-
-    const savedUrl = settingsService.getCurrentModelUrl(
-      userSetting.model
-    )
-
-    win.webContents.send(
-      'model-changed',
-      userSetting.model,
-      savedUrl
-    )
   })
 }
