@@ -1,12 +1,16 @@
 name: Build and Release
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - 'v*' # 匹配 v 开头的 tag，如 v1.0.0, v1.1.0
 
+permissions:
+  contents: read
+
 concurrency:
-  group: desktop-release
+  group: ${{ github.event_name == 'push' && 'desktop-release' || format('desktop-package-{0}', github.ref) }}
   cancel-in-progress: false
 
 jobs:
@@ -23,6 +27,7 @@ jobs:
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
       - name: Check version against all published stable releases
+        if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -79,22 +84,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Get version from tag
-        id: get_version
+      - name: Set release version from tag
+        if: github.event_name == 'push'
         shell: bash
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Tag version: $VERSION"
-
-      - name: Update package.json version
-        shell: bash
-        run: |
-          VERSION=${{ steps.get_version.outputs.version }}
-          # 使用 Node.js 更新 package.json 版本号
-          node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); pkg.version = '$VERSION'; fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');"
-          echo "✅ 已更新 package.json 版本号为: $VERSION"
-          grep '"version"' package.json
+        run: npm pkg set "version=${GITHUB_REF_NAME#v}"
 
       - name: Build application
         run: pnpm run ${{ matrix.build-command }}
@@ -150,6 +143,7 @@ jobs:
 
   release:
     name: Create Release
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     needs: build
     runs-on: ubuntu-latest
     permissions:
